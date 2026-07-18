@@ -10,22 +10,38 @@ export function Comanda() {
   const contexto = useContext(AppContext);
   
   const mesaAtual = contexto?.mesas.find(m => m.numero === Number(idMesa));
-  const [itensPedidos, setItensPedidos] = useState<ItemComanda[]>(mesaAtual?.itens || []);
-  const [nomeCliente, setNomeCliente] = useState(mesaAtual?.nomeCliente || '');
+
+  const itensIniciais = mesaAtual?.itens || [];
+  const nomeClienteInicial = mesaAtual?.nomeCliente || '';
   
+  const [itensLocaisPedidos, setItensLocaisPedidos] = useState<ItemComanda[]>([]);
+  const [nomeClienteLocal, setNomeClienteLocal] = useState<string | null>(null);
+  
+  const itensPedidos = itensLocaisPedidos.length > 0 ? itensLocaisPedidos : itensIniciais;
+  const nomeCliente = nomeClienteLocal !== null ? nomeClienteLocal : nomeClienteInicial;
+
+  const setItensPedidos = (novosItens: ItemComanda[] | ((prev: ItemComanda[]) => ItemComanda[])) => {
+    if (typeof novosItens === 'function') {
+      setItensLocaisPedidos(novosItens(itensPedidos));
+    } else {
+      setItensLocaisPedidos(novosItens);
+    }
+  };
+
+  const setNomeCliente = (nome: string) => setNomeClienteLocal(nome);
+
   const cardapioAtivo = useMemo(() => (contexto?.produtos || []).filter(p => p.ativo !== false && p.id !== 999), [contexto?.produtos]);
   const categoriasDisponiveis = useMemo(() => Array.from(new Set(cardapioAtivo.map(p => p.categoria))), [cardapioAtivo]);
 
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
+  const [subcategoriaAtiva, setSubcategoriaAtiva] = useState<string | null>(null);
   const [mostrarItens, setMostrarItens] = useState(false);
   const [statusSalvo, setStatusSalvo] = useState(false);
   
-  // ESTADOS DO MODAL DE PAGAMENTO
   const [etapaModal, setEtapaModal] = useState<0 | 1 | 2 | 3>(0);
   const [itemEditandoObs, setItemEditandoObs] = useState<ItemComanda | null>(null);
   const [textoObs, setTextoObs] = useState('');
   
-  // ESTADOS DO CARRINHO DE PAGAMENTOS
   const [decisaoDezPorCento, setDecisaoDezPorCento] = useState(false);
   const [pagamentosLancados, setPagamentosLancados] = useState<Pagamento[]>([]);
   const [valorDigitado, setValorDigitado] = useState('');
@@ -71,12 +87,9 @@ export function Comanda() {
   
   const marcarComoEntregue = (idItem: string) => {
     contexto?.atualizarStatusCozinha(Number(idMesa), idItem, 'entregue');
-    setItensPedidos(prev => prev.map(item => 
-      item.id === idItem ? { ...item, statusCozinha: 'entregue' } : item
-    ));
+    setItensPedidos(prev => prev.map(item => item.id === idItem ? { ...item, statusCozinha: 'entregue' } : item));
   };
 
-  // CÁLCULOS FECHAMENTO
   const valorTotalMenu = itensPedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
   const quantidadeTotalItens = itensPedidos.reduce((total, item) => total + item.quantidade, 0);
   const valorServico = valorTotalMenu * 0.10;
@@ -85,10 +98,11 @@ export function Comanda() {
   const faltaPagar = totalCobrarFinal - totalJaPago;
   const troco = totalJaPago > totalCobrarFinal ? totalJaPago - totalCobrarFinal : 0;
 
-  const handleConfirmarPedido = () => {
+  const handleConfirmarPedido = async () => {
     if (contexto && idMesa) {
-      contexto.salvarComanda(Number(idMesa), itensPedidos, nomeCliente);
+      await contexto.salvarComanda(Number(idMesa), itensPedidos, nomeCliente);
       setStatusSalvo(true);
+      setItensLocaisPedidos([]); 
       setTimeout(() => setStatusSalvo(false), 2000);
     }
   };
@@ -102,7 +116,6 @@ export function Comanda() {
 
   const handleAdicionarPagamento = (metodo: MetodoPagamento) => {
     const valorAAdicionar = parseFloat(valorDigitado.replace(',', '.'));
-    
     if (!valorAAdicionar || isNaN(valorAAdicionar) || valorAAdicionar <= 0) {
       if (faltaPagar > 0) {
         setPagamentosLancados(prev => [...prev, { metodo, valor: faltaPagar }]);
@@ -118,400 +131,341 @@ export function Comanda() {
     setPagamentosLancados(prev => prev.filter((_, i) => i !== index));
   };
 
-  const concluirMesaFinal = () => {
-    if (faltaPagar > 0.01) { 
-      alert('Ainda faltam valores a receber!');
-      return;
-    }
-    contexto?.finalizarMesa(Number(idMesa), decisaoDezPorCento, pagamentosLancados);
+  const concluirMesaFinal = async () => {
+    if (faltaPagar > 0.01) { alert('Ainda faltam valores a receber!'); return; }
+    await contexto?.finalizarMesa(Number(idMesa), decisaoDezPorCento, pagamentosLancados);
     navigate('/');
   };
 
   const formatarMoeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  const produtosDaCategoriaAtiva = useMemo(() => {
+    return cardapioAtivo.filter(p => p.categoria === categoriaAtiva);
+  }, [cardapioAtivo, categoriaAtiva]);
+
+  const subcategoriasDisponiveis = useMemo(() => {
+    const subs = produtosDaCategoriaAtiva.map(p => p.subcategoria).filter(Boolean) as string[];
+    return Array.from(new Set(subs)).sort();
+  }, [produtosDaCategoriaAtiva]);
+
+  const produtosExibidosMenu = useMemo(() => {
+    if (!subcategoriaAtiva) return produtosDaCategoriaAtiva;
+    return produtosDaCategoriaAtiva.filter(p => p.subcategoria === subcategoriaAtiva);
+  }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-52 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
       
       {/* FUNDO */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-emerald-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
       {/* HEADER SUPERIOR */}
-      <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_15px_rgba(0,0,0,0.02)] px-6 py-4 flex items-center justify-between mb-2">
-        <button onClick={() => navigate('/mesas')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm rounded-full text-slate-600 active:scale-90 transition-all hover:bg-slate-50">
+      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm shadow-slate-200/50 px-4 md:px-8 py-4 flex items-center justify-between mb-6">
+        <button onClick={() => navigate('/mesas')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 active:shadow-inner transition-all hover:bg-slate-50">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <div className="text-center">
-          <h1 className="text-2xl font-black text-transparent bg-clip-text bg-linear-to-b from-slate-700 to-slate-950 tracking-tighter drop-shadow-sm leading-none">
+          <h1 className="text-[20px] font-black text-slate-900 tracking-widest leading-none uppercase drop-shadow-sm">
             MESA {idMesa}
           </h1>
-          <p className="text-emerald-500 font-black uppercase tracking-[0.2em] text-[9px] mt-1">Atendimento</p>
+          <p className="text-teal-600 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Atendimento</p>
         </div>
         <div className="w-10" />
       </header>
 
-      <main className="max-w-md mx-auto p-4 space-y-6 relative z-10">
+      {/* LAYOUT: Duas colunas no Desktop, uma no Mobile */}
+      <main className="max-w-6xl mx-auto px-4 md:px-8 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
         
-        {/* INPUT DE CLIENTE */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <input 
-            type="text" 
-            placeholder="Nome do Cliente (Opcional)" 
-            value={nomeCliente} 
-            onChange={(e) => setNomeCliente(e.target.value)} 
-            className="w-full pl-14 pr-5 py-4 bg-white/80 backdrop-blur-md rounded-3xl shadow-sm border border-slate-200 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 font-bold text-slate-800 transition-all" 
-          />
-        </div>
-
-        {/* CARRINHO (Total da Mesa) */}
-        <section className="space-y-3">
-          <button 
-            onClick={() => setMostrarItens(!mostrarItens)} 
-            className="w-full relative overflow-hidden rounded-[36px] bg-linear-to-b from-slate-800 to-slate-900 border border-slate-700 shadow-[0_8px_0_#0f172a,0_15px_20px_rgba(0,0,0,0.3)] active:shadow-[0_0px_0_#0f172a,0_0px_0_rgba(0,0,0,0)] active:translate-y-2 transition-all p-6 text-left group"
-          >
-            <div className="absolute inset-0 bg-white/5 rounded-[36px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <h2 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1 drop-shadow-sm">Total da Mesa</h2>
-                <p className="text-4xl font-black tracking-tighter text-white drop-shadow-md">{formatarMoeda(valorTotalMenu)}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider relative z-10">
-              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-              {quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'Item Adicionado' : 'Itens Adicionados'}
-            </div>
-          </button>
-
-          {/* LISTA DE ITENS DO CARRINHO */}
-          {mostrarItens && (
-            <div className="bg-white/80 backdrop-blur-md rounded-4xl border border-slate-200 p-3 shadow-inner animate-in slide-in-from-top-4 duration-300">
-              {itensPedidos.length === 0 ? (
-                <p className="text-center py-8 text-slate-400 text-sm font-bold">Nenhum item na mesa ainda.</p>
+        {/* COLUNA ESQUERDA: CARDÁPIO */}
+        <div className="w-full space-y-6 order-2 lg:order-1">
+          {!categoriaAtiva ? (
+            <section className="space-y-4 animate-in fade-in duration-500">
+              <h3 className="flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                <div className="w-12 h-px bg-slate-300"></div> Cardápio <div className="w-12 h-px bg-slate-300"></div>
+              </h3>
+              {categoriasDisponiveis.length === 0 ? (
+                <div className="bg-white p-8 rounded-4xl border border-dashed border-slate-300 text-center shadow-sm">
+                  <p className="text-slate-400 font-bold text-sm">O cardápio está vazio.</p>
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {itensPedidos.map(item => (
-                    <div key={item.id} className="flex flex-col p-4 bg-slate-50 rounded-[20px] border border-slate-100 shadow-sm relative overflow-hidden">
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 flex flex-col items-start pr-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-slate-800 text-base leading-tight">{item.produto.nome}</span>
-                            <button onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 transition-colors active:scale-90">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                            </button>
-                          </div>
-                          {item.observacao && <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest mt-1.5 bg-indigo-100/50 px-2.5 py-1 rounded-md">OBS: {item.observacao}</span>}
-                          <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest">{formatarMoeda(item.produto.preco)}</span>
-                        </div>
-
-                        {/* QUANTIDADE NO CARRINHO */}
-                        <div className="flex items-center gap-3 bg-white p-1.5 rounded-[18px] border border-slate-200 shadow-sm">
-                          <button onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl shadow-[0_3px_0_#e2e8f0] active:shadow-none active:translate-y-0.75 transition-all">
-                            -
-                          </button>
-                          <span className="font-black text-slate-800 text-base w-5 text-center">{item.quantidade}</span>
-                          <button onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 font-black text-xl shadow-[0_3px_0_#a7f3d0] active:shadow-none active:translate-y-0.75 transition-all">
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 🔔 ALERTA: Botão de Entregar (Aparece se a cozinha marcou como 'pronto') */}
-                      {item.statusCozinha === 'pronto' && (
-                        <button 
-                          onClick={() => marcarComoEntregue(item.id)}
-                          className="mt-4 w-full bg-linear-to-b from-emerald-400 to-emerald-500 border border-emerald-300 shadow-[0_5px_0_#047857] active:shadow-[0_0px_0_#047857] active:translate-y-1.25 text-white py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                        >
-                          <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
-                        </button>
-                      )}
-
-                      {/* Selo de Entregue */}
-                      {item.statusCozinha === 'entregue' && (
-                        <div className="mt-3 bg-emerald-50 border border-emerald-200 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-1.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Item Entregue
-                        </div>
-                      )}
-                    </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
+                  {categoriasDisponiveis.map((cat) => (
+                    <button key={cat} onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
+                      <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform">{getEmojiParaCategoria(cat)}</div>
+                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter text-center leading-tight drop-shadow-sm">{cat}</span>
+                    </button>
                   ))}
                 </div>
               )}
-            </div>
-          )}
-        </section>
-
-        {/* NAVEGAÇÃO DO CARDÁPIO */}
-        {!categoriaAtiva ? (
-          <section className="space-y-4 pt-4 animate-in fade-in">
-            <h3 className="flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
-              <div className="w-13 h-px bg-slate-400"></div> Cardápio <div className="w-13 h-px bg-slate-400"></div>
-            </h3>
-            
-            {categoriasDisponiveis.length === 0 ? (
-              <div className="bg-white p-8 rounded-3xl border border-dashed border-slate-200 text-center">
-                <p className="text-slate-400 font-bold text-sm">O cardápio está vazio.</p>
+            </section>
+          ) : (
+            <section className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center justify-between px-2 mb-4">
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase">
+                  <span className="bg-white w-12 h-12 rounded-[20px] shadow-sm shadow-slate-200/50 flex items-center justify-center border border-slate-200">{getEmojiParaCategoria(categoriaAtiva)}</span> 
+                  {categoriaAtiva}
+                </h3>
+                <button onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
+                  Voltar
+                </button>
               </div>
-            ) : (
-              // CATEGORIAS: BOTÕES
-              <div className="grid grid-cols-3 gap-4">
-                {categoriasDisponiveis.map((cat) => (
-                  <button 
-                    key={cat} 
-                    onClick={() => setCategoriaAtiva(cat)} 
-                    className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-[0_6px_0_#e2e8f0,0_10px_15px_rgba(0,0,0,0.05)] active:shadow-[0_0px_0_#e2e8f0,0_0px_0_rgba(0,0,0,0)] active:translate-y-1.5 transition-all group"
-                  >
-                    <div className="w-12 h-12 bg-white rounded-full shadow-inner border border-slate-100 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform">
-                      {getEmojiParaCategoria(cat)}
-                    </div>
-                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter text-center leading-tight">
-                      {cat}
-                    </span>
-                  </button>
-                ))}
+
+              {subcategoriasDisponiveis.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide mb-2">
+                  <button onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
+                  {subcategoriasDisponiveis.map(sub => (
+                    <button key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
+                  ))}
+                </div>
+              )}
+              
+              {/* GRADE DE PRODUTOS */}
+              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mt-6">
+                {produtosExibidosMenu.length === 0 ? (
+                   <p className="text-center text-xs uppercase tracking-widest font-bold text-slate-400 py-10 bg-white rounded-3xl border border-slate-200 border-dashed col-span-full">Nenhum produto nesta variação.</p>
+                ) : (
+                  produtosExibidosMenu.map((produto) => {
+                    const estaEsgotado = produto.estoque !== undefined && produto.estoque <= 0;
+                    return (
+                      <button key={produto.id} onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left transform-style-3d group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
+                        
+                        <div className="flex items-center gap-5 flex-1 min-w-0">
+                          {produto.imagem_url ? (
+                            <img src={produto.imagem_url} alt={produto.nome} className={`w-16 h-16 rounded-[20px] object-cover border border-slate-200 shadow-sm shrink-0 transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`} />
+                          ) : (
+                            <div className={`w-16 h-16 rounded-[20px] bg-slate-50 border border-slate-200 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`}>
+                              {getEmojiParaCategoria(produto.categoria)}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <p className={`font-bold text-base tracking-tight mb-3 leading-none truncate uppercase ${estaEsgotado ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{produto.nome}</p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-teal-900 font-bold text-sm bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100 shadow-sm tabular-nums">{formatarMoeda(produto.preco)}</span>
+                              {produto.subcategoria && !estaEsgotado && <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest bg-slate-100 border border-slate-200 px-2 py-1 rounded-md truncate max-w-20">{produto.subcategoria}</span>}
+                              {estaEsgotado && <span className="text-[9px] bg-rose-50 border border-rose-100 text-rose-500 px-2 py-1 rounded-md font-bold uppercase tracking-widest shadow-sm">Esgotado</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BOTÃO + */}
+                        <div className={`w-10 h-10 rounded-4xl flex items-center justify-center shadow-inner border shrink-0 transition-transform group-hover:scale-110 ${estaEsgotado ? 'bg-slate-200 text-slate-400 border-slate-300' : 'bg-teal-600 text-white border-teal-500 shadow-md shadow-teal-500/30'}`}>
+                          {estaEsgotado ? <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>}
+                        </div>
+
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* COLUNA DIREITA */}
+        <div className="w-full order-1 lg:order-2 lg:sticky lg:top-24 space-y-8">
+          
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Nome do Cliente" 
+              value={nomeCliente} 
+              onChange={(e) => setNomeCliente(e.target.value)} 
+              className="w-full pl-12 pr-5 py-3 bg-white backdrop-blur-md rounded-3xl shadow-sm shadow-slate-300/50 border border-slate-300 focus:outline-none focus:border-teal-900 focus:ring-4 focus:ring-teal-400/10 font-bold text-slate-800 transition-all uppercase tracking-wide text-sm" 
+            />
+          </div>
+
+          <section className="space-y-4">
+            <button onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-[36px] bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-xl shadow-slate-900/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner transition-all p-7 text-left group">
+              <div className="absolute inset-0 bg-white/5 rounded-[36px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 drop-shadow-sm">Total da Mesa</h2>
+                  <p className="text-[32px] md:text-4xl font-black tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
+                </div>
+                <div className={`w-10 h-10 rounded-2xl bg-white/10 border border-white/20 shadow-inner flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </div>
+              <div className="mt-5 inline-flex items-center gap-2.5 text-teal-400 text-[10px] font-bold uppercase tracking-widest relative z-10 bg-black/20 self-start px-3 py-1.5 rounded-full border border-white/5">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-teal-500 animate-pulse shadow-md shadow-teal-500/50"></span>
+                {quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'Item Adicionado' : 'Itens Adicionados'}
+              </div>
+            </button>
+
+            {mostrarItens && (
+              <div className="bg-white/90 backdrop-blur-xl rounded-[36px] border border-slate-200 p-3 shadow-lg shadow-slate-200/50 animate-in slide-in-from-top-4 duration-300 lg:max-h-[50vh] lg:overflow-y-auto scrollbar-hide">
+                {itensPedidos.length === 0 ? (
+                  <p className="text-center py-10 text-slate-400 text-[11px] font-bold uppercase tracking-widest">Nenhum item na mesa.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {itensPedidos.map(item => (
+                      <div key={item.id} className="flex flex-col p-4 bg-slate-50 rounded-[28px] border border-slate-100 shadow-sm relative overflow-hidden hover:border-slate-200 transition-colors">
+                        <div className="flex items-center justify-between gap-3">
+                          {item.produto.imagem_url ? (
+                            <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl shrink-0 shadow-sm">{getEmojiParaCategoria(item.produto.categoria)}</div>
+                          )}
+                          <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
+                            <div className="flex items-center gap-2 w-full">
+                              <span className="font-black text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
+                              <button onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                              </button>
+                            </div>
+                            {item.observacao && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-widest mt-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md truncate max-w-full">OBS: {item.observacao}</span>}
+                            <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest tabular-nums">{formatarMoeda(item.produto.preco)}</span>
+                          </div>
+                          <div className="flex items-center gap-3 bg-white p-1.5 rounded-[20px] border border-slate-200 shadow-sm shrink-0">
+                            <button onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
+                            <span className="font-black text-slate-800 text-base w-4 text-center tabular-nums">{item.quantidade}</span>
+                            <button onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                          </div>
+                        </div>
+                        {item.statusCozinha === 'pronto' && (
+                          <button onClick={() => marcarComoEntregue(item.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                            <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </section>
-        ) : (
-          /* PRODUTOS DENTRO DA CATEGORIA */
-          <section className="space-y-4 animate-in slide-in-from-right-4 duration-300 pt-2">
-            
-            {/* Cabecalho da Categoria */}
-            <div className="flex items-center justify-between px-2 mb-6">
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                <span className="bg-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center border border-slate-100">{getEmojiParaCategoria(categoriaAtiva)}</span> 
-                {categoriaAtiva}
-              </h3>
-              <button onClick={() => setCategoriaAtiva(null)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2 rounded-full active:bg-slate-100 hover:text-slate-600 transition-colors shadow-sm">
-                Voltar
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {cardapioAtivo.filter(p => p.categoria === categoriaAtiva).map((produto) => {
-                const estaEsgotado = produto.estoque !== undefined && produto.estoque === 0;
-                
-                return (
-                  <button 
-                    key={produto.id} 
-                    onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} 
-                    disabled={estaEsgotado} 
-                    className={`w-full p-4 rounded-[28px] border flex justify-between items-center transition-all text-left
-                      ${estaEsgotado 
-                        ? 'bg-slate-100 border-slate-200 opacity-60 grayscale cursor-not-allowed' 
-                        : 'bg-white border-slate-200 shadow-[0_6px_0_#e2e8f0] active:shadow-[0_0px_0_#e2e8f0] active:translate-y-1.5 hover:border-emerald-300'
-                      }`}
-                  >
-                    <div className="flex-1 pr-4">
-                      <p className={`font-black text-base tracking-tight mb-1 ${estaEsgotado ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
-                        {produto.nome}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-600 font-black text-sm bg-emerald-50 px-2 py-0.5 rounded-md">
-                          {formatarMoeda(produto.preco)}
-                        </span>
-                        {estaEsgotado && <span className="text-[9px] bg-rose-100 text-rose-600 px-2 py-1 rounded-md font-black uppercase tracking-widest">Esgotado</span>}
-                      </div>
-                    </div>
-                    
-                    {/* Botão de Adicionar ao Cardápio */}
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border
-                      ${estaEsgotado ? 'bg-slate-200 text-slate-400 border-slate-300' : 'bg-emerald-500 text-white border-emerald-400 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2)]'}
-                    `}>
-                      {estaEsgotado ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
-        {(itensPedidos.length > 0 || nomeCliente !== '') && (
-          <div className="pt-10 pb-6 flex justify-center">
-            <button 
-              onClick={() => setEtapaModal(1)} 
-              className="text-rose-500 font-black text-[11px] py-4 px-8 rounded-full hover:bg-rose-50 border-2 border-rose-200 transition-colors uppercase tracking-[0.2em] w-full text-center"
-            >
-              Encerrar Atendimento
+          {/* BOTÕES DE AÇÃO NO DESKTOP  */}
+          <div className="hidden lg:flex w-full gap-3 mt-6">
+            {(itensPedidos.length > 0 || nomeCliente !== '') && (
+              <button onClick={() => setEtapaModal(1)} className="flex-1 bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 py-4.5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-sm shadow-slate-200/50 active:scale-95 active:shadow-inner transition-all">
+                Encerrar
+              </button>
+            )}
+            <button onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
+              <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
+              {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
             </button>
           </div>
-        )}
+        </div>
       </main>
 
-      {/* BOTÃO SALVAR */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 z-20 bg-linear-to-t from-slate-50 via-slate-50/95 to-transparent pointer-events-none">
-        <div className="max-w-md mx-auto pointer-events-auto pb-2">
-          <button 
-            onClick={handleConfirmarPedido} 
-            className={`w-full text-white font-black py-5 rounded-[28px] border transition-all flex justify-between items-center px-8 shadow-[0_8px_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-2
-              ${statusSalvo ? 'bg-slate-800 border-slate-700' : 'bg-linear-to-b from-emerald-500 to-emerald-600 border-emerald-400'}
-            `}
-          >
-            <span className="text-lg uppercase tracking-widest">{statusSalvo ? 'Salvo!' : 'Confirmar Pedido'}</span>
-            {!statusSalvo && (
-              <>
-                <div className="h-8 w-0.5 bg-white/20 mx-2 rounded-full" />
-                <span className="text-2xl drop-shadow-md">{formatarMoeda(valorTotalMenu)}</span>
-              </>
-            )}
+      {/* STICKY BOTTOM BAR NO MOBILE */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
+        <div className="flex items-center gap-3 max-w-md mx-auto">
+          {(itensPedidos.length > 0 || nomeCliente !== '') && (
+            <button onClick={() => setEtapaModal(1)} className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 py-4 rounded-[20px] font-bold text-[10px] uppercase tracking-widest active:scale-95 active:shadow-inner transition-all shadow-sm">
+              Encerrar
+            </button>
+          )}
+          <button onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
+            <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
+            {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
           </button>
         </div>
       </div>
 
-      {/* MODAL OBSERVAÇÃO */}
+      {/* MODAL: OBSERVAÇÃO */}
       {itemEditandoObs && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl flex flex-col relative z-50 animate-in slide-in-from-bottom-10 sm:zoom-in-95">
-            <h3 className="text-xl font-black text-slate-900 mb-1 tracking-tight">Observação para a Cozinha</h3>
-            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-6 bg-emerald-50 inline-block px-3 py-1 rounded-full">{itemEditandoObs.produto.nome}</p>
-            
-            <textarea 
-              autoFocus 
-              value={textoObs} 
-              onChange={(e) => setTextoObs(e.target.value)} 
-              placeholder="Ex: Sem cebola, gelo e limão à parte..." 
-              className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 resize-none h-32 text-slate-700 font-bold text-sm mb-6" 
-            />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setItemEditandoObs(null)}></div>
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl shadow-slate-900/50 flex flex-col relative z-50 animate-in slide-in-from-bottom-10 sm:zoom-in-95 border border-white/20">
+            <h3 className="text-[20px] font-bold text-slate-900 mb-1 tracking-tight uppercase">Nota para Cozinha</h3>
+            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-6 bg-indigo-50 border border-indigo-100 inline-block px-3 py-1.5 rounded-md truncate max-w-full">{itemEditandoObs.produto.nome}</p>
+            <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/10 resize-none h-32 text-slate-800 font-bold text-sm mb-6 transition-all shadow-inner shadow-slate-100/50" />
             <div className="flex gap-4">
-              <button onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-black py-4 rounded-2xl text-sm transition-colors">Cancelar</button>
-              <button onClick={salvarObservacao} className="flex-[1.5] bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 text-sm active:scale-95 transition-transform">Salvar Nota</button>
+              <button onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-4 rounded-[20px] text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
+              <button onClick={salvarObservacao} className="flex-[1.5] bg-linear-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* FLUXO DE ENCERRAMENTO (3 ETAPAS) - Estilo Apple Pay/Nubank */}
+      {/* MODAL: FECHAMENTO DE CONTA */}
       {etapaModal > 0 && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95">
+          <div className="absolute inset-0" onClick={() => setEtapaModal(0)}></div>
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl shadow-slate-900/50 relative overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 border border-white/20">
             
-            {/* ETAPA 1: CONFIRMAR FECHAMENTO */}
             {etapaModal === 1 && (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-left-4">
-                <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mb-6 text-rose-500 border border-rose-100 shadow-inner">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M2 6h20"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/><path d="M10 10v6"/><path d="M14 10v6"/></svg>
-                </div>
-                <h3 className="text-3xl font-black text-slate-900 text-center mb-2 tracking-tighter">Fechar Conta?</h3>
-                <p className="text-center text-slate-500 font-bold mb-8 text-sm">A mesa não poderá mais receber novos itens.</p>
+                <div className="w-24 h-24 bg-rose-50 rounded-[28px] flex items-center justify-center mb-6 text-rose-500 border border-rose-100 shadow-inner shadow-rose-200/50"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M2 6h20"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/><path d="M10 10v6"/><path d="M14 10v6"/></svg></div>
+                <h3 className="text-3xl font-bold text-slate-900 text-center mb-2 tracking-tighter uppercase">Fechar Conta?</h3>
+                <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest">A mesa não recebe mais itens.</p>
                 <div className="flex gap-4 w-full">
-                  <button onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-black py-4 rounded-[20px] hover:bg-slate-200 transition-colors">Voltar</button>
-                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-linear-to-b from-rose-500 to-rose-600 text-white font-black py-4 rounded-[20px] shadow-[0_6px_0_#be123c] active:shadow-none active:translate-y-1.5 transition-all">
-                    Avançar
-                  </button>
+                  <button onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-[20px] hover:bg-slate-200 text-[12px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
+                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-linear-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
                 </div>
               </div>
             )}
 
-            {/* ETAPA 2: 10% DE SERVIÇO */}
             {etapaModal === 2 && (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-right-4">
-                <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 text-emerald-500 border border-emerald-100 shadow-inner">
-                  <span className="text-4xl font-black">%</span>
+                <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center mb-5 text-teal-500 border border-teal-100 shadow-inner shadow-teal-200/50"><span className="text-4xl font-bold">%</span></div>
+                <h3 className="text-2xl font-bold text-slate-900 text-center mb-6 tracking-tight uppercase">Taxa de Serviço</h3>
+                <div className="w-full bg-slate-50 p-6 rounded-4xl mb-8 border border-slate-200 space-y-4 shadow-inner shadow-slate-100/50">
+                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-500"><span>Consumo</span><span className="tabular-nums">{formatarMoeda(valorTotalMenu)}</span></div>
+                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-teal-500 border-b border-slate-200 pb-5"><span>Serviço (10%)</span><span className="tabular-nums">+ {formatarMoeda(valorServico)}</span></div>
+                  <div className="flex justify-between items-center pt-2"><span className="font-bold text-slate-900 text-[10px] uppercase tracking-widest">Total Final</span><span className="text-2xl font-bold text-slate-900 tracking-tighter tabular-nums">{formatarMoeda(valorTotalMenu + valorServico)}</span></div>
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 text-center mb-6 tracking-tight">Taxa de Serviço</h3>
-                
-                <div className="w-full bg-slate-50 p-5 rounded-3xl mb-8 border border-slate-200 space-y-3">
-                  <div className="flex justify-between items-center text-sm font-bold text-slate-500"><span>Consumo</span><span>{formatarMoeda(valorTotalMenu)}</span></div>
-                  <div className="flex justify-between items-center text-sm font-black text-emerald-500 border-b border-slate-200 pb-4"><span>Serviço (10%)</span><span>+ {formatarMoeda(valorServico)}</span></div>
-                  <div className="flex justify-between items-center pt-2"><span className="font-black text-slate-900 text-sm uppercase tracking-widest">Total Final</span><span className="text-2xl font-black text-slate-900 tracking-tight">{formatarMoeda(valorTotalMenu + valorServico)}</span></div>
-                </div>
-
                 <div className="flex flex-col gap-4 w-full">
-                  <button onClick={() => avancaParaPagamento(true)} className="w-full bg-linear-to-b from-slate-800 to-slate-900 text-white font-black py-5 rounded-3xl shadow-[0_6px_0_#0f172a] active:shadow-none active:translate-y-1.5 transition-all text-lg">
-                    Sim, com serviço
-                  </button>
-                  <button onClick={() => avancaParaPagamento(false)} className="w-full bg-white border-2 border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 font-bold py-4 rounded-3xl transition-colors">
-                    Não, só o consumo
-                  </button>
-                  <button onClick={() => setEtapaModal(1)} className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center py-2 hover:text-slate-600">
-                    &larr; Voltar
-                  </button>
+                  <button onClick={() => avancaParaPagamento(true)} className="w-full bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
+                  <button onClick={() => avancaParaPagamento(false)} className="w-full bg-white border border-slate-300 text-slate-600 hover:text-slate-700 hover:bg-zinc-100 font-bold py-4 rounded-4xl transition-colors text-[10px] uppercase tracking-widest active:scale-95 shadow-sm">Não, só consumo</button>
+                  <button onClick={() => setEtapaModal(1)} className="mt-0 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center py-2 hover:text-slate-600 transition-colors">&larr; Voltar</button>
                 </div>
               </div>
             )}
 
-            {/* ETAPA 3: O CARRINHO DE PAGAMENTOS */}
             {etapaModal === 3 && (
               <div className="w-full flex flex-col animate-in slide-in-from-right-4">
-                <h3 className="text-2xl font-black text-slate-900 text-center mb-6 tracking-tight">Pagamento</h3>
-                
-                <div className="flex justify-between items-center bg-slate-50 p-5 rounded-3xl mb-4 border border-slate-200">
+                <h3 className="text-2xl font-black text-slate-900 text-center mb-6 tracking-tight uppercase">Pagamento</h3>
+                <div className="flex justify-between items-center bg-slate-50 p-6 rounded-[28px] mb-4 border border-slate-200 shadow-inner shadow-slate-100/50">
                   <span className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Total a Pagar</span>
-                  <span className="font-black text-3xl text-slate-800 tracking-tighter">{formatarMoeda(totalCobrarFinal)}</span>
+                  <span className="font-black text-3xl text-slate-800 tracking-tighter tabular-nums">{formatarMoeda(totalCobrarFinal)}</span>
                 </div>
-
-                {/* Lista de Pagamentos já Lançados */}
+                
                 {pagamentosLancados.length > 0 && (
-                  <div className="mb-4 space-y-2 max-h-32 overflow-y-auto pr-1">
+                  <div className="mb-4 space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
                     {pagamentosLancados.map((pag, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-4 bg-emerald-50 text-emerald-700 rounded-[20px] border border-emerald-100 shadow-sm">
+                      <div key={idx} className="flex justify-between items-center p-4 bg-teal-50 text-teal-700 rounded-[20px] border border-teal-100 shadow-sm">
                         <span className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2">✅ {pag.metodo}</span>
                         <div className="flex items-center gap-4">
-                          <span className="font-black text-lg">{formatarMoeda(pag.valor)}</span>
-                          <button onClick={() => handleRemoverPagamento(idx)} className="w-7 h-7 flex items-center justify-center bg-emerald-200/50 rounded-full text-emerald-700 active:scale-90 hover:bg-emerald-200 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
+                          <span className="font-black text-[17px] tabular-nums">{formatarMoeda(pag.valor)}</span>
+                          <button onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Se ainda falta pagar, mostra os inputs */}
+                
                 {faltaPagar > 0 ? (
-                  <div className="space-y-4 bg-white border border-slate-200 p-5 rounded-[28px] shadow-sm">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Restante</span>
-                      <span className="font-black text-rose-500 text-xl">{formatarMoeda(faltaPagar)}</span>
-                    </div>
-
+                  <div className="space-y-4 bg-white border border-slate-200 p-5 rounded-4xl shadow-sm shadow-slate-200/50">
+                    <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Restante</span><span className="font-bold text-rose-500 text-xl tabular-nums">{formatarMoeda(faltaPagar)}</span></div>
                     <div className="relative">
-                      <span className="absolute left-4 top-4 text-base font-black text-slate-300">R$</span>
-                      <input 
-                        type="text" inputMode="decimal"
-                        value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)}
-                        placeholder={faltaPagar.toFixed(2)}
-                        className="w-full bg-slate-50 pl-12 pr-4 py-4 rounded-[20px] border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 font-black text-2xl text-slate-800 transition-all"
-                      />
+                      <span className="absolute left-5 top-4.5 text-[15px] font-bold text-slate-400">R$</span>
+                      <input type="text" inputMode="decimal" value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)} placeholder={faltaPagar.toFixed(2)} className="w-full bg-slate-50 pl-14 pr-5 py-4 rounded-[20px] border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white font-black text-[22px] text-slate-800 transition-all shadow-inner shadow-slate-100/50 tabular-nums" />
                     </div>
-
                     <div className="grid grid-cols-2 gap-3 mt-2">
-                      <button onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest border border-indigo-200/50 active:scale-95 transition-all shadow-sm">PIX</button>
-                      <button onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest border border-amber-200/50 active:scale-95 transition-all shadow-sm">Crédito</button>
-                      <button onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest border border-blue-200/50 active:scale-95 transition-all shadow-sm">Débito</button>
-                      <button onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest border border-emerald-200/50 active:scale-95 transition-all shadow-sm">Dinheiro</button>
+                      <button onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-indigo-200 active:scale-95 transition-all shadow-sm">PIX</button>
+                      <button onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 hover:border-amber-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-amber-200 active:scale-95 transition-all shadow-sm">Crédito</button>
+                      <button onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-blue-200 active:scale-95 transition-all shadow-sm">Débito</button>
+                      <button onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-teal-50 text-teal-600 hover:bg-teal-100 hover:border-teal-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-teal-200 active:scale-95 transition-all shadow-sm">Dinheiro</button>
                     </div>
                   </div>
                 ) : (
-                  // Se pagou tudo ou deu dinheiro a mais (Troco)
-                  <div className="text-center py-8 bg-emerald-500 text-white rounded-[28px] shadow-lg shadow-emerald-200 animate-in zoom-in-95">
-                    <span className="text-5xl block mb-3 drop-shadow-md">🎉</span>
-                    <span className="font-black text-xl uppercase tracking-widest block drop-shadow-sm">Conta Paga</span>
-                    {troco > 0 && <span className="font-bold text-emerald-100 mt-2 block bg-black/10 mx-6 py-2 rounded-xl border border-white/20">Devolver Troco: <span className="font-black text-white">{formatarMoeda(troco)}</span></span>}
+                  <div className="text-center py-8 bg-linear-to-b from-teal-500 to-teal-600 border border-teal-500 text-white rounded-4xl shadow-lg shadow-teal-500/40 animate-in zoom-in-95">
+                    <span className="text-[20px] block mb-3 drop-shadow-md">🎉</span><span className="font-bold text-xl uppercase tracking-widest block drop-shadow-sm">Conta Paga</span>
+                    {troco > 0 && <span className="font-bold text-teal-100 mt-3 block bg-black/15 mx-6 py-2.5 rounded-2xl border border-white/20 text-xs shadow-inner">Devolver Troco: <span className="font-black text-white tabular-nums text-sm ml-1">{formatarMoeda(troco)}</span></span>}
                   </div>
                 )}
-
+                
                 <div className="flex gap-4 mt-8">
-                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-black py-5 rounded-3xl transition-colors">Voltar</button>
-                  <button 
-                    disabled={faltaPagar > 0.01} 
-                    onClick={concluirMesaFinal} 
-                    className={`flex-[1.5] text-white font-black py-5 rounded-3xl transition-all text-lg
-                      ${faltaPagar <= 0.01 ? 'bg-linear-to-b from-slate-800 to-slate-900 shadow-[0_6px_0_#0f172a] active:shadow-none active:translate-y-1.5' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}
-                    `}
-                  >
-                    Encerrar
-                  </button>
+                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-zinc-300 text-zinc-900 hover:bg-zinc-300 font-bold uppercase tracking-widest py-3 rounded-4xl transition-colors text-[10px] active:scale-95">Voltar</button>
+                  <button disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
                 </div>
               </div>
             )}

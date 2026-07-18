@@ -5,6 +5,8 @@ export interface Produto {
   nome: string;
   preco: number;
   categoria: string;
+  subcategoria?: string;
+  imagem_url?: string;
   estoque?: number;
   precoCusto?: number;
   ativo?: boolean;
