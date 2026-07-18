@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';
 import type { ReactNode } from 'react';
 import { AppContext, AppProvider } from './context/AppContext';
+import { Analytics } from '@vercel/analytics/react';
 
 import { Home } from './pages/Home';
 import { MesasGarcom } from './pages/MesasGarcom';
@@ -59,6 +60,7 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </AppProvider>
   );
 }
