@@ -1,6 +1,7 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';
+import type { ReactNode } from 'react';
 import { AppContext, AppProvider } from './context/AppContext';
 
 import { Home } from './pages/Home';
@@ -15,16 +16,15 @@ import { Estoque } from './pages/Estoque';
 import { AdminMesas } from './pages/AdminMesas'; 
 import { Cozinha } from './pages/Cozinha';
 
-
 // SEGURANÇA 1: Garante que está LOGADO
-function RotaProtegida({ children }: { children: JSX.Element }) {
+function RotaProtegida({ children }: { children: ReactNode }) {
   const contexto = useContext(AppContext);
   if (!contexto?.garcomLogado) return <Navigate to="/login" replace />;
   return children;
 }
 
 // SEGURANÇA 2: Garante que é ADMIN
-function RotaAdmin({ children }: { children: JSX.Element }) {
+function RotaAdmin({ children }: { children: ReactNode }) {
   const contexto = useContext(AppContext);
   // Se não for admin, chuta de volta para a Home
   if (contexto?.garcomLogado?.cargo !== 'admin') {
