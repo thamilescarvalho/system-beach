@@ -3,6 +3,7 @@ import { useContext, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import type { Produto } from '../types';
+import imageCompression from 'browser-image-compression';
 
 export function Estoque() {
   const navigate = useNavigate();
@@ -137,9 +138,33 @@ export function Estoque() {
     let urlFinal = novoProdImagemUrl;
 
     if (novoProdImagemFile && contexto?.uploadImagemProduto) {
-      const urlUploaded = await contexto.uploadImagemProduto(novoProdImagemFile);
-      if (urlUploaded) {
-        urlFinal = urlUploaded;
+      try {
+        // COMPRESSOR DE IMAGEM
+        const opcoesCompressao = {
+          maxSizeMB: 0.1,          // Força a imagem a ter no máximo 100 KB
+          maxWidthOrHeight: 1024,  // Trava a resolução em HD
+          useWebWorker: true,      // Não trava a tela enquanto comprime
+          initialQuality: 0.8      // Qualidade de 80%
+        };
+        
+        console.log(`Tamanho original: ${(novoProdImagemFile.size / 1024 / 1024).toFixed(3)} MB`);
+        
+        // Espreme o arquivo
+        const arquivoComprimido = await imageCompression(novoProdImagemFile, opcoesCompressao);
+        
+        console.log(`Tamanho espremido: ${(arquivoComprimido.size / 1024 / 1024).toFixed(3)} MB`);
+        // FIM DO COMPRESSOR
+
+        // Envia o arquivo COMPRIMIDO para o Supabase em vez do original
+        const urlUploaded = await contexto.uploadImagemProduto(arquivoComprimido);
+        if (urlUploaded) {
+          urlFinal = urlUploaded;
+        }
+      } catch (erro) {
+        console.error('Erro ao comprimir a imagem:', erro);
+        alert('Ocorreu um erro ao processar a foto. Tente uma imagem mais leve.');
+        setSalvandoProduto(false);
+        return; // Interrompe o salvamento se a foto der erro
       }
     }
 
