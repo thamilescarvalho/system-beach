@@ -1,4 +1,5 @@
 // src/context/AppContext.tsx
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
@@ -20,7 +21,6 @@ interface AppContextType {
   produtos: Produto[];
   historicoEstoque: MovimentacaoEstoque[];
   
-  // FUNÇÕES DE SEGURANÇA E UPLOAD
   uploadImagemProduto: (file: File) => Promise<string | null>;
   autenticarUsuario: (id: string, pinDigitado: string) => Promise<boolean>; 
   
@@ -45,7 +45,6 @@ interface AppContextType {
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // CRIPTOGRAFIA DE SESSÃO
@@ -67,7 +66,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [historicoVendas, setHistoricoVendas] = useState<VendaFechada[]>([]);
   
-  // Mantém a sessão ativa
   const [garcomLogado, setGarcomLogadoState] = useState<Garcom | null>(() => {
     const salvo = localStorage.getItem('coral_device_session');
     return salvo ? decifrarSessao(salvo) : null;
@@ -82,13 +80,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setGarcomLogadoState(garcom);
   };
 
-  // AUTO-LOGOUT (30 Minutos de inatividade)
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
 
-    const fazerLogout = () => {
-      setGarcomLogado(null); 
-    };
+    const fazerLogout = () => setGarcomLogado(null);
 
     const resetarTimer = () => {
       clearTimeout(timeoutId);
@@ -142,60 +137,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (dadosMesas) {
         setMesas(dadosMesas.map((m: DBMesa) => ({
-          id: m.id, 
-          numero: m.numero, 
-          status: m.status, 
-          garcomId: m.garcom_id, 
-          garcomNome: m.garcom_nome, 
-          nomeCliente: m.nome_cliente || '', 
-          itens: m.itens || []
+          id: m.id, numero: m.numero, status: m.status, garcomId: m.garcom_id, garcomNome: m.garcom_nome, nomeCliente: m.nome_cliente || '', itens: m.itens || []
         })));
       }
 
       if (resProds.data) setProdutos(resProds.data.map((p: DBProduto) => ({
-        id: p.id, 
-        nome: p.nome, 
-        categoria: p.categoria, 
-        subcategoria: p.subcategoria, 
-        imagem_url: p.imagem_url, 
-        preco: Number(p.preco), 
-        precoCusto: Number(p.preco_custo), 
-        estoque: p.estoque, 
-        ativo: p.ativo
+        id: p.id, nome: p.nome, categoria: p.categoria, subcategoria: p.subcategoria, imagem_url: p.imagem_url, preco: Number(p.preco), precoCusto: Number(p.preco_custo), estoque: p.estoque, ativo: p.ativo
       })));
 
       if (resVendas.data) setHistoricoVendas(resVendas.data.map((v: DBVenda) => ({
-        id: v.id, 
-        numeroMesa: v.numero_mesa, 
-        total: Number(v.total), 
-        pagamentos: v.pagamentos || [], 
-        itens: v.itens || [], 
-        garcomNome: v.garcom_nome, 
-        nomeCliente: v.nome_cliente || '', 
-        status: (v.status === 'fechada' ? 'concluida' : v.status) as 'concluida' | 'cancelada', 
-        dataFechamento: v.data_fechamento, 
-        canceladoPor: v.cancelado_por, 
-        motivoCancelamento: v.motivo_cancelamento, 
-        dataCancelamento: v.data_cancelamento
+        id: v.id, numeroMesa: v.numero_mesa, total: Number(v.total), pagamentos: v.pagamentos || [], itens: v.itens || [], garcomNome: v.garcom_nome, nomeCliente: v.nome_cliente || '', status: (v.status === 'fechada' ? 'concluida' : v.status) as 'concluida' | 'cancelada', dataFechamento: v.data_fechamento, canceladoPor: v.cancelado_por, motivoCancelamento: v.motivo_cancelamento, dataCancelamento: v.data_cancelamento
       })));
 
       if (resUsers.data) setUsuarios(resUsers.data.map((u: DBUsuario) => ({
-        id: u.id, 
-        nome: u.nome, 
-        avatar: u.avatar, 
-        pin: '***', 
-        cargo: u.cargo
+        id: u.id, nome: u.nome, avatar: u.avatar, pin: '***', cargo: u.cargo
       })));
 
       if (resHist.data) setHistoricoEstoque(resHist.data.map((h: DBHistorico) => ({
-        id: h.id, 
-        produtoId: h.produto_id, 
-        produtoNome: h.produto_nome, 
-        tipo: h.tipo as 'entrada' | 'inventario' | 'estorno', 
-        quantidade: h.quantidade, 
-        precoCusto: Number(h.preco_custo), 
-        usuarioNome: h.usuario_nome, 
-        data: h.data
+        id: h.id, produtoId: h.produto_id, produtoNome: h.produto_nome, tipo: h.tipo as 'entrada' | 'inventario' | 'estorno', quantidade: h.quantidade, precoCusto: Number(h.preco_custo), usuarioNome: h.usuario_nome, data: h.data
       })));
     } catch (err) {
       console.error("Erro fatal ao carregar dados:", err);
@@ -203,56 +162,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const inicializar = async () => {
-      await carregarDados();
-    };
-
+    const inicializar = async () => await carregarDados();
     inicializar();
 
     const channel = supabase.channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public' }, () => {
         carregarDados();
-      })
-      .subscribe();
+      }).subscribe();
       
     return () => { supabase.removeChannel(channel); };
   }, [carregarDados]);
 
-  // AUTENTICAÇÃO NO SERVIDOR 
   const autenticarUsuario = async (id: string, pinDigitado: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nome, avatar, cargo') 
-        .eq('id', id)
-        .eq('pin', pinDigitado)
-        .single();
-
+      const { data, error } = await supabase.from('usuarios').select('id, nome, avatar, cargo').eq('id', id).eq('pin', pinDigitado).single();
       if (data && !error) {
-        const sessaoSegura: Garcom = {
-          id: data.id,
-          nome: data.nome,
-          avatar: data.avatar,
-          cargo: data.cargo,
-          pin: '***' 
-        };
-        setGarcomLogado(sessaoSegura);
+        setGarcomLogado({ id: data.id, nome: data.nome, avatar: data.avatar, cargo: data.cargo, pin: '***' });
         return true;
       }
       return false;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   };
 
   const uploadImagemProduto = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-
       const { error: uploadError } = await supabase.storage.from('produtos').upload(fileName, file);
       if (uploadError) throw uploadError;
-
       const { data } = supabase.storage.from('produtos').getPublicUrl(fileName);
       return data.publicUrl;
     } catch (error) {
@@ -262,19 +199,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const adicionarProduto = async (novo: Omit<Produto, 'id'>) => {
-    await supabase.from('produtos').insert([{ 
-      nome: novo.nome, categoria: novo.categoria, subcategoria: novo.subcategoria, imagem_url: novo.imagem_url, preco: novo.preco, preco_custo: novo.precoCusto, estoque: novo.estoque, ativo: true 
-    }]);
+    await supabase.from('produtos').insert([{ nome: novo.nome, categoria: novo.categoria, subcategoria: novo.subcategoria, imagem_url: novo.imagem_url, preco: novo.preco, preco_custo: novo.precoCusto, estoque: novo.estoque, ativo: true }]);
   };
 
   const editarProduto = async (id: number, atualizacao: Partial<Produto>) => {
-    await supabase.from('produtos').update({ 
-      nome: atualizacao.nome, categoria: atualizacao.categoria, subcategoria: atualizacao.subcategoria, imagem_url: atualizacao.imagem_url, preco: atualizacao.preco, preco_custo: atualizacao.precoCusto, ativo: atualizacao.ativo 
-    }).eq('id', id);
+    await supabase.from('produtos').update({ nome: atualizacao.nome, categoria: atualizacao.categoria, subcategoria: atualizacao.subcategoria, imagem_url: atualizacao.imagem_url, preco: atualizacao.preco, preco_custo: atualizacao.precoCusto, ativo: atualizacao.ativo }).eq('id', id);
   };
 
   const excluirProduto = async (id: number) => { await supabase.from('produtos').delete().eq('id', id); };
-
+  
   const alternarStatusProduto = async (id: number) => {
     const p = produtos.find(x => x.id === id);
     if (p) await supabase.from('produtos').update({ ativo: !p.ativo }).eq('id', id);
@@ -315,33 +248,105 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // SALVAMENTO
   const salvarComanda = async (numero: number, itens: ItemComanda[], nomeCliente: string) => {
     const mesa = mesas.find(m => m.numero === numero);
     if (!mesa) return;
 
     const diferencasEstoque = new Map<number, number>();
-    const itensParaCozinha = itens.map(itemNovo => {
-      const itemAntigo = mesa.itens.find(i => i.produto.id === itemNovo.produto.id);
-      let novoStatus = itemNovo.statusCozinha || 'pendente';
-      if (itemAntigo && itemNovo.quantidade > itemAntigo.quantidade) novoStatus = 'pendente';
-      return { ...itemNovo, statusCozinha: novoStatus, horaPedido: itemNovo.horaPedido || new Date().toISOString() };
+    const itensFinaisParaMesa: ItemComanda[] = [];
+
+    const qtdAntigaPorProduto = new Map<number, number>();
+    mesa.itens.forEach(item => {
+      qtdAntigaPorProduto.set(item.produto.id, (qtdAntigaPorProduto.get(item.produto.id) || 0) + item.quantidade);
     });
 
-    itens.forEach(itemNovo => {
-      const qtdAntiga = mesa.itens.find(i => i.produto.id === itemNovo.produto.id)?.quantidade || 0;
-      diferencasEstoque.set(itemNovo.produto.id, itemNovo.quantidade - qtdAntiga);
+    const qtdNovaPorProduto = new Map<number, number>();
+    itens.forEach(item => {
+      qtdNovaPorProduto.set(item.produto.id, (qtdNovaPorProduto.get(item.produto.id) || 0) + item.quantidade);
     });
-    mesa.itens.forEach(itemAntigo => { if (!itens.find(i => i.produto.id === itemAntigo.produto.id)) diferencasEstoque.set(itemAntigo.produto.id, -itemAntigo.quantidade); });
 
-    const novoStatus = itens.length > 0 ? 'ocupada' : 'livre';
+    for (const [prodId, novaQtd] of qtdNovaPorProduto) {
+      const antiga = qtdAntigaPorProduto.get(prodId) || 0;
+      diferencasEstoque.set(prodId, novaQtd - antiga);
+    }
+    for (const [prodId, antigaQtd] of qtdAntigaPorProduto) {
+      if (!qtdNovaPorProduto.has(prodId)) {
+        diferencasEstoque.set(prodId, -antigaQtd); 
+      }
+    }
+
+    const produtosUnicosCart = Array.from(new Set(itens.map(i => i.produto.id)));
+
+    produtosUnicosCart.forEach(prodId => {
+      const novaQtdTotal = qtdNovaPorProduto.get(prodId) || 0;
+      const itensAntigosDesseProduto = mesa.itens.filter(i => i.produto.id === prodId);
+      const antigaQtdTotal = qtdAntigaPorProduto.get(prodId) || 0;
+
+      if (novaQtdTotal > antigaQtdTotal) {
+        itensFinaisParaMesa.push(...itensAntigosDesseProduto);
+        
+        const diff = novaQtdTotal - antigaQtdTotal;
+        const itemTemplate = itens.find(i => i.produto.id === prodId)!; 
+        
+        itensFinaisParaMesa.push({
+          ...itemTemplate,
+          id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, 
+          quantidade: diff,
+          statusCozinha: 'pendente',
+          horaPedido: new Date().toISOString()
+        });
+
+      } else if (novaQtdTotal === antigaQtdTotal) {
+        itensFinaisParaMesa.push(...itensAntigosDesseProduto);
+
+      } else {
+        let toRemove = antigaQtdTotal - novaQtdTotal;
+        
+        const sortedAntigos = [...itensAntigosDesseProduto].sort((a, b) => {
+          if (a.statusCozinha === 'pendente' && b.statusCozinha !== 'pendente') return -1;
+          if (a.statusCozinha !== 'pendente' && b.statusCozinha === 'pendente') return 1;
+          return 0;
+        });
+
+        for (const oldItem of sortedAntigos) {
+          if (toRemove <= 0) {
+            itensFinaisParaMesa.push(oldItem);
+          } else if (oldItem.quantidade > toRemove) {
+            itensFinaisParaMesa.push({ ...oldItem, quantidade: oldItem.quantidade - toRemove });
+            toRemove = 0;
+          } else {
+            toRemove -= oldItem.quantidade; 
+          }
+        }
+      }
+    });
+
+    // 5. Finalização e Gravação
+    const novoStatus = itensFinaisParaMesa.length > 0 ? 'ocupada' : 'livre';
     let donoId = mesa.garcomId; let donoNome = mesa.garcomNome;
-    if (novoStatus === 'ocupada') { if (!donoId && garcomLogado) { donoId = garcomLogado.id; donoNome = garcomLogado.nome; } } else { donoId = undefined; donoNome = undefined; }
+    
+    if (novoStatus === 'ocupada') { 
+      if (!donoId && garcomLogado) { donoId = garcomLogado.id; donoNome = garcomLogado.nome; } 
+    } else { 
+      donoId = undefined; donoNome = undefined; 
+    }
 
-    await supabase.from('mesas').update({ status: novoStatus, itens: itensParaCozinha, nome_cliente: nomeCliente, garcom_id: donoId, garcom_nome: donoNome }).eq('numero', numero);
+    await supabase.from('mesas').update({ 
+      status: novoStatus, 
+      itens: itensFinaisParaMesa, 
+      nome_cliente: nomeCliente, 
+      garcom_id: donoId, 
+      garcom_nome: donoNome 
+    }).eq('numero', numero);
 
+    // Abate do Estoque Oficial
     for (const [id, diff] of diferencasEstoque) {
+      if (diff === 0) continue;
       const p = produtos.find(x => x.id === id);
-      if (p && p.estoque !== undefined) { await supabase.from('produtos').update({ estoque: Math.max(0, p.estoque - diff) }).eq('id', id); }
+      if (p && p.estoque !== undefined) { 
+        await supabase.from('produtos').update({ estoque: Math.max(0, p.estoque - diff) }).eq('id', id); 
+      }
     }
   };
 
@@ -354,7 +359,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (incluirServico) {
         const valorServico = totalDaMesa * 0.10;
         totalDaMesa += valorServico;
-        itensFinais.push({ id: 'taxa-servico-10', produto: { id: 999, nome: 'Taxa de Serviço (10%)', preco: valorServico, categoria: 'Outros', ativo: true }, quantidade: 1 });
+        itensFinais.push({ id: 'taxa-servico-10', produto: { id: 999, nome: 'Taxa de Serviço (10%)', preco: valorServico, categoria: 'Outros', ativo: true }, quantidade: 1, statusCozinha: 'entregue' });
       }
 
       await supabase.from('vendas').insert([{ numero_mesa: mesa.numero, nome_cliente: mesa.nomeCliente || '', garcom_nome: garcomLogado?.nome || 'Sistema', itens: itensFinais, total: totalDaMesa, pagamentos: pagamentosRealizados, status: 'fechada' }]);

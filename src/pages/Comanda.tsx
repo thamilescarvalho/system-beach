@@ -4,6 +4,41 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import type { Produto, ItemComanda, Pagamento, MetodoPagamento } from '../types';
 
+// INTERFACE
+const agruparItensParaInterface = (itens: ItemComanda[]): ItemComanda[] => {
+  const mapa = new Map<number, ItemComanda>();
+
+  itens.forEach(item => {
+    const prodId = item.produto.id;
+    if (mapa.has(prodId)) {
+      const existente = mapa.get(prodId)!;
+
+      let novoStatus: 'pronto' | 'pendente' | 'entregue';
+      if (existente.statusCozinha === 'pronto' || item.statusCozinha === 'pronto') {
+        novoStatus = 'pronto';
+      } else if (existente.statusCozinha === 'pendente' || item.statusCozinha === 'pendente') {
+        novoStatus = 'pendente';
+      } else {
+        novoStatus = 'entregue';
+      }
+
+      mapa.set(prodId, {
+        ...existente,
+        quantidade: existente.quantidade + item.quantidade,
+        statusCozinha: novoStatus,
+        observacao: item.observacao 
+          ? (existente.observacao && existente.observacao !== item.observacao 
+              ? `${existente.observacao} | ${item.observacao}` 
+              : item.observacao)
+          : existente.observacao
+      });
+    } else {
+      mapa.set(prodId, { ...item });
+    }
+  });
+  return Array.from(mapa.values());
+};
+
 export function Comanda() {
   const { idMesa } = useParams();
   const navigate = useNavigate();
@@ -11,7 +46,10 @@ export function Comanda() {
   
   const mesaAtual = contexto?.mesas.find(m => m.numero === Number(idMesa));
 
-  const itensIniciais = mesaAtual?.itens || [];
+  const itensIniciais = useMemo(() => {
+    return agruparItensParaInterface(mesaAtual?.itens || []);
+  }, [mesaAtual?.itens]);
+
   const nomeClienteInicial = mesaAtual?.nomeCliente || '';
   
   const [itensLocaisPedidos, setItensLocaisPedidos] = useState<ItemComanda[]>([]);
@@ -70,7 +108,7 @@ export function Comanda() {
           }
         }
         if (existe) return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item);
-        return [...prev, { id: Math.random().toString(), produto, quantidade: 1 }];
+        return [...prev, { id: `item_ui_${Date.now()}`, produto, quantidade: 1 }];
       } else {
         if (existe && existe.quantidade > 1) return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade - 1 } : item);
         return prev.filter(item => item.produto.id !== produto.id);
@@ -85,9 +123,20 @@ export function Comanda() {
     }
   };
   
-  const marcarComoEntregue = (idItem: string) => {
-    contexto?.atualizarStatusCozinha(Number(idMesa), idItem, 'entregue');
-    setItensPedidos(prev => prev.map(item => item.id === idItem ? { ...item, statusCozinha: 'entregue' } : item));
+  const marcarComoEntregue = (produtoId: number) => {
+    const lotesProntosNoBanco = mesaAtual?.itens?.filter(
+      i => i.produto.id === produtoId && i.statusCozinha === 'pronto'
+    ) || [];
+
+    lotesProntosNoBanco.forEach(itemCru => {
+      contexto?.atualizarStatusCozinha(Number(idMesa), itemCru.id, 'entregue');
+    });
+
+    if (itensLocaisPedidos.length > 0) {
+      setItensLocaisPedidos(prev => prev.map(item => 
+        item.produto.id === produtoId ? { ...item, statusCozinha: 'entregue' } : item
+      ));
+    }
   };
 
   const valorTotalMenu = itensPedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
@@ -162,7 +211,7 @@ export function Comanda() {
 
       {/* HEADER SUPERIOR */}
       <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm shadow-slate-200/50 px-4 md:px-8 py-4 flex items-center justify-between mb-6">
-        <button onClick={() => navigate('/mesas')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 active:shadow-inner transition-all hover:bg-slate-50">
+        <button type="button" onClick={() => navigate('/mesas')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 active:shadow-inner transition-all hover:bg-slate-50">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <div className="text-center">
@@ -191,7 +240,7 @@ export function Comanda() {
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
                   {categoriasDisponiveis.map((cat) => (
-                    <button key={cat} onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
+                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
                       <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform">{getEmojiParaCategoria(cat)}</div>
                       <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter text-center leading-tight drop-shadow-sm">{cat}</span>
                     </button>
@@ -206,16 +255,16 @@ export function Comanda() {
                   <span className="bg-white w-12 h-12 rounded-[20px] shadow-sm shadow-slate-200/50 flex items-center justify-center border border-slate-200">{getEmojiParaCategoria(categoriaAtiva)}</span> 
                   {categoriaAtiva}
                 </h3>
-                <button onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
+                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
                   Voltar
                 </button>
               </div>
 
               {subcategoriasDisponiveis.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide mb-2">
-                  <button onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
+                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
                   {subcategoriasDisponiveis.map(sub => (
-                    <button key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
+                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
                   ))}
                 </div>
               )}
@@ -228,7 +277,7 @@ export function Comanda() {
                   produtosExibidosMenu.map((produto) => {
                     const estaEsgotado = produto.estoque !== undefined && produto.estoque <= 0;
                     return (
-                      <button key={produto.id} onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left transform-style-3d group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
+                      <button key={produto.id} type="button" onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left transform-style-3d group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
                         
                         <div className="flex items-center gap-5 flex-1 min-w-0">
                           {produto.imagem_url ? (
@@ -279,7 +328,7 @@ export function Comanda() {
           </div>
 
           <section className="space-y-4">
-            <button onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-[36px] bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-xl shadow-slate-900/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner transition-all p-7 text-left group">
+            <button type="button" onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-[36px] bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-xl shadow-slate-900/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner transition-all p-7 text-left group">
               <div className="absolute inset-0 bg-white/5 rounded-[36px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <div className="flex justify-between items-start relative z-10">
                 <div>
@@ -313,7 +362,7 @@ export function Comanda() {
                           <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
                             <div className="flex items-center gap-2 w-full">
                               <span className="font-black text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
-                              <button onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
+                              <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                               </button>
                             </div>
@@ -321,13 +370,14 @@ export function Comanda() {
                             <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest tabular-nums">{formatarMoeda(item.produto.preco)}</span>
                           </div>
                           <div className="flex items-center gap-3 bg-white p-1.5 rounded-[20px] border border-slate-200 shadow-sm shrink-0">
-                            <button onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
+                            <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
                             <span className="font-black text-slate-800 text-base w-4 text-center tabular-nums">{item.quantidade}</span>
-                            <button onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                            <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
                           </div>
                         </div>
+                        
                         {item.statusCozinha === 'pronto' && (
-                          <button onClick={() => marcarComoEntregue(item.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                          <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
                             <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
                           </button>
                         )}
@@ -342,11 +392,11 @@ export function Comanda() {
           {/* BOTÕES DE AÇÃO NO DESKTOP  */}
           <div className="hidden lg:flex w-full gap-3 mt-6">
             {(itensPedidos.length > 0 || nomeCliente !== '') && (
-              <button onClick={() => setEtapaModal(1)} className="flex-1 bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 py-4.5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-sm shadow-slate-200/50 active:scale-95 active:shadow-inner transition-all">
+              <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 py-4.5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-sm shadow-slate-200/50 active:scale-95 active:shadow-inner transition-all">
                 Encerrar
               </button>
             )}
-            <button onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
+            <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
               <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
               {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
             </button>
@@ -358,11 +408,11 @@ export function Comanda() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
         <div className="flex items-center gap-3 max-w-md mx-auto">
           {(itensPedidos.length > 0 || nomeCliente !== '') && (
-            <button onClick={() => setEtapaModal(1)} className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 py-4 rounded-[20px] font-bold text-[10px] uppercase tracking-widest active:scale-95 active:shadow-inner transition-all shadow-sm">
+            <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 py-4 rounded-[20px] font-bold text-[10px] uppercase tracking-widest active:scale-95 active:shadow-inner transition-all shadow-sm">
               Encerrar
             </button>
           )}
-          <button onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
+          <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
             <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
             {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
           </button>
@@ -378,8 +428,8 @@ export function Comanda() {
             <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-6 bg-indigo-50 border border-indigo-100 inline-block px-3 py-1.5 rounded-md truncate max-w-full">{itemEditandoObs.produto.nome}</p>
             <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/10 resize-none h-32 text-slate-800 font-bold text-sm mb-6 transition-all shadow-inner shadow-slate-100/50" />
             <div className="flex gap-4">
-              <button onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-4 rounded-[20px] text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-              <button onClick={salvarObservacao} className="flex-[1.5] bg-linear-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
+              <button type="button" onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-4 rounded-[20px] text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
+              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-linear-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
             </div>
           </div>
         </div>
@@ -397,8 +447,8 @@ export function Comanda() {
                 <h3 className="text-3xl font-bold text-slate-900 text-center mb-2 tracking-tighter uppercase">Fechar Conta?</h3>
                 <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest">A mesa não recebe mais itens.</p>
                 <div className="flex gap-4 w-full">
-                  <button onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-[20px] hover:bg-slate-200 text-[12px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-linear-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
+                  <button type="button" onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-[20px] hover:bg-slate-200 text-[12px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
+                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-linear-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
                 </div>
               </div>
             )}
@@ -413,9 +463,9 @@ export function Comanda() {
                   <div className="flex justify-between items-center pt-2"><span className="font-bold text-slate-900 text-[10px] uppercase tracking-widest">Total Final</span><span className="text-2xl font-bold text-slate-900 tracking-tighter tabular-nums">{formatarMoeda(valorTotalMenu + valorServico)}</span></div>
                 </div>
                 <div className="flex flex-col gap-4 w-full">
-                  <button onClick={() => avancaParaPagamento(true)} className="w-full bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
-                  <button onClick={() => avancaParaPagamento(false)} className="w-full bg-white border border-slate-300 text-slate-600 hover:text-slate-700 hover:bg-zinc-100 font-bold py-4 rounded-4xl transition-colors text-[10px] uppercase tracking-widest active:scale-95 shadow-sm">Não, só consumo</button>
-                  <button onClick={() => setEtapaModal(1)} className="mt-0 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center py-2 hover:text-slate-600 transition-colors">&larr; Voltar</button>
+                  <button type="button" onClick={() => avancaParaPagamento(true)} className="w-full bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
+                  <button type="button" onClick={() => avancaParaPagamento(false)} className="w-full bg-white border border-slate-300 text-slate-600 hover:text-slate-700 hover:bg-zinc-100 font-bold py-4 rounded-4xl transition-colors text-[10px] uppercase tracking-widest active:scale-95 shadow-sm">Não, só consumo</button>
+                  <button type="button" onClick={() => setEtapaModal(1)} className="mt-0 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center py-2 hover:text-slate-600 transition-colors">&larr; Voltar</button>
                 </div>
               </div>
             )}
@@ -435,7 +485,7 @@ export function Comanda() {
                         <span className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2">✅ {pag.metodo}</span>
                         <div className="flex items-center gap-4">
                           <span className="font-black text-[17px] tabular-nums">{formatarMoeda(pag.valor)}</span>
-                          <button onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                         </div>
                       </div>
                     ))}
@@ -450,10 +500,10 @@ export function Comanda() {
                       <input type="text" inputMode="decimal" value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)} placeholder={faltaPagar.toFixed(2)} className="w-full bg-slate-50 pl-14 pr-5 py-4 rounded-[20px] border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white font-black text-[22px] text-slate-800 transition-all shadow-inner shadow-slate-100/50 tabular-nums" />
                     </div>
                     <div className="grid grid-cols-2 gap-3 mt-2">
-                      <button onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-indigo-200 active:scale-95 transition-all shadow-sm">PIX</button>
-                      <button onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 hover:border-amber-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-amber-200 active:scale-95 transition-all shadow-sm">Crédito</button>
-                      <button onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-blue-200 active:scale-95 transition-all shadow-sm">Débito</button>
-                      <button onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-teal-50 text-teal-600 hover:bg-teal-100 hover:border-teal-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-teal-200 active:scale-95 transition-all shadow-sm">Dinheiro</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-indigo-200 active:scale-95 transition-all shadow-sm">PIX</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 hover:border-amber-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-amber-200 active:scale-95 transition-all shadow-sm">Crédito</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-blue-200 active:scale-95 transition-all shadow-sm">Débito</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-teal-50 text-teal-600 hover:bg-teal-100 hover:border-teal-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-teal-200 active:scale-95 transition-all shadow-sm">Dinheiro</button>
                     </div>
                   </div>
                 ) : (
@@ -464,8 +514,8 @@ export function Comanda() {
                 )}
                 
                 <div className="flex gap-4 mt-8">
-                  <button onClick={() => setEtapaModal(2)} className="flex-1 bg-zinc-300 text-zinc-900 hover:bg-zinc-300 font-bold uppercase tracking-widest py-3 rounded-4xl transition-colors text-[10px] active:scale-95">Voltar</button>
-                  <button disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
+                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-zinc-300 text-zinc-900 hover:bg-zinc-300 font-bold uppercase tracking-widest py-3 rounded-4xl transition-colors text-[10px] active:scale-95">Voltar</button>
+                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
                 </div>
               </div>
             )}

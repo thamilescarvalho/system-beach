@@ -182,9 +182,10 @@ export function Login() {
         <div className={`flex lg:hidden flex-col items-center justify-center w-full mb-8 relative z-20 animate-in fade-in zoom-in duration-700 transition-all ${usuarioSelecionado ? 'opacity-0 scale-95 pointer-events-none blur-md' : 'opacity-100 scale-100 blur-0'}`}>
           <h2 className="text-[22px] font-black text-slate-800 tracking-tight drop-shadow-sm">
             <span className="text-cyan-600">T</span>-SYSTEM BEACH </h2>
-            <span className="text-[12px] font-bold uppercase tracking-widest text-cyan-700 mt-1">
-               BARRACA CORAL
-          </span>
+            <div className="bg-white text-slate-900 px-4 py-1.5 rounded-full shadow-sm border border-slate-200 flex items-center gap-2 justify-center mx-auto w-max">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 animate-pulse"></span>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">BARRACA CORAL</p>
+        </div>
         </div>
 
         <div className={`w-full max-w-md bg-white/70 backdrop-blur-4xl p-8 sm:p-10 rounded-[3rem] shadow-xl shadow-slate-300 border border-white transition-all duration-700 relative ${usuarioSelecionado ? 'opacity-0 scale-95 pointer-events-none blur-md' : 'opacity-100 scale-100 blur-0'}`}>
