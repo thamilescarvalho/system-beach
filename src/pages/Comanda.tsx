@@ -296,7 +296,7 @@ export function Comanda() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mt-6">
                 {produtosExibidosMenu.length === 0 ? (
                    <p className="text-center text-xs uppercase tracking-widest font-bold text-slate-400 py-10 bg-white rounded-3xl border border-slate-200 border-dashed col-span-full">Nenhum produto nesta variação.</p>
                 ) : (
@@ -379,7 +379,6 @@ export function Comanda() {
                   <div className="space-y-3">
                     
                     {/* LISTA DE ITENS DO CARRINHO */}
-
                     {itensPedidos.map(item => {
                       const itemCatNome = extrairNomeCategoria(item.produto.categoria);
                       
@@ -387,50 +386,48 @@ export function Comanda() {
                         <div key={item.id} className="flex flex-col p-4 bg-white rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden hover:border-slate-300 transition-colors">
                           <div className="flex items-start gap-4">
                             
-                            {/* Coluna 1: Imagem/Ícone */}
+                            {/* Coluna 1: Imagem/Ícone Fixa */}
                             <div className="shrink-0">
                               {item.produto.imagem_url ? (
-                                <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-[65px] h-[65px] rounded-[15px] object-cover border border-slate-200 shadow-sm" />
+                                <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-[68px] h-[68px] rounded-[18px] object-cover border border-slate-100 shadow-sm" />
                               ) : (
-                                <div className="w-[65px] h-[65px] rounded-[15px] bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm">
+                                <div className="w-[68px] h-[68px] rounded-[18px] bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm">
                                   <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} className="text-slate-400" size={28} />
                                 </div>
                               )}
                             </div>
                             
-                            {/* Coluna 2: Informações e Controles (Tight Layout) */}
-                            <div className="flex-1 min-w-0 flex flex-col pt-0.3">
+                            {/* Coluna 2: Conteúdo Flexível (Tight Layout + Anchoring) */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 min-h-[68px]">
                               
+                              {/* TOPO: Titulo e Botão Msg */}
                               <div className="flex items-start justify-between gap-2 w-full">
-                                {/* Nome produto */}
-                                <span className="font-bold text-slate-800 text-[12px] leading-tight uppercase truncate">
-                                  {item.produto.nome}
-                                </span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-bold text-slate-800 text-[12px] leading-tight uppercase truncate">
+                                    {item.produto.nome}
+                                  </span>
+                                  {item.observacao && (
+                                    <span className="text-[8px] text-indigo-700 font-bold uppercase tracking-widest bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md truncate max-w-full inline-block mt-1.5 self-start">
+                                      OBS: {item.observacao}
+                                    </span>
+                                  )}
+                                </div>
                                 
-                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
-                                  <LucideIcons.MessageSquarePlus size={14} strokeWidth={2.5}/>
+                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0 ml-2 mt-[-2px]">
+                                  <LucideIcons.MessageSquarePlus size={13} strokeWidth={2.5}/>
                                 </button>
                               </div>
-                              
-                              {/* Observação */}
-                              {item.observacao && (
-                                <div className="mt-1">
-                                  <span className="text-[8px] text-indigo-600 font-bold uppercase tracking-widest bg-indigo-50 border border-indigo-100 px-1 py-0.5 rounded-md truncate max-w-full inline-block">
-                                    OBS: {item.observacao}
-                                  </span>
-                                </div>
-                              )}
 
-                              {/* Preço e Botões*/}
-                              <div className="flex items-center justify-between w-full mt-0.3">
-                                <span className="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
+                              {/* BASE: Preço e Controles */}
+                              <div className="flex items-end justify-between w-full mt-2">
+                                <span className="text-[13px] text-slate-500 font-bold uppercase tracking-widest tabular-nums">
                                   {formatarMoeda(item.produto.preco)}
                                 </span>
                                 
-                                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-[14px] border border-slate-200 shadow-sm shrink-0">
-                                  <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-7 h-7 flex items-center justify-center rounded-[10px] bg-white border border-slate-200 text-rose-500 font-black text-lg hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
-                                  <span className="font-bold text-slate-800 text-[13px] w-3 text-center tabular-nums">{item.quantidade}</span>
-                                  <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-7 h-7 flex items-center justify-center rounded-[10px] bg-teal-50 border border-teal-200 text-teal-600 font-black text-lg hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-[12px] border border-slate-200 shadow-sm shrink-0">
+                                  <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-7 h-7 flex items-center justify-center rounded-[8px] bg-white border border-slate-200 text-rose-500 font-black text-lg hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
+                                  <span className="font-black text-slate-800 text-[13px] w-4 text-center tabular-nums">{item.quantidade}</span>
+                                  <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-7 h-7 flex items-center justify-center rounded-[8px] bg-teal-50 border border-teal-200 text-teal-600 font-black text-lg hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
                                 </div>
                               </div>
                               
@@ -438,8 +435,8 @@ export function Comanda() {
                           </div>
                           
                           {item.statusCozinha === 'pronto' && (
-                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-3 w-full bg-gradient-to-b from-teal-500 to-teal-600 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                              <span className="animate-bounce text-[10px]">🔔</span> Entregar na Mesa
+                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-4 w-full bg-gradient-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                              <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
                             </button>
                           )}
                         </div>
