@@ -261,7 +261,7 @@ export function Comanda() {
                   <p className="text-slate-400 font-bold text-sm">O cardápio está vazio.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-4">
                   {categoriasDisponiveis.map((cat) => (
                     <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
                       <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
