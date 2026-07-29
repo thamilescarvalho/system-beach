@@ -19,8 +19,7 @@ function IconeCategoria({ nomeCategoria, categorias, className = "", size = 28 }
   );
   
   const iconeNome = categoriaDoBanco?.icone || 'Package';
-  
-  const IconeComponente = ((LucideIcons as unknown) as Record<string, ElementType>)[iconeNome] || LucideIcons.Package;
+  const IconeComponente = (LucideIcons as unknown as Record<string, ElementType>)[iconeNome] || LucideIcons.Package;
   
   return <IconeComponente className={className} size={size} strokeWidth={2} />;
 }
@@ -231,7 +230,7 @@ export function Comanda() {
   }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
 
   return (
-    <div className="min-h-screen bg-slate-200 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
+    <div className="min-h-screen bg-slate-50 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
       
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
@@ -241,33 +240,34 @@ export function Comanda() {
           <LucideIcons.ArrowLeft size={20} strokeWidth={2.5}/>
         </button>
         <div className="text-center">
-          <h1 className="text-[20px] font-bold text-slate-900 tracking-widest leading-none uppercase drop-shadow-sm">
+          <h1 className="text-[20px] font-black text-slate-900 tracking-widest leading-none uppercase drop-shadow-sm">
             MESA {idMesa}
           </h1>
+          <p className="text-teal-600 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Atendimento</p>
         </div>
         <div className="w-10" />
       </header>
 
-      <main className="max-w-6xl mx-auto px-8 md:px-10 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
+      <main className="max-w-6xl mx-auto px-4 md:px-8 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
         
         <div className="w-full space-y-6 order-2 lg:order-1">
           {!categoriaAtiva ? (
             <section className="space-y-4 animate-in fade-in duration-500">
-              <h3 className="flex items-center justify-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
-                <div className="w-12 h-px bg-slate-400"></div> Cardápio <div className="w-12 h-px bg-slate-400"></div>
+              <h3 className="flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                <div className="w-12 h-px bg-slate-300"></div> Cardápio <div className="w-12 h-px bg-slate-300"></div>
               </h3>
               {categoriasDisponiveis.length === 0 ? (
                 <div className="bg-white p-8 rounded-4xl border border-dashed border-slate-300 text-center shadow-sm">
                   <p className="text-slate-400 font-bold text-sm">O cardápio está vazio.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
                   {categoriasDisponiveis.map((cat) => (
-                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
+                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-gradient-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
                       <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <IconeCategoria nomeCategoria={cat} categorias={categorias} className="text-slate-600 drop-shadow-sm" />
                       </div>
-                      <span className="text-[9px] font-bold text-slate-700 uppercase tracking-widest text-center leading-tight drop-shadow-sm">{cat}</span>
+                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter text-center leading-tight drop-shadow-sm">{cat}</span>
                     </button>
                   ))}
                 </div>
@@ -276,22 +276,22 @@ export function Comanda() {
           ) : (
             <section className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div className="flex items-center justify-between px-2 mb-4">
-                <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3 uppercase">
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase">
                   <span className="bg-white w-12 h-12 rounded-[20px] shadow-sm shadow-slate-200/50 flex items-center justify-center border border-slate-200">
                     <IconeCategoria nomeCategoria={categoriaAtiva} categorias={categorias} className="text-slate-600" />
                   </span> 
                   {categoriaAtiva}
                 </h3>
-                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
+                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
                   Voltar
                 </button>
               </div>
 
               {subcategoriasDisponiveis.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide mb-2">
-                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
+                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
                   {subcategoriasDisponiveis.map(sub => (
-                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
+                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
                   ))}
                 </div>
               )}
@@ -354,12 +354,12 @@ export function Comanda() {
           </div>
 
           <section className="space-y-4">
-            <button type="button" onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-[36px] bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-xl shadow-slate-900/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner transition-all p-7 text-left group">
+            <button type="button" onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-[36px] bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-xl shadow-slate-900/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner transition-all p-7 text-left group">
               <div className="absolute inset-0 bg-white/5 rounded-[36px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <div className="flex justify-between items-start relative z-10">
                 <div>
                   <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 drop-shadow-sm">Total da Mesa</h2>
-                  <p className="text-[32px] md:text-4xl font-bold tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
+                  <p className="text-[32px] md:text-4xl font-black tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-2xl bg-white/10 border border-white/20 shadow-inner flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
                   <LucideIcons.ChevronDown size={20} strokeWidth={3}/>
@@ -377,39 +377,69 @@ export function Comanda() {
                   <p className="text-center py-10 text-slate-400 text-[11px] font-bold uppercase tracking-widest">Nenhum item na mesa.</p>
                 ) : (
                   <div className="space-y-3">
+                    
+                    {/* LISTA DE ITENS DO CARRINHO */}
+
                     {itensPedidos.map(item => {
                       const itemCatNome = extrairNomeCategoria(item.produto.categoria);
                       
                       return (
-                        <div key={item.id} className="flex flex-col p-4 bg-slate-50 rounded-[28px] border border-slate-100 shadow-sm relative overflow-hidden hover:border-slate-200 transition-colors">
-                          <div className="flex items-center justify-between gap-3">
-                            {item.produto.imagem_url ? (
-                              <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0" />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
-                                <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} className="text-slate-400" size={22} />
-                              </div>
-                            )}
-                            <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
-                              <div className="flex items-center gap-2 w-full">
-                                <span className="font-bold text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
-                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
-                                  <LucideIcons.MessageSquarePlus size={12} strokeWidth={3}/>
+                        <div key={item.id} className="flex flex-col p-4 bg-white rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden hover:border-slate-300 transition-colors">
+                          <div className="flex items-start gap-4">
+                            
+                            {/* Coluna 1: Imagem/Ícone */}
+                            <div className="shrink-0">
+                              {item.produto.imagem_url ? (
+                                <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-[65px] h-[65px] rounded-[15px] object-cover border border-slate-200 shadow-sm" />
+                              ) : (
+                                <div className="w-[65px] h-[65px] rounded-[15px] bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm">
+                                  <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} className="text-slate-400" size={28} />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Coluna 2: Informações e Controles (Tight Layout) */}
+                            <div className="flex-1 min-w-0 flex flex-col pt-0.3">
+                              
+                              <div className="flex items-start justify-between gap-2 w-full">
+                                {/* Nome produto */}
+                                <span className="font-bold text-slate-800 text-[12px] leading-tight uppercase truncate">
+                                  {item.produto.nome}
+                                </span>
+                                
+                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
+                                  <LucideIcons.MessageSquarePlus size={14} strokeWidth={2.5}/>
                                 </button>
                               </div>
-                              {item.observacao && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-widest mt-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md truncate max-w-full">OBS: {item.observacao}</span>}
-                              <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest tabular-nums">{formatarMoeda(item.produto.preco)}</span>
-                            </div>
-                            <div className="flex items-center gap-3 bg-white p-1.5 rounded-[20px] border border-slate-200 shadow-sm shrink-0">
-                              <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
-                              <span className="font-black text-slate-800 text-base w-4 text-center tabular-nums">{item.quantidade}</span>
-                              <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                              
+                              {/* Observação */}
+                              {item.observacao && (
+                                <div className="mt-1">
+                                  <span className="text-[8px] text-indigo-600 font-bold uppercase tracking-widest bg-indigo-50 border border-indigo-100 px-1 py-0.5 rounded-md truncate max-w-full inline-block">
+                                    OBS: {item.observacao}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Preço e Botões*/}
+                              <div className="flex items-center justify-between w-full mt-0.3">
+                                <span className="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
+                                  {formatarMoeda(item.produto.preco)}
+                                </span>
+                                
+                                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-[14px] border border-slate-200 shadow-sm shrink-0">
+                                  <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-7 h-7 flex items-center justify-center rounded-[10px] bg-white border border-slate-200 text-rose-500 font-black text-lg hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
+                                  <span className="font-bold text-slate-800 text-[13px] w-3 text-center tabular-nums">{item.quantidade}</span>
+                                  <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-7 h-7 flex items-center justify-center rounded-[10px] bg-teal-50 border border-teal-200 text-teal-600 font-black text-lg hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                                </div>
+                              </div>
+                              
                             </div>
                           </div>
                           
                           {item.statusCozinha === 'pronto' && (
-                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                              <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
+                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-3 w-full bg-gradient-to-b from-teal-500 to-teal-600 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                              <span className="animate-bounce text-[10px]">🔔</span> Entregar na Mesa
                             </button>
                           )}
                         </div>
@@ -427,7 +457,7 @@ export function Comanda() {
                 Encerrar
               </button>
             )}
-            <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
+            <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-gradient-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
               <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
               {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
             </button>
@@ -442,7 +472,7 @@ export function Comanda() {
               Encerrar
             </button>
           )}
-          <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
+          <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-gradient-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
             <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
             {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
           </button>
@@ -458,7 +488,7 @@ export function Comanda() {
             <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/10 resize-none h-32 text-slate-800 font-bold text-sm mb-6 transition-all shadow-inner shadow-slate-100/50" />
             <div className="flex gap-4">
               <button type="button" onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-4 rounded-[20px] text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-linear-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
+              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
             </div>
           </div>
         </div>
@@ -476,7 +506,7 @@ export function Comanda() {
                 <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest">A mesa não recebe mais itens.</p>
                 <div className="flex gap-4 w-full">
                   <button type="button" onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-[20px] hover:bg-slate-200 text-[12px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-linear-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
+                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-gradient-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
                 </div>
               </div>
             )}
@@ -491,7 +521,7 @@ export function Comanda() {
                   <div className="flex justify-between items-center pt-2"><span className="font-bold text-slate-900 text-[10px] uppercase tracking-widest">Total Final</span><span className="text-2xl font-bold text-slate-900 tracking-tighter tabular-nums">{formatarMoeda(valorTotalMenu + valorServico)}</span></div>
                 </div>
                 <div className="flex flex-col gap-4 w-full">
-                  <button type="button" onClick={() => avancaParaPagamento(true)} className="w-full bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
+                  <button type="button" onClick={() => avancaParaPagamento(true)} className="w-full bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
                   <button type="button" onClick={() => avancaParaPagamento(false)} className="w-full bg-white border border-slate-300 text-slate-600 hover:text-slate-700 hover:bg-zinc-100 font-bold py-4 rounded-4xl transition-colors text-[10px] uppercase tracking-widest active:scale-95 shadow-sm">Não, só consumo</button>
                   <button type="button" onClick={() => setEtapaModal(1)} className="mt-0 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center py-2 hover:text-slate-600 transition-colors">&larr; Voltar</button>
                 </div>
@@ -535,7 +565,7 @@ export function Comanda() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 bg-linear-to-b from-teal-500 to-teal-600 border border-teal-500 text-white rounded-4xl shadow-lg shadow-teal-500/40 animate-in zoom-in-95">
+                  <div className="text-center py-8 bg-gradient-to-b from-teal-500 to-teal-600 border border-teal-500 text-white rounded-4xl shadow-lg shadow-teal-500/40 animate-in zoom-in-95">
                     <span className="text-[20px] block mb-3 drop-shadow-md">🎉</span><span className="font-bold text-xl uppercase tracking-widest block drop-shadow-sm">Conta Paga</span>
                     {troco > 0 && <span className="font-bold text-teal-100 mt-3 block bg-black/15 mx-6 py-2.5 rounded-2xl border border-white/20 text-xs shadow-inner">Devolver Troco: <span className="font-black text-white tabular-nums text-sm ml-1">{formatarMoeda(troco)}</span></span>}
                   </div>
@@ -543,7 +573,7 @@ export function Comanda() {
                 
                 <div className="flex gap-4 mt-8">
                   <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-zinc-300 text-zinc-900 hover:bg-zinc-300 font-bold uppercase tracking-widest py-3 rounded-4xl transition-colors text-[10px] active:scale-95">Voltar</button>
-                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-linear-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
+                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
                 </div>
               </div>
             )}
