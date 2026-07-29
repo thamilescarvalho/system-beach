@@ -28,7 +28,7 @@ export function MesaCard({ mesa }: MesaCardProps) {
         }
       `}
     >
-      <div className={`absolute inset-0 rounded-[32px] pointer-events-none transition-opacity ${isLivre ? 'bg-gradient-to-b from-white to-transparent opacity-50' : 'bg-white/10'}`} />
+      <div className={`absolute inset-0 rounded-[32px] pointer-events-none transition-opacity ${isLivre ? 'bg-linear-to-b from-white to-transparent opacity-50' : 'bg-white/10'}`} />
 
       {/* CABEÇALHO DO CARD */}
       <div className="flex justify-between items-start w-full relative z-10">
@@ -52,7 +52,7 @@ export function MesaCard({ mesa }: MesaCardProps) {
           {mesa.numero}
         </h3>
         
-        <div className={`mt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest min-h-[16px]
+        <div className={`mt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest min-h-4
           ${isLivre ? 'text-slate-400' : 'text-rose-100'}`}
         >
           {isLivre ? (
@@ -61,7 +61,7 @@ export function MesaCard({ mesa }: MesaCardProps) {
             <>
               {/* PONTO DE STATUS */}
               <span className="flex h-2 w-2 rounded-full bg-white animate-pulse shadow-sm shadow-white/80 shrink-0"></span>
-              <span className="truncate max-w-[80px] sm:max-w-[100px]">{mesa.nomeCliente || 'Sem Nome'}</span>
+              <span className="truncate max-w-20 sm:max-w-25">{mesa.nomeCliente || 'Sem Nome'}</span>
               <span className="opacity-50 shrink-0">•</span>
               <span className="shrink-0">{qtdItens} {qtdItens === 1 ? 'Item' : 'Itens'}</span>
             </>

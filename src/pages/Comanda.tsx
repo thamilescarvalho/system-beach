@@ -1,10 +1,37 @@
 // src/pages/Comanda.tsx
 import { useState, useContext, useMemo } from 'react';
+import type { ElementType } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import type { Produto, ItemComanda, Pagamento, MetodoPagamento } from '../types';
+import type { Produto, ItemComanda, Pagamento, MetodoPagamento, Categoria } from '../types';
+import * as LucideIcons from 'lucide-react';
 
-// INTERFACE
+interface IconeCategoriaProps {
+  nomeCategoria: string;
+  categorias: Categoria[];
+  className?: string;
+  size?: number;
+}
+
+function IconeCategoria({ nomeCategoria, categorias, className = "", size = 28 }: IconeCategoriaProps) {
+  const categoriaDoBanco = categorias.find(
+    c => c.nome.toLowerCase() === nomeCategoria.toLowerCase()
+  );
+  
+  const iconeNome = categoriaDoBanco?.icone || 'Package';
+  
+  const IconeComponente = ((LucideIcons as unknown) as Record<string, ElementType>)[iconeNome] || LucideIcons.Package;
+  
+  return <IconeComponente className={className} size={size} strokeWidth={2} />;
+}
+
+const extrairNomeCategoria = (categoria: unknown): string => {
+  if (typeof categoria === 'object' && categoria !== null && 'nome' in categoria) {
+    return String((categoria as Record<string, unknown>).nome);
+  }
+  return String(categoria);
+};
+
 const agruparItensParaInterface = (itens: ItemComanda[]): ItemComanda[] => {
   const mapa = new Map<number, ItemComanda>();
 
@@ -45,6 +72,7 @@ export function Comanda() {
   const contexto = useContext(AppContext);
   
   const mesaAtual = contexto?.mesas.find(m => m.numero === Number(idMesa));
+  const categorias = useMemo(() => contexto?.categorias || [], [contexto?.categorias]);
 
   const itensIniciais = useMemo(() => {
     return agruparItensParaInterface(mesaAtual?.itens || []);
@@ -69,7 +97,15 @@ export function Comanda() {
   const setNomeCliente = (nome: string) => setNomeClienteLocal(nome);
 
   const cardapioAtivo = useMemo(() => (contexto?.produtos || []).filter(p => p.ativo !== false && p.id !== 999), [contexto?.produtos]);
-  const categoriasDisponiveis = useMemo(() => Array.from(new Set(cardapioAtivo.map(p => p.categoria))), [cardapioAtivo]);
+  
+  const categoriasDisponiveis = useMemo(() => {
+    if (categorias && categorias.length > 0) {
+      return [...categorias]
+        .sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
+        .map(c => c.nome);
+    }
+    return Array.from(new Set(cardapioAtivo.map(p => extrairNomeCategoria(p.categoria))));
+  }, [categorias, cardapioAtivo]);
 
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [subcategoriaAtiva, setSubcategoriaAtiva] = useState<string | null>(null);
@@ -83,18 +119,6 @@ export function Comanda() {
   const [decisaoDezPorCento, setDecisaoDezPorCento] = useState(false);
   const [pagamentosLancados, setPagamentosLancados] = useState<Pagamento[]>([]);
   const [valorDigitado, setValorDigitado] = useState('');
-
-  const getEmojiParaCategoria = (nome: string) => {
-    const n = nome.toLowerCase();
-    if (n.includes('cerveja')) return '🍺';
-    if (n.includes('drink') || n.includes('destilado')) return '🍹';
-    if (n.includes('bebida') || n.includes('refrigerante') || n.includes('agua') || n.includes('água') || n.includes('suco')) return '🥤';
-    if (n.includes('petisco') || n.includes('porção') || n.includes('frita')) return '🍟';
-    if (n.includes('prato') || n.includes('refeição')) return '🍲';
-    if (n.includes('sobremesa') || n.includes('doce')) return '🍨';
-    if (n.includes('combo')) return '🍔';
-    return '🍽️';
-  };
 
   const manipularProduto = (produto: Produto, acao: 'mais' | 'menos') => {
     setItensPedidos(prev => {
@@ -189,7 +213,11 @@ export function Comanda() {
   const formatarMoeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const produtosDaCategoriaAtiva = useMemo(() => {
-    return cardapioAtivo.filter(p => p.categoria === categoriaAtiva);
+    if (!categoriaAtiva) return [];
+    return cardapioAtivo.filter(p => {
+      const nomeCat = extrairNomeCategoria(p.categoria);
+      return nomeCat.toLowerCase() === categoriaAtiva.toLowerCase();
+    });
   }, [cardapioAtivo, categoriaAtiva]);
 
   const subcategoriasDisponiveis = useMemo(() => {
@@ -205,44 +233,41 @@ export function Comanda() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
       
-      {/* FUNDO */}
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
-      {/* HEADER SUPERIOR */}
       <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm shadow-slate-200/50 px-4 md:px-8 py-4 flex items-center justify-between mb-6">
         <button type="button" onClick={() => navigate('/mesas')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 active:shadow-inner transition-all hover:bg-slate-50">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <LucideIcons.ArrowLeft size={20} strokeWidth={2.5}/>
         </button>
         <div className="text-center">
-          <h1 className="text-[20px] font-black text-slate-900 tracking-widest leading-none uppercase drop-shadow-sm">
+          <h1 className="text-[20px] font-bold text-slate-900 tracking-widest leading-none uppercase drop-shadow-sm">
             MESA {idMesa}
           </h1>
-          <p className="text-teal-600 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Atendimento</p>
         </div>
         <div className="w-10" />
       </header>
 
-      {/* LAYOUT: Duas colunas no Desktop, uma no Mobile */}
-      <main className="max-w-6xl mx-auto px-4 md:px-8 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
+      <main className="max-w-6xl mx-auto px-8 md:px-10 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
         
-        {/* COLUNA ESQUERDA: CARDÁPIO */}
         <div className="w-full space-y-6 order-2 lg:order-1">
           {!categoriaAtiva ? (
             <section className="space-y-4 animate-in fade-in duration-500">
-              <h3 className="flex items-center justify-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
-                <div className="w-12 h-px bg-slate-300"></div> Cardápio <div className="w-12 h-px bg-slate-300"></div>
+              <h3 className="flex items-center justify-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
+                <div className="w-12 h-px bg-slate-400"></div> Cardápio <div className="w-12 h-px bg-slate-400"></div>
               </h3>
               {categoriasDisponiveis.length === 0 ? (
                 <div className="bg-white p-8 rounded-4xl border border-dashed border-slate-300 text-center shadow-sm">
                   <p className="text-slate-400 font-bold text-sm">O cardápio está vazio.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-4">
                   {categoriasDisponiveis.map((cat) => (
                     <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-linear-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
-                      <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center text-3xl mb-3 group-hover:scale-110 transition-transform">{getEmojiParaCategoria(cat)}</div>
-                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter text-center leading-tight drop-shadow-sm">{cat}</span>
+                      <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <IconeCategoria nomeCategoria={cat} categorias={categorias} className="text-slate-600 drop-shadow-sm" />
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-700 uppercase tracking-widest text-center leading-tight drop-shadow-sm">{cat}</span>
                     </button>
                   ))}
                 </div>
@@ -251,31 +276,34 @@ export function Comanda() {
           ) : (
             <section className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div className="flex items-center justify-between px-2 mb-4">
-                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase">
-                  <span className="bg-white w-12 h-12 rounded-[20px] shadow-sm shadow-slate-200/50 flex items-center justify-center border border-slate-200">{getEmojiParaCategoria(categoriaAtiva)}</span> 
+                <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3 uppercase">
+                  <span className="bg-white w-12 h-12 rounded-[20px] shadow-sm shadow-slate-200/50 flex items-center justify-center border border-slate-200">
+                    <IconeCategoria nomeCategoria={categoriaAtiva} categorias={categorias} className="text-slate-600" />
+                  </span> 
                   {categoriaAtiva}
                 </h3>
-                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
+                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2.5 rounded-2xl active:scale-95 active:shadow-inner hover:text-slate-700 hover:shadow-sm transition-all shadow-sm">
                   Voltar
                 </button>
               </div>
 
               {subcategoriasDisponiveis.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide mb-2">
-                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
+                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
                   {subcategoriasDisponiveis.map(sub => (
-                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
+                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
                   ))}
                 </div>
               )}
               
-              {/* GRADE DE PRODUTOS */}
-              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mt-6">
+              <div className="grid grid-cols-1 gap-4 mt-6">
                 {produtosExibidosMenu.length === 0 ? (
                    <p className="text-center text-xs uppercase tracking-widest font-bold text-slate-400 py-10 bg-white rounded-3xl border border-slate-200 border-dashed col-span-full">Nenhum produto nesta variação.</p>
                 ) : (
                   produtosExibidosMenu.map((produto) => {
                     const estaEsgotado = produto.estoque !== undefined && produto.estoque <= 0;
+                    const catNome = extrairNomeCategoria(produto.categoria);
+                    
                     return (
                       <button key={produto.id} type="button" onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left transform-style-3d group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
                         
@@ -283,8 +311,8 @@ export function Comanda() {
                           {produto.imagem_url ? (
                             <img src={produto.imagem_url} alt={produto.nome} className={`w-16 h-16 rounded-[20px] object-cover border border-slate-200 shadow-sm shrink-0 transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`} />
                           ) : (
-                            <div className={`w-16 h-16 rounded-[20px] bg-slate-50 border border-slate-200 flex items-center justify-center text-3xl shrink-0 shadow-inner transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`}>
-                              {getEmojiParaCategoria(produto.categoria)}
+                            <div className={`w-16 h-16 rounded-[20px] bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`}>
+                              <IconeCategoria nomeCategoria={catNome} categorias={categorias} className="text-slate-400" size={24} />
                             </div>
                           )}
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -297,9 +325,8 @@ export function Comanda() {
                           </div>
                         </div>
 
-                        {/* BOTÃO + */}
                         <div className={`w-10 h-10 rounded-4xl flex items-center justify-center shadow-inner border shrink-0 transition-transform group-hover:scale-110 ${estaEsgotado ? 'bg-slate-200 text-slate-400 border-slate-300' : 'bg-teal-600 text-white border-teal-500 shadow-md shadow-teal-500/30'}`}>
-                          {estaEsgotado ? <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>}
+                          {estaEsgotado ? <LucideIcons.X size={20} strokeWidth={3}/> : <LucideIcons.Plus size={24} strokeWidth={3}/>}
                         </div>
 
                       </button>
@@ -311,12 +338,11 @@ export function Comanda() {
           )}
         </div>
 
-        {/* COLUNA DIREITA */}
         <div className="w-full order-1 lg:order-2 lg:sticky lg:top-24 space-y-8">
           
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <LucideIcons.User size={20} strokeWidth={2.5}/>
             </div>
             <input 
               type="text" 
@@ -336,7 +362,7 @@ export function Comanda() {
                   <p className="text-[32px] md:text-4xl font-black tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-2xl bg-white/10 border border-white/20 shadow-inner flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  <LucideIcons.ChevronDown size={20} strokeWidth={3}/>
                 </div>
               </div>
               <div className="mt-5 inline-flex items-center gap-2.5 text-teal-400 text-[10px] font-bold uppercase tracking-widest relative z-10 bg-black/20 self-start px-3 py-1.5 rounded-full border border-white/5">
@@ -351,45 +377,50 @@ export function Comanda() {
                   <p className="text-center py-10 text-slate-400 text-[11px] font-bold uppercase tracking-widest">Nenhum item na mesa.</p>
                 ) : (
                   <div className="space-y-3">
-                    {itensPedidos.map(item => (
-                      <div key={item.id} className="flex flex-col p-4 bg-slate-50 rounded-[28px] border border-slate-100 shadow-sm relative overflow-hidden hover:border-slate-200 transition-colors">
-                        <div className="flex items-center justify-between gap-3">
-                          {item.produto.imagem_url ? (
-                            <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0" />
-                          ) : (
-                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl shrink-0 shadow-sm">{getEmojiParaCategoria(item.produto.categoria)}</div>
-                          )}
-                          <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
-                            <div className="flex items-center gap-2 w-full">
-                              <span className="font-black text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
-                              <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                              </button>
+                    {itensPedidos.map(item => {
+                      const itemCatNome = extrairNomeCategoria(item.produto.categoria);
+                      
+                      return (
+                        <div key={item.id} className="flex flex-col p-4 bg-slate-50 rounded-[28px] border border-slate-100 shadow-sm relative overflow-hidden hover:border-slate-200 transition-colors">
+                          <div className="flex items-center justify-between gap-3">
+                            {item.produto.imagem_url ? (
+                              <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0" />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                                <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} className="text-slate-400" size={22} />
+                              </div>
+                            )}
+                            <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
+                              <div className="flex items-center gap-2 w-full">
+                                <span className="font-black text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
+                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
+                                  <LucideIcons.MessageSquarePlus size={12} strokeWidth={3}/>
+                                </button>
+                              </div>
+                              {item.observacao && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-widest mt-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md truncate max-w-full">OBS: {item.observacao}</span>}
+                              <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest tabular-nums">{formatarMoeda(item.produto.preco)}</span>
                             </div>
-                            {item.observacao && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-widest mt-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md truncate max-w-full">OBS: {item.observacao}</span>}
-                            <span className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest tabular-nums">{formatarMoeda(item.produto.preco)}</span>
+                            <div className="flex items-center gap-3 bg-white p-1.5 rounded-[20px] border border-slate-200 shadow-sm shrink-0">
+                              <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
+                              <span className="font-black text-slate-800 text-base w-4 text-center tabular-nums">{item.quantidade}</span>
+                              <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 bg-white p-1.5 rounded-[20px] border border-slate-200 shadow-sm shrink-0">
-                            <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-rose-500 font-black text-xl hover:bg-rose-50 active:scale-95 active:shadow-inner transition-all">-</button>
-                            <span className="font-black text-slate-800 text-base w-4 text-center tabular-nums">{item.quantidade}</span>
-                            <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 font-black text-xl hover:bg-teal-100 active:scale-95 active:shadow-inner transition-all">+</button>
-                          </div>
+                          
+                          {item.statusCozinha === 'pronto' && (
+                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                              <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
+                            </button>
+                          )}
                         </div>
-                        
-                        {item.statusCozinha === 'pronto' && (
-                          <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-4 w-full bg-linear-to-b from-teal-400 to-teal-500 border border-teal-500 border-t-teal-300/50 shadow-md shadow-teal-500/30 active:scale-[0.98] active:translate-y-0 active:shadow-inner text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                            <span className="animate-bounce text-base">🔔</span> Entregar na Mesa
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
           </section>
 
-          {/* BOTÕES DE AÇÃO NO DESKTOP  */}
           <div className="hidden lg:flex w-full gap-3 mt-6">
             {(itensPedidos.length > 0 || nomeCliente !== '') && (
               <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 py-4.5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-sm shadow-slate-200/50 active:scale-95 active:shadow-inner transition-all">
@@ -404,7 +435,6 @@ export function Comanda() {
         </div>
       </main>
 
-      {/* STICKY BOTTOM BAR NO MOBILE */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
         <div className="flex items-center gap-3 max-w-md mx-auto">
           {(itensPedidos.length > 0 || nomeCliente !== '') && (
@@ -419,7 +449,6 @@ export function Comanda() {
         </div>
       </div>
 
-      {/* MODAL: OBSERVAÇÃO */}
       {itemEditandoObs && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setItemEditandoObs(null)}></div>
@@ -435,7 +464,6 @@ export function Comanda() {
         </div>
       )}
 
-      {/* MODAL: FECHAMENTO DE CONTA */}
       {etapaModal > 0 && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setEtapaModal(0)}></div>
@@ -443,7 +471,7 @@ export function Comanda() {
             
             {etapaModal === 1 && (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-left-4">
-                <div className="w-24 h-24 bg-rose-50 rounded-[28px] flex items-center justify-center mb-6 text-rose-500 border border-rose-100 shadow-inner shadow-rose-200/50"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M2 6h20"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/><path d="M10 10v6"/><path d="M14 10v6"/></svg></div>
+                <div className="w-24 h-24 bg-rose-50 rounded-[28px] flex items-center justify-center mb-6 text-rose-500 border border-rose-100 shadow-inner shadow-rose-200/50"><LucideIcons.AlertTriangle size={40} strokeWidth={2.5}/></div>
                 <h3 className="text-3xl font-bold text-slate-900 text-center mb-2 tracking-tighter uppercase">Fechar Conta?</h3>
                 <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest">A mesa não recebe mais itens.</p>
                 <div className="flex gap-4 w-full">
@@ -485,7 +513,7 @@ export function Comanda() {
                         <span className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2">✅ {pag.metodo}</span>
                         <div className="flex items-center gap-4">
                           <span className="font-black text-[17px] tabular-nums">{formatarMoeda(pag.valor)}</span>
-                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><LucideIcons.X size={14} strokeWidth={4}/></button>
                         </div>
                       </div>
                     ))}

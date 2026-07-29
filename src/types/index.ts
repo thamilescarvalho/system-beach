@@ -1,5 +1,13 @@
 // src/types/index.ts
 
+export interface Categoria {
+  id: number;
+  nome: string;
+  icone: string;
+  ativo: boolean;
+  ordem?: number;
+}
+
 export interface Produto {
   id: number;
   nome: string;
@@ -17,7 +25,6 @@ export interface ItemComanda {
   produto: Produto;
   quantidade: number;
   observacao?: string;
-  // Controle de Cozinha
   statusCozinha?: 'pendente' | 'pronto' | 'entregue';
   horaPedido?: string;
 }
