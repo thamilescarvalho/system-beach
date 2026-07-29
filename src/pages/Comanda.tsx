@@ -231,7 +231,7 @@ export function Comanda() {
   }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
+    <div className="min-h-screen bg-slate-200 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
       
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
@@ -359,7 +359,7 @@ export function Comanda() {
               <div className="flex justify-between items-start relative z-10">
                 <div>
                   <h2 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 drop-shadow-sm">Total da Mesa</h2>
-                  <p className="text-[32px] md:text-4xl font-black tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
+                  <p className="text-[32px] md:text-4xl font-bold tracking-tighter text-white drop-shadow-md tabular-nums leading-none">{formatarMoeda(valorTotalMenu)}</p>
                 </div>
                 <div className={`w-10 h-10 rounded-2xl bg-white/10 border border-white/20 shadow-inner flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
                   <LucideIcons.ChevronDown size={20} strokeWidth={3}/>
@@ -392,7 +392,7 @@ export function Comanda() {
                             )}
                             <div className="flex-1 flex flex-col items-start pr-2 min-w-0">
                               <div className="flex items-center gap-2 w-full">
-                                <span className="font-black text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
+                                <span className="font-bold text-slate-800 text-sm leading-tight uppercase truncate">{item.produto.nome}</span>
                                 <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:border-indigo-200 hover:bg-indigo-50 transition-colors active:scale-90 shrink-0">
                                   <LucideIcons.MessageSquarePlus size={12} strokeWidth={3}/>
                                 </button>
