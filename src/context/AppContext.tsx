@@ -48,7 +48,6 @@ interface AppContextType {
   atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => Promise<void>;
   salvarComanda: (numeroMesa: number, itens: ItemComanda[], nomeCliente: string) => Promise<void>;
   
-  // Assinatura atualizada para receber o valor monetário da taxa
   finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[]) => Promise<void>;
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
 }
@@ -123,9 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const autenticarUsuario = async (id: string, pinDigitado: string): Promise<boolean> => { try { const { data, error } = await supabase.from('usuarios').select('id, nome, avatar, cargo').eq('id', id).eq('pin', pinDigitado).single(); if (data && !error) { setGarcomLogado({ id: data.id, nome: data.nome, avatar: data.avatar, cargo: data.cargo, pin: '***' }); return true; } return false; } catch { return false; } };
   const uploadImagemProduto = async (file: File): Promise<string | null> => { try { const fileExt = file.name.split('.').pop(); const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`; const { error: uploadError } = await supabase.storage.from('produtos').upload(fileName, file); if (uploadError) throw uploadError; const { data } = supabase.storage.from('produtos').getPublicUrl(fileName); return data.publicUrl; } catch (error) { console.error('Erro ao enviar imagem:', error); return null; } };
 
-  // =========================================================================
-  // CATEGORIAS: Forçamos o App a recarregar após cada ação (Sem delay!)
-  // =========================================================================
+
+  // CATEGORIAS
   const adicionarCategoria = async (nome: string, icone: string) => {
     const novaOrdem = categorias.length;
     await supabase.from('categorias').insert([{ nome, icone, ativo: true, ordem: novaOrdem }]);
@@ -148,10 +146,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await supabase.from('categorias').update({ ordem: cat.ordem }).eq('id', cat.id);
     }
   };
-
-  // =========================================================================
+  
   // PRODUTOS
-  // =========================================================================
   const adicionarProduto = async (novo: Omit<Produto, 'id'>) => { 
     await supabase.from('produtos').insert([{ nome: novo.nome, categoria: novo.categoria, subcategoria: novo.subcategoria, imagem_url: novo.imagem_url, preco: novo.preco, preco_custo: novo.precoCusto, estoque: novo.estoque, ativo: true }]); 
     await carregarDados();
