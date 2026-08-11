@@ -47,7 +47,9 @@ interface AppContextType {
   
   atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => Promise<void>;
   salvarComanda: (numeroMesa: number, itens: ItemComanda[], nomeCliente: string) => Promise<void>;
-  finalizarMesa: (numeroMesa: number, incluirServico: boolean, pagamentosRealizados: Pagamento[]) => Promise<void>;
+  
+  // Assinatura atualizada para receber o valor monetário da taxa
+  finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[]) => Promise<void>;
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
 }
 
@@ -122,33 +124,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const uploadImagemProduto = async (file: File): Promise<string | null> => { try { const fileExt = file.name.split('.').pop(); const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`; const { error: uploadError } = await supabase.storage.from('produtos').upload(fileName, file); if (uploadError) throw uploadError; const { data } = supabase.storage.from('produtos').getPublicUrl(fileName); return data.publicUrl; } catch (error) { console.error('Erro ao enviar imagem:', error); return null; } };
 
   // =========================================================================
-  // CATEGORIAS: Agora forçamos o App a recarregar após cada ação (Sem delay!)
+  // CATEGORIAS: Forçamos o App a recarregar após cada ação (Sem delay!)
   // =========================================================================
   const adicionarCategoria = async (nome: string, icone: string) => {
     const novaOrdem = categorias.length;
     await supabase.from('categorias').insert([{ nome, icone, ativo: true, ordem: novaOrdem }]);
-    await carregarDados(); // <--- O SEGREDO AQUI
+    await carregarDados(); 
   };
 
   const editarCategoria = async (id: number, nome: string, icone: string) => {
     await supabase.from('categorias').update({ nome, icone }).eq('id', id);
-    await carregarDados(); // <--- O SEGREDO AQUI
+    await carregarDados(); 
   };
 
   const excluirCategoria = async (id: number) => {
     await supabase.from('categorias').delete().eq('id', id);
-    await carregarDados(); // <--- O SEGREDO AQUI
+    await carregarDados(); 
   };
 
   const reordenarCategorias = async (categoriasReordenadas: Categoria[]) => {
-    setCategorias(categoriasReordenadas); // Atualiza instantaneamente a tela pro usuário não ver travando
+    setCategorias(categoriasReordenadas);
     for (const cat of categoriasReordenadas) {
       await supabase.from('categorias').update({ ordem: cat.ordem }).eq('id', cat.id);
     }
   };
 
   // =========================================================================
-  // PRODUTOS: Mesma coisa, garantia de tela atualizada rápido
+  // PRODUTOS
   // =========================================================================
   const adicionarProduto = async (novo: Omit<Produto, 'id'>) => { 
     await supabase.from('produtos').insert([{ nome: novo.nome, categoria: novo.categoria, subcategoria: novo.subcategoria, imagem_url: novo.imagem_url, preco: novo.preco, preco_custo: novo.precoCusto, estoque: novo.estoque, ativo: true }]); 
@@ -187,7 +189,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     for (const [id, diff] of diferencasEstoque) { if (diff === 0) continue; const p = produtos.find(x => x.id === id); if (p && p.estoque !== undefined) { await supabase.from('produtos').update({ estoque: Math.max(0, p.estoque - diff) }).eq('id', id); } }
   };
 
-  const finalizarMesa = async (numero: number, incluirServico = false, pagamentosRealizados: Pagamento[] = []) => { const mesa = mesas.find(m => m.numero === numero); if (mesa && mesa.status === 'ocupada' && mesa.itens.length > 0) { let totalDaMesa = mesa.itens.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0); const itensFinais = [...mesa.itens]; if (incluirServico) { const valorServico = totalDaMesa * 0.10; totalDaMesa += valorServico; itensFinais.push({ id: 'taxa-servico-10', produto: { id: 999, nome: 'Taxa de Serviço (10%)', preco: valorServico, categoria: 'Outros', ativo: true }, quantidade: 1, statusCozinha: 'entregue' }); } await supabase.from('vendas').insert([{ numero_mesa: mesa.numero, nome_cliente: mesa.nomeCliente || '', garcom_nome: garcomLogado?.nome || 'Sistema', itens: itensFinais, total: totalDaMesa, pagamentos: pagamentosRealizados, status: 'fechada' }]); await supabase.from('mesas').update({ status: 'livre', itens: [], garcom_id: null, garcom_nome: null, nome_cliente: null }).eq('numero', numero); } };
+  //  valorTaxa 
+  const finalizarMesa = async (numero: number, valorTaxa = 0, pagamentosRealizados: Pagamento[] = []) => { 
+    const mesa = mesas.find(m => m.numero === numero); 
+    
+    if (mesa && mesa.status === 'ocupada' && mesa.itens.length > 0) { 
+      let totalDaMesa = mesa.itens.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0); 
+      const itensFinais = [...mesa.itens]; 
+      
+      // Se a taxa for inserida, soma ao total e registra o "item virtual" no banco
+      if (valorTaxa > 0) { 
+        totalDaMesa += valorTaxa; 
+        itensFinais.push({ 
+          id: `taxa-${Date.now()}`, 
+          produto: { id: 999, nome: 'Guarda-sol / Taxa', preco: valorTaxa, categoria: 'Outros', ativo: true, precoCusto: 0 }, 
+          quantidade: 1, 
+          statusCozinha: 'entregue' 
+        }); 
+      } 
+      
+      await supabase.from('vendas').insert([{ numero_mesa: mesa.numero, nome_cliente: mesa.nomeCliente || '', garcom_nome: garcomLogado?.nome || 'Sistema', itens: itensFinais, total: totalDaMesa, pagamentos: pagamentosRealizados, status: 'fechada' }]); 
+      await supabase.from('mesas').update({ status: 'livre', itens: [], garcom_id: null, garcom_nome: null, nome_cliente: null }).eq('numero', numero); 
+    } 
+  };
+  
   const cancelarVenda = async (idVenda: string, motivo: string, adminNome: string) => { const venda = historicoVendas.find(v => v.id === idVenda); if (!venda || venda.status === 'cancelada') return; await supabase.from('vendas').update({ status: 'cancelada', cancelado_por: adminNome, motivo_cancelamento: motivo, data_cancelamento: new Date().toISOString() }).eq('id', idVenda); for (const item of venda.itens) { if (item.produto.id !== 999) { const p = produtos.find(x => x.id === item.produto.id); if (p && p.estoque !== undefined) { await supabase.from('produtos').update({ estoque: p.estoque + item.quantidade }).eq('id', p.id); await registrarLogEstoque(p.id, p.nome, item.quantidade, p.precoCusto || 0, adminNome, 'estorno'); } } } };
 
   return (

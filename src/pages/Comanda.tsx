@@ -1,5 +1,5 @@
 // src/pages/Comanda.tsx
-import { useState, useContext, useMemo } from 'react';
+import { useState, useContext, useMemo, useEffect } from 'react';
 import type { ElementType } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
@@ -73,27 +73,21 @@ export function Comanda() {
   const mesaAtual = contexto?.mesas.find(m => m.numero === Number(idMesa));
   const categorias = useMemo(() => contexto?.categorias || [], [contexto?.categorias]);
 
-  const itensIniciais = useMemo(() => {
-    return agruparItensParaInterface(mesaAtual?.itens || []);
-  }, [mesaAtual?.itens]);
+  // ESTADOS LOCAIS INDEPENDENTES (CORRIGE O BUG DE REMOÇÃO TOTAL DE ITENS)
+  const [itensPedidos, setItensPedidos] = useState<ItemComanda[]>([]);
+  const [nomeCliente, setNomeCliente] = useState<string>('');
+  const [mesaIdCarregada, setMesaIdCarregada] = useState<number | null>(null);
 
-  const nomeClienteInicial = mesaAtual?.nomeCliente || '';
-  
-  const [itensLocaisPedidos, setItensLocaisPedidos] = useState<ItemComanda[]>([]);
-  const [nomeClienteLocal, setNomeClienteLocal] = useState<string | null>(null);
-  
-  const itensPedidos = itensLocaisPedidos.length > 0 ? itensLocaisPedidos : itensIniciais;
-  const nomeCliente = nomeClienteLocal !== null ? nomeClienteLocal : nomeClienteInicial;
-
-  const setItensPedidos = (novosItens: ItemComanda[] | ((prev: ItemComanda[]) => ItemComanda[])) => {
-    if (typeof novosItens === 'function') {
-      setItensLocaisPedidos(novosItens(itensPedidos));
-    } else {
-      setItensLocaisPedidos(novosItens);
+  useEffect(() => {
+    if (mesaAtual && mesaAtual.numero !== mesaIdCarregada) {
+      const id = setTimeout(() => {
+        setItensPedidos(agruparItensParaInterface(mesaAtual.itens || []));
+        setNomeCliente(mesaAtual.nomeCliente || '');
+        setMesaIdCarregada(mesaAtual.numero);
+      }, 0);
+      return () => clearTimeout(id);
     }
-  };
-
-  const setNomeCliente = (nome: string) => setNomeClienteLocal(nome);
+  }, [mesaAtual, mesaIdCarregada]);
 
   const cardapioAtivo = useMemo(() => (contexto?.produtos || []).filter(p => p.ativo !== false && p.id !== 999), [contexto?.produtos]);
   
@@ -111,11 +105,22 @@ export function Comanda() {
   const [mostrarItens, setMostrarItens] = useState(false);
   const [statusSalvo, setStatusSalvo] = useState(false);
   
+  const [mensagemToast, setMensagemToast] = useState<string | null>(null);
+
+  const dispararToast = (msg: string) => {
+    setMensagemToast(msg);
+    setTimeout(() => {
+      setMensagemToast(null);
+    }, 2500);
+  };
+  
   const [etapaModal, setEtapaModal] = useState<0 | 1 | 2 | 3>(0);
   const [itemEditandoObs, setItemEditandoObs] = useState<ItemComanda | null>(null);
   const [textoObs, setTextoObs] = useState('');
   
-  const [decisaoDezPorCento, setDecisaoDezPorCento] = useState(false);
+  const [valorTaxa, setValorTaxa] = useState<number>(0);
+  const [inputTaxa, setInputTaxa] = useState<string>('');
+  
   const [pagamentosLancados, setPagamentosLancados] = useState<Pagamento[]>([]);
   const [valorDigitado, setValorDigitado] = useState('');
 
@@ -130,10 +135,18 @@ export function Comanda() {
             return prev;
           }
         }
-        if (existe) return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item);
-        return [...prev, { id: `item_ui_${Date.now()}`, produto, quantidade: 1 }];
+        dispararToast(`+1 ${produto.nome} adicionado`);
+        if (existe) {
+          return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item);
+        }
+        return [...prev, { id: `item_ui_${Date.now()}`, produto, quantidade: 1, statusCozinha: 'pendente' }];
       } else {
-        if (existe && existe.quantidade > 1) return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade - 1 } : item);
+        if (!existe) return prev;
+        dispararToast(`${produto.nome} atualizado`);
+        if (existe.quantidade > 1) {
+          return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade - 1 } : item);
+        }
+        // Remove totalmente o item da lista se a quantidade chegar a 1 e for decrementada
         return prev.filter(item => item.produto.id !== produto.id);
       }
     });
@@ -143,6 +156,7 @@ export function Comanda() {
     if (itemEditandoObs) {
       setItensPedidos(prev => prev.map(item => item.id === itemEditandoObs.id ? { ...item, observacao: textoObs.trim() === '' ? undefined : textoObs } : item));
       setItemEditandoObs(null); setTextoObs('');
+      dispararToast("Nota salva com sucesso!");
     }
   };
   
@@ -155,17 +169,16 @@ export function Comanda() {
       contexto?.atualizarStatusCozinha(Number(idMesa), itemCru.id, 'entregue');
     });
 
-    if (itensLocaisPedidos.length > 0) {
-      setItensLocaisPedidos(prev => prev.map(item => 
-        item.produto.id === produtoId ? { ...item, statusCozinha: 'entregue' } : item
-      ));
-    }
+    setItensPedidos(prev => prev.map(item => 
+      item.produto.id === produtoId ? { ...item, statusCozinha: 'entregue' } : item
+    ));
+    dispararToast("Item marcado como entregue!");
   };
 
   const valorTotalMenu = itensPedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
   const quantidadeTotalItens = itensPedidos.reduce((total, item) => total + item.quantidade, 0);
-  const valorServico = valorTotalMenu * 0.10;
-  const totalCobrarFinal = decisaoDezPorCento ? (valorTotalMenu + valorServico) : valorTotalMenu;
+  
+  const totalCobrarFinal = valorTotalMenu + valorTaxa;
   const totalJaPago = pagamentosLancados.reduce((acc, pag) => acc + pag.valor, 0);
   const faltaPagar = totalCobrarFinal - totalJaPago;
   const troco = totalJaPago > totalCobrarFinal ? totalJaPago - totalCobrarFinal : 0;
@@ -174,13 +187,14 @@ export function Comanda() {
     if (contexto && idMesa) {
       await contexto.salvarComanda(Number(idMesa), itensPedidos, nomeCliente);
       setStatusSalvo(true);
-      setItensLocaisPedidos([]); 
+      dispararToast("Comanda salva com sucesso!");
       setTimeout(() => setStatusSalvo(false), 2000);
     }
   };
 
-  const avancaParaPagamento = (incluir10: boolean) => {
-    setDecisaoDezPorCento(incluir10);
+  const avancaParaPagamento = () => {
+    const taxaConvertida = parseFloat(inputTaxa.replace(',', '.')) || 0;
+    setValorTaxa(taxaConvertida);
     setPagamentosLancados([]); 
     setValorDigitado('');
     setEtapaModal(3);
@@ -205,7 +219,7 @@ export function Comanda() {
 
   const concluirMesaFinal = async () => {
     if (faltaPagar > 0.01) { alert('Ainda faltam valores a receber!'); return; }
-    await contexto?.finalizarMesa(Number(idMesa), decisaoDezPorCento, pagamentosLancados);
+    await contexto?.finalizarMesa(Number(idMesa), valorTaxa as any, pagamentosLancados);
     navigate('/');
   };
 
@@ -230,8 +244,17 @@ export function Comanda() {
   }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-32 lg:pb-10 relative overflow-hidden perspective-distant">
+    <div className="min-h-screen bg-slate-50 font-sans pb-36 lg:pb-28 relative overflow-hidden">
       
+      {mensagemToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
+          <div className="bg-slate-900/90 text-white px-5 py-3 rounded-2xl shadow-xl backdrop-blur-md border border-white/10 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            <span className="text-[11px] font-black uppercase tracking-widest">{mensagemToast}</span>
+          </div>
+        </div>
+      )}
+
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
@@ -263,7 +286,7 @@ export function Comanda() {
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
                   {categoriasDisponiveis.map((cat) => (
-                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-gradient-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group transform-style-3d">
+                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-[28px] bg-gradient-to-b from-white to-slate-50 border border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:-translate-y-1 active:scale-[0.96] active:shadow-inner active:translate-y-0 transition-all group">
                       <div className="w-14 h-14 bg-white rounded-[20px] shadow-inner shadow-slate-100/50 border border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <IconeCategoria nomeCategoria={cat} categorias={categorias} className="text-slate-600 drop-shadow-sm" />
                       </div>
@@ -305,7 +328,7 @@ export function Comanda() {
                     const catNome = extrairNomeCategoria(produto.categoria);
                     
                     return (
-                      <button key={produto.id} type="button" onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left transform-style-3d group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
+                      <button key={produto.id} type="button" onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-4 rounded-4xl border flex justify-between items-center gap-4 transition-all text-left group ${estaEsgotado ? 'bg-slate-100 border-slate-200 opacity-70 saturate-50 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 active:scale-[0.98] active:translate-y-0 active:shadow-inner hover:border-teal-300 hover:shadow-md hover:-translate-y-1'}`}>
                         
                         <div className="flex items-center gap-5 flex-1 min-w-0">
                           {produto.imagem_url ? (
@@ -378,7 +401,6 @@ export function Comanda() {
                 ) : (
                   <div className="space-y-3">
                     
-                    {/* LISTA DE ITENS DO CARRINHO */}
                     {itensPedidos.map(item => {
                       const itemCatNome = extrairNomeCategoria(item.produto.categoria);
                       
@@ -386,7 +408,6 @@ export function Comanda() {
                         <div key={item.id} className="flex flex-col p-4 bg-white rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden hover:border-slate-300 transition-colors">
                           <div className="flex items-start gap-4">
                             
-                            {/* Coluna 1: Imagem/Ícone Fixa */}
                             <div className="shrink-0">
                               {item.produto.imagem_url ? (
                                 <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-[68px] h-[68px] rounded-[18px] object-cover border border-slate-100 shadow-sm" />
@@ -397,10 +418,8 @@ export function Comanda() {
                               )}
                             </div>
                             
-                            {/* Coluna 2: Conteúdo Flexível (Tight Layout + Anchoring) */}
                             <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 min-h-[68px]">
                               
-                              {/* TOPO: Titulo e Botão Msg */}
                               <div className="flex items-start justify-between gap-2 w-full">
                                 <div className="flex flex-col min-w-0">
                                   <span className="font-bold text-slate-800 text-[12px] leading-tight uppercase truncate">
@@ -418,7 +437,6 @@ export function Comanda() {
                                 </button>
                               </div>
 
-                              {/* BASE: Preço e Controles */}
                               <div className="flex items-end justify-between w-full mt-2">
                                 <span className="text-[13px] text-slate-500 font-bold uppercase tracking-widest tabular-nums">
                                   {formatarMoeda(item.produto.preco)}
@@ -447,100 +465,123 @@ export function Comanda() {
               </div>
             )}
           </section>
-
-          <div className="hidden lg:flex w-full gap-3 mt-6">
-            {(itensPedidos.length > 0 || nomeCliente !== '') && (
-              <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-white text-rose-500 border border-rose-200 hover:bg-rose-50 py-4.5 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-sm shadow-slate-200/50 active:scale-95 active:shadow-inner transition-all">
-                Encerrar
-              </button>
-            )}
-            <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-gradient-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl hover:-translate-y-1 transition-all flex justify-between px-5 items-center">
-              <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
-              {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
-            </button>
-          </div>
         </div>
       </main>
 
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-safe">
-        <div className="flex items-center gap-3 max-w-md mx-auto">
-          {(itensPedidos.length > 0 || nomeCliente !== '') && (
-            <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 py-4 rounded-[20px] font-bold text-[10px] uppercase tracking-widest active:scale-95 active:shadow-inner transition-all shadow-sm">
-              Encerrar
-            </button>
-          )}
-          <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-gradient-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-[20px] font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner transition-all flex justify-between px-5 items-center">
-            <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
-            {!statusSalvo && <span className="bg-black/15 px-2.5 py-1 rounded-xl shadow-inner tabular-nums">{formatarMoeda(valorTotalMenu)}</span>}
+      <div className="fixed bottom-0 left-0 right-0 p-4 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-2xl pb-safe">
+        <div className="flex items-center gap-3 max-w-4xl mx-auto">
+          <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest active:scale-95 active:shadow-inner transition-all shadow-sm">
+            Encerrar Mesa
+          </button>
+          <button type="button" onClick={handleConfirmarPedido} className="flex-[1.5] bg-gradient-to-b from-teal-500 to-teal-700 border border-teal-600 border-t-teal-400/50 text-white py-4 rounded-3xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/30 active:scale-[0.98] active:shadow-inner hover:shadow-xl transition-all flex justify-between px-6 items-center">
+            <span>{statusSalvo ? 'Salvo!' : 'Salvar Pedido'}</span>
+            {!statusSalvo && <span className="bg-black/15 px-3 py-1 rounded-xl shadow-inner tabular-nums font-black">{formatarMoeda(valorTotalMenu)}</span>}
           </button>
         </div>
       </div>
 
       {itemEditandoObs && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="absolute inset-0" onClick={() => setItemEditandoObs(null)}></div>
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl shadow-slate-900/50 flex flex-col relative z-50 animate-in slide-in-from-bottom-10 sm:zoom-in-95 border border-white/20">
-            <h3 className="text-[20px] font-bold text-slate-900 mb-1 tracking-tight uppercase">Nota para Cozinha</h3>
+          <div className="bg-white rounded-4xl p-5 md:p-8 w-full max-w-sm shadow-2xl flex flex-col relative z-50 animate-in zoom-in-95 duration-300 border border-slate-100">
+            <h3 className="text-[20px] font-black text-slate-900 mb-1 tracking-tight uppercase">Nota para Cozinha</h3>
             <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-6 bg-indigo-50 border border-indigo-100 inline-block px-3 py-1.5 rounded-md truncate max-w-full">{itemEditandoObs.produto.nome}</p>
-            <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/10 resize-none h-32 text-slate-800 font-bold text-sm mb-6 transition-all shadow-inner shadow-slate-100/50" />
-            <div className="flex gap-4">
-              <button type="button" onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-4 rounded-[20px] text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-600 border-t-indigo-400/50 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] shadow-md shadow-indigo-600/30 text-[11px] active:scale-95 active:shadow-inner transition-all">Salvar Nota</button>
+            <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-5 rounded-4xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/10 resize-none h-32 text-slate-800 font-bold text-sm mb-6 transition-all shadow-inner" />
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold py-3.5 rounded-2xl text-[10px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
+              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-gradient-to-b from-indigo-500 to-indigo-600 border border-indigo-600 text-white font-bold uppercase tracking-widest py-3.5 rounded-2xl shadow-md text-[11px] active:scale-95 transition-all">Salvar Nota</button>
             </div>
           </div>
         </div>
       )}
 
       {etapaModal > 0 && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="absolute inset-0" onClick={() => setEtapaModal(0)}></div>
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl shadow-slate-900/50 relative overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 border border-white/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-300">
+          <div className="fixed inset-0" onClick={() => setEtapaModal(0)}></div>
+          <div className="bg-white rounded-4xl p-5 md:p-8 w-full max-w-sm shadow-2xl relative z-50 my-auto overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 border border-slate-100">
             
             {etapaModal === 1 && (
-              <div className="w-full flex flex-col items-center animate-in slide-in-from-left-4">
-                <div className="w-24 h-24 bg-rose-50 rounded-[28px] flex items-center justify-center mb-6 text-rose-500 border border-rose-100 shadow-inner shadow-rose-200/50"><LucideIcons.AlertTriangle size={40} strokeWidth={2.5}/></div>
-                <h3 className="text-3xl font-bold text-slate-900 text-center mb-2 tracking-tighter uppercase">Fechar Conta?</h3>
-                <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest">A mesa não recebe mais itens.</p>
-                <div className="flex gap-4 w-full">
-                  <button type="button" onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-100 text-slate-500 font-bold py-3 rounded-[20px] hover:bg-slate-200 text-[12px] uppercase tracking-widest transition-colors active:scale-95">Cancelar</button>
-                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-gradient-to-b from-rose-500 to-rose-600 border border-rose-600 border-t-rose-400/50 text-white font-bold py-3 rounded-[20px] shadow-lg shadow-rose-600/30 active:scale-95 active:shadow-inner transition-all text-[12px] uppercase tracking-widest">Sim</button>
+              <div className="w-full flex flex-col items-center">
+                <div className="w-17 h-17 bg-rose-50 rounded-3xl flex items-center justify-center mb-5 text-rose-700 border border-rose-200 shadow-sm"><LucideIcons.AlertTriangle size={36} strokeWidth={2.5}/></div>
+                <h3 className="text-2xl font-black text-slate-900 text-center mb-2 tracking-tight uppercase">Fechar Conta?</h3>
+                <p className="text-center text-slate-500 font-bold mb-8 text-[11px] uppercase tracking-widest leading-relaxed">A mesa não receberá mais itens.</p>
+                <div className="flex gap-3 w-full">
+                  <button type="button" onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-200 text-slate-700 font-bold py-3 rounded-4xl hover:bg-slate-300 text-[12px] uppercase tracking-widest transition-all active:scale-95">Cancelar</button>
+                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-gradient-to-b from-rose-600 to-rose-700 border border-rose-700 text-white font-bold py-3 rounded-4xl shadow-md active:scale-95 transition-all text-[12px] uppercase tracking-widest">Sim</button>
                 </div>
               </div>
             )}
 
             {etapaModal === 2 && (
-              <div className="w-full flex flex-col items-center animate-in slide-in-from-right-4">
-                <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center mb-5 text-teal-500 border border-teal-100 shadow-inner shadow-teal-200/50"><span className="text-4xl font-bold">%</span></div>
-                <h3 className="text-2xl font-bold text-slate-900 text-center mb-6 tracking-tight uppercase">Taxa de Serviço</h3>
-                <div className="w-full bg-slate-50 p-6 rounded-4xl mb-8 border border-slate-200 space-y-4 shadow-inner shadow-slate-100/50">
-                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-500"><span>Consumo</span><span className="tabular-nums">{formatarMoeda(valorTotalMenu)}</span></div>
-                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-teal-500 border-b border-slate-200 pb-5"><span>Serviço (10%)</span><span className="tabular-nums">+ {formatarMoeda(valorServico)}</span></div>
-                  <div className="flex justify-between items-center pt-2"><span className="font-bold text-slate-900 text-[10px] uppercase tracking-widest">Total Final</span><span className="text-2xl font-bold text-slate-900 tracking-tighter tabular-nums">{formatarMoeda(valorTotalMenu + valorServico)}</span></div>
+              <div className="w-full flex flex-col items-center">
+                <div className="w-17 h-17 bg-teal-50 rounded-3xl flex items-center justify-center mb-5 text-teal-600 border border-teal-100 shadow-sm">
+                  <LucideIcons.Umbrella size={36} strokeWidth={2.5} />
                 </div>
+                
+                <h3 className="text-2xl font-black text-slate-900 text-center mb-6 tracking-tight uppercase">
+                  TAXA GUARDA-SOL
+                </h3>
+                
+                <div className="w-full bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-200 shadow-inner">
+                  <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                    <span>Consumo</span>
+                    <span className="tabular-nums">{formatarMoeda(valorTotalMenu)}</span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2 border-b border-slate-200 pb-5 mb-5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-teal-800">
+                      Valor Taxa (Opcional)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[20px] font-bold text-black">
+                        R$
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={inputTaxa}
+                        onChange={(e) => setInputTaxa(e.target.value.replace(/[^0-9.,]/g, ''))}
+                        placeholder="0,00"
+                        className="w-full bg-white pl-12 pr-4 py-2 rounded-4xl border border-slate-200 outline-none focus:border-teal-700 focus:ring-4 focus:ring-teal-500/10 font-bold text-[20px] text-slate-800 transition-all shadow-sm tabular-nums"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-900 text-[12px] uppercase tracking-widest">Total Final</span>
+                    <span className="text-3xl font-bold tracking-tight tabular-nums text-teal-700">
+                      {formatarMoeda(valorTotalMenu + (parseFloat(inputTaxa.replace(',', '.')) || 0))}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-4 w-full">
-                  <button type="button" onClick={() => avancaParaPagamento(true)} className="w-full bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 text-white font-bold py-4 rounded-4xl shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner transition-all text-[11px] uppercase tracking-widest">Sim, com taxa</button>
-                  <button type="button" onClick={() => avancaParaPagamento(false)} className="w-full bg-white border border-slate-300 text-slate-600 hover:text-slate-700 hover:bg-zinc-100 font-bold py-4 rounded-4xl transition-colors text-[10px] uppercase tracking-widest active:scale-95 shadow-sm">Não, só consumo</button>
-                  <button type="button" onClick={() => setEtapaModal(1)} className="mt-0 text-[10px] font-bold text-slate-600 uppercase tracking-widest text-center py-2 hover:text-slate-600 transition-colors">&larr; Voltar</button>
+                  <button type="button" onClick={avancaParaPagamento} className="w-full bg-gradient-to-b from-teal-800 to-teal-950 border border-teal-900 text-white font-bold py-3 rounded-4xl shadow-lg active:scale-[0.98] transition-all text-[12px] uppercase tracking-widest">
+                    Finalizar Pagamento
+                  </button>
+                  <button type="button" onClick={() => setEtapaModal(1)} className="text-[12px] font-bold text-slate-700 uppercase tracking-widest text-center py-2 hover:text-slate-800 transition-colors">
+                    &larr; Voltar
+                  </button>
                 </div>
               </div>
             )}
 
             {etapaModal === 3 && (
-              <div className="w-full flex flex-col animate-in slide-in-from-right-4">
+              <div className="w-full flex flex-col">
                 <h3 className="text-2xl font-black text-slate-900 text-center mb-6 tracking-tight uppercase">Pagamento</h3>
-                <div className="flex justify-between items-center bg-slate-50 p-6 rounded-[28px] mb-4 border border-slate-200 shadow-inner shadow-slate-100/50">
-                  <span className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Total a Pagar</span>
-                  <span className="font-black text-3xl text-slate-800 tracking-tighter tabular-nums">{formatarMoeda(totalCobrarFinal)}</span>
+                <div className="flex justify-between items-center bg-slate-50 p-5 rounded-2xl mb-4 border border-slate-200 shadow-inner">
+                  <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Total a Pagar</span>
+                  <span className="font-black text-3xl text-slate-800 tracking-tight tabular-nums">{formatarMoeda(totalCobrarFinal)}</span>
                 </div>
                 
                 {pagamentosLancados.length > 0 && (
                   <div className="mb-4 space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
                     {pagamentosLancados.map((pag, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-4 bg-teal-50 text-teal-700 rounded-[20px] border border-teal-100 shadow-sm">
+                      <div key={idx} className="flex justify-between items-center p-3.5 bg-teal-50 text-teal-700 rounded-2xl border border-teal-100 shadow-sm">
                         <span className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2">✅ {pag.metodo}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="font-black text-[17px] tabular-nums">{formatarMoeda(pag.valor)}</span>
-                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><LucideIcons.X size={14} strokeWidth={4}/></button>
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-[15px] tabular-nums">{formatarMoeda(pag.valor)}</span>
+                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-7 h-7 flex items-center justify-center bg-white rounded-full text-rose-500 border border-teal-100 shadow-sm active:scale-90 hover:bg-rose-50 transition-colors"><LucideIcons.X size={12} strokeWidth={4}/></button>
                         </div>
                       </div>
                     ))}
@@ -548,29 +589,29 @@ export function Comanda() {
                 )}
                 
                 {faltaPagar > 0 ? (
-                  <div className="space-y-4 bg-white border border-slate-200 p-5 rounded-4xl shadow-sm shadow-slate-200/50">
-                    <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Restante</span><span className="font-bold text-rose-500 text-xl tabular-nums">{formatarMoeda(faltaPagar)}</span></div>
+                  <div className="space-y-3 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                    <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Restante</span><span className="font-bold text-rose-500 text-lg tabular-nums">{formatarMoeda(faltaPagar)}</span></div>
                     <div className="relative">
-                      <span className="absolute left-5 top-4.5 text-[15px] font-bold text-slate-400">R$</span>
-                      <input type="text" inputMode="decimal" value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)} placeholder={faltaPagar.toFixed(2)} className="w-full bg-slate-50 pl-14 pr-5 py-4 rounded-[20px] border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white font-black text-[22px] text-slate-800 transition-all shadow-inner shadow-slate-100/50 tabular-nums" />
+                      <span className="absolute left-4 top-3.5 text-[14px] font-bold text-slate-400">R$</span>
+                      <input type="text" inputMode="decimal" value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)} placeholder={faltaPagar.toFixed(2)} className="w-full bg-slate-50 pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white font-black text-[20px] text-slate-800 transition-all shadow-inner tabular-nums" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <button type="button" onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-indigo-200 active:scale-95 transition-all shadow-sm">PIX</button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 hover:border-amber-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-amber-200 active:scale-95 transition-all shadow-sm">Crédito</button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-blue-200 active:scale-95 transition-all shadow-sm">Débito</button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-teal-50 text-teal-600 hover:bg-teal-100 hover:border-teal-300 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest border border-teal-200 active:scale-95 transition-all shadow-sm">Dinheiro</button>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button type="button" onClick={() => handleAdicionarPagamento('PIX')} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest border border-indigo-200 active:scale-95 transition-all">PIX</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Crédito')} className="bg-amber-50 text-amber-600 hover:bg-amber-100 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest border border-amber-200 active:scale-95 transition-all">Crédito</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Débito')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest border border-blue-200 active:scale-95 transition-all">Débito</button>
+                      <button type="button" onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-teal-50 text-teal-600 hover:bg-teal-100 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest border border-teal-200 active:scale-95 transition-all">Dinheiro</button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 bg-gradient-to-b from-teal-500 to-teal-600 border border-teal-500 text-white rounded-4xl shadow-lg shadow-teal-500/40 animate-in zoom-in-95">
-                    <span className="text-[20px] block mb-3 drop-shadow-md">🎉</span><span className="font-bold text-xl uppercase tracking-widest block drop-shadow-sm">Conta Paga</span>
-                    {troco > 0 && <span className="font-bold text-teal-100 mt-3 block bg-black/15 mx-6 py-2.5 rounded-2xl border border-white/20 text-xs shadow-inner">Devolver Troco: <span className="font-black text-white tabular-nums text-sm ml-1">{formatarMoeda(troco)}</span></span>}
+                  <div className="text-center py-6 bg-gradient-to-b from-teal-500 to-teal-600 border border-teal-500 text-white rounded-2xl shadow-lg animate-in zoom-in-95 duration-300">
+                    <span className="text-[22px] block mb-2">🎉</span><span className="font-black text-lg uppercase tracking-widest block">Conta Paga</span>
+                    {troco > 0 && <span className="font-bold text-teal-100 mt-2 block bg-black/15 mx-4 py-2 rounded-xl border border-white/20 text-xs shadow-inner">Devolver Troco: <span className="font-black text-white tabular-nums text-sm ml-1">{formatarMoeda(troco)}</span></span>}
                   </div>
                 )}
                 
-                <div className="flex gap-4 mt-8">
-                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-zinc-300 text-zinc-900 hover:bg-zinc-300 font-bold uppercase tracking-widest py-3 rounded-4xl transition-colors text-[10px] active:scale-95">Voltar</button>
-                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3 rounded-4xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 border-t-slate-700/50 shadow-lg shadow-slate-900/30 active:scale-[0.98] active:shadow-inner' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
+                <div className="flex gap-3 mt-6">
+                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold uppercase tracking-widest py-3.5 rounded-2xl transition-colors text-[10px] active:scale-95">Voltar</button>
+                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-[1.5] text-white font-bold py-3.5 rounded-2xl transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-gradient-to-b from-slate-800 to-slate-950 border border-slate-900 shadow-lg active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'}`}>Encerrar Mesa</button>
                 </div>
               </div>
             )}
