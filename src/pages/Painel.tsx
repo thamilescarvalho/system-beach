@@ -1,25 +1,31 @@
 // src/pages/Painel.tsx
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import type { VendaFechada } from '../types';
+import * as LucideIcons from 'lucide-react';
 
 export function Painel() {
   const navigate = useNavigate();
   const contexto = useContext(AppContext);
   
-  // Filtro de Período
+  // ================= ESTADOS TELA PRINCIPAL =================
   const dataHoje = new Date().toISOString().split('T')[0];
   const [dataInicio, setDataInicio] = useState(dataHoje);
   const [dataFim, setDataFim] = useState(dataHoje);
-
-  // Estado Pop-up
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaFechada | null>(null);
 
+  // ================= ESTADOS MODAL DE RECEBIMENTOS =================
+  const [modalRecebimentosAberto, setModalRecebimentosAberto] = useState(false);
+  // Para exibir algo no modal assim que abrir, vamos colocar o início do mês até hoje como padrão
+  const primeiroDiaDoMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
+  const [modalDataFim, setModalDataFim] = useState(dataHoje);
+
+  // ================= DADOS DO CONTEXTO =================
   const historico = contexto?.historicoVendas || [];
   const garcomLogado = contexto?.garcomLogado;
 
-  // Filtro
   const vendasFiltradas = historico.filter(venda => {
     const dataVenda = venda.dataFechamento.split('T')[0];
     const dataValida = dataVenda >= dataInicio && dataVenda <= dataFim;
@@ -27,161 +33,172 @@ export function Painel() {
     return dataValida && privacidadeValida;
   });
 
-  // Vendas não canceladas
   const vendasValidas = vendasFiltradas.filter(v => v.status !== 'cancelada');
-
-  // Cálculos Financeiros
   const faturamentoTotal = vendasValidas.reduce((total, venda) => total + venda.total, 0);
 
-  // Comissão (10%)
-  const comissaoTotal = vendasValidas.reduce((totalComissao, venda) => {
-    const itemServico = venda.itens.find(item => item.id === 'taxa-servico-10');
-    if (itemServico) {
-      return totalComissao + (itemServico.produto.preco * itemServico.quantidade);
-    }
-    return totalComissao;
-  }, 0);
+  // ================= SIMULAÇÃO DE DADOS FINANCEIROS (Vales/Pagamentos) =================
+  // Simulando estrutura profissional que vai para o types.ts e AppContext
+  const recebimentosMock = [
+    { id: 1, status: 'agendado', categoria: 'Pagamento', valor: 400.00, data: '2026-08-25', descricao: 'Acerto Semanal (Semana 3)' },
+    { id: 2, status: 'pago', categoria: 'Vale', valor: 150.00, data: '2026-08-15', descricao: 'Adiantamento / Vale Transporte' },
+    { id: 3, status: 'pago', categoria: 'Vale', valor: 50.00, data: '2026-08-10', descricao: 'Vale' },
+    { id: 4, status: 'pago', categoria: 'Comissão', valor: 320.00, data: '2026-08-05', descricao: 'Acerto Semanal (Semana 1)' },
+  ];
 
+  // Filtro e Totais específicos do Modal
+  const recebimentosFiltrados = recebimentosMock.filter(r => r.data >= modalDataInicio && r.data <= modalDataFim);
+  const recebimentosPagos = recebimentosFiltrados.filter(r => r.status === 'pago');
+  const recebimentosAgendados = recebimentosFiltrados.filter(r => r.status === 'agendado');
+
+  const totalModalPago = recebimentosPagos.reduce((acc, r) => acc + r.valor, 0);
+  const totalModalAgendado = recebimentosAgendados.reduce((acc, r) => acc + r.valor, 0);
+  
+  // Total da tela principal (simplificado para pegar tudo que já foi pago no periodo principal)
+  const totalRecebidoPrincipal = recebimentosMock.filter(r => r.status === 'pago' && r.data >= dataInicio && r.data <= dataFim).reduce((acc, r) => acc + r.valor, 0);
+
+  // ================= FORMATAÇÕES =================
   const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatarHora = (isoString: string) => new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const formatarDataBR = (isoString: string) => new Date(isoString).toLocaleDateString('pt-BR');
+  const formatarDataBR = (isoString: string) => {
+    const partes = isoString.split('T')[0].split('-');
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  };
+
+  // Travar o scroll do body quando um modal abrir (Boas práticas UI/UX)
+  useEffect(() => {
+    if (vendaSelecionada || modalRecebimentosAberto) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  }, [vendaSelecionada, modalRecebimentosAberto]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-24 relative overflow-hidden perspective-distant">
+    <div className="min-h-screen w-full bg-[#F8F9FA] font-sans pb-24 selection:bg-gray-300 selection:text-black text-gray-900">
       
-      {/* FUNDO */}
-      <div className="fixed top-[-15%] left-[-15%] w-[60vw] h-[60vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-15%] right-[-15%] w-[60vw] h-[60vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1.5s' }} />
-
-      {/* HEADER SUPERIOR */}
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/80 shadow-sm shadow-slate-200/50 px-6 py-4 flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 transition-all hover:bg-slate-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-widest uppercase leading-none">
-              MEU CAIXA
-            </h1>
-            <p className="text-teal-600 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Desempenho</p>
-          </div>
+      {/* ================= HEADER MINIMALISTA ================= */}
+      <header className="sticky top-0 z-30 bg-[#F8F9FA]/90 backdrop-blur-md px-6 py-5 flex items-center justify-between mb-4 shadow-sm border-b border-gray-100">
+        <button 
+          onClick={() => navigate('/')} 
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-900 hover:bg-gray-100 active:scale-95 transition-all duration-200 shadow-sm"
+        >
+          <LucideIcons.ChevronLeft size={24} strokeWidth={2} />
+        </button>
+        
+        <div className="text-center flex flex-col items-center">
+          <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-none">
+            Meu Caixa
+          </h1>
+          <p className="text-gray-500 font-medium text-xs md:text-sm mt-1">
+            Desempenho Geral
+          </p>
         </div>
+        
+        <div className="w-12 h-12" /> 
       </header>
 
-      <main className="max-w-md mx-auto px-4 space-y-6 relative z-10 animate-in zoom-in-95 duration-500 transform-style-3d">
+      {/* ================= CONTAINER PRINCIPAL ================= */}
+      <main className="w-full max-w-3xl mx-auto px-5 md:px-8 space-y-8 animate-in zoom-in-95 duration-500">
         
-        {/* FILTRO DE PERÍODO  */}
-        <section className="bg-white px-2 py-1 rounded-full shadow-sm shadow-slate-200/50 border border-slate-200 flex items-center gap-1 mx-auto max-w-fit">
-          <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="bg-transparent text-slate-700 text-[11px] font-bold px-3 py-1 outline-none cursor-pointer uppercase tracking-wider" />
-          <span className="text-slate-400 font-bold text-[9px] uppercase">até</span>
-          <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="bg-transparent text-slate-700 text-[11px] font-bold px-3 py-1 outline-none cursor-pointer uppercase tracking-wider" />
-        </section>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 className="hidden md:block text-2xl font-bold tracking-tight text-gray-900">
+            Resumo de Vendas
+          </h2>
 
-        {/* CARD PRINCIPAL DE DESEMPENHO */}
-        <section className="relative w-full rounded-[36px] bg-linear-to-b from-teal-500 to-teal-700 border border-teal-700 border-t-teal-400/50 shadow-2xl shadow-teal-700/30 p-7 overflow-hidden">
-          <div className="absolute top-0 right-0 w-50 h-40 bg-teal-400/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+          <section className="bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 flex items-center justify-center gap-2 w-full md:w-auto">
+            <LucideIcons.CalendarDays size={16} className="text-gray-400" />
+            <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="bg-transparent text-gray-700 text-xs md:text-sm font-bold outline-none cursor-pointer uppercase tracking-wide w-min" />
+            <span className="text-gray-300 font-bold text-[10px] md:text-xs uppercase">até</span>
+            <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="bg-transparent text-gray-700 text-xs md:text-sm font-bold outline-none cursor-pointer uppercase tracking-wide w-min" />
+          </section>
+        </div>
+
+        {/* CARD VENDAS CONCLUÍDAS */}
+        <section className="w-full rounded-[32px] bg-[#111111] p-6 md:p-10 shadow-xl shadow-black/10 flex flex-col relative overflow-hidden transition-all">
+          <div className="absolute top-[-20%] right-[-10%] w-56 h-56 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-white text-[11px] font-bold uppercase tracking-widest drop-shadow-sm">Vendas Concluídas</h2>
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-lg rounded-4xl flex items-center justify-center text-xl shadow-inner border border-white/50 text-white">
-                $
-              </div>
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <h2 className="text-gray-400 text-sm md:text-base font-bold uppercase tracking-widest">Total Vendido</h2>
+            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md">
+              <LucideIcons.TrendingUp size={20} strokeWidth={2} />
             </div>
-            
-            <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-bold text-teal-200 drop-shadow-md">R$</span>
-              <span className="text-4xl font-bold text-white tracking-tighter tabular-nums drop-shadow-md">
-                {faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            
-            {/* Divisória */}
-            <div className="pt-5 border-t border-white/15 flex items-center justify-between">
-              <div>
-                <span className="text-teal-200 text-[9px] font-bold uppercase tracking-widest block mb-1">Minha Comissão (10%)</span>
-                <span className="text-xl font-bold text-white tabular-nums tracking-tight bg-black/15 px-3 py-1.5 rounded-xl border border-white/10 shadow-inner inline-block">
-                  {formatarMoeda(comissaoTotal)}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-teal-200 text-[9px] font-bold uppercase tracking-widest block mb-1">Comandas</span>
-                <span className="text-xl font-bold text-white tabular-nums tracking-tight bg-black/15 px-4 py-1.5 rounded-xl border border-white/10 shadow-inner inline-block">
-                  {vendasValidas.length}
-                </span>
-              </div>
-            </div>
+          </div>
+          
+          <div className="flex items-baseline gap-2 mb-8 relative z-10">
+            <span className="text-3xl md:text-4xl font-bold text-gray-500">R$</span>
+            <span className="text-6xl md:text-7xl font-black text-white tracking-tighter tabular-nums">
+              {faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="pt-6 border-t border-white/10 flex items-center justify-between relative z-10">
+            <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Volume de Comandas</span>
+            <span className="text-sm font-bold text-white bg-white/10 px-5 py-2 rounded-full">
+              {vendasValidas.length} registros
+            </span>
           </div>
         </section>
 
-        {/* HISTÓRICO DE COMANDAS */}
-        <section className="space-y-4 pt-2">
+        {/* BOTÃO PARA ABRIR MODAL DE RECEBIMENTOS */}
+        <button 
+          onClick={() => setModalRecebimentosAberto(true)}
+          className="w-full group bg-white border border-gray-200 rounded-[24px] p-5 flex items-center justify-between shadow-sm hover:border-gray-900 hover:shadow-md active:scale-[0.99] transition-all duration-200"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-900 group-hover:bg-gray-100 transition-colors">
+              <LucideIcons.Wallet size={24} strokeWidth={1.5} />
+            </div>
+            <div className="text-left">
+              <h3 className="font-bold text-gray-900 text-base md:text-lg tracking-tight">Meus Recebimentos</h3>
+              <p className="text-xs text-gray-500 font-medium mt-0.5">Vales, comissões e pagamentos agendados</p>
+            </div>
+          </div>
+          <LucideIcons.ChevronRight className="text-gray-400 group-hover:text-gray-900 transition-colors" size={24} />
+        </button>
+
+        {/* EXTRATO DE COMANDAS DA TELA PRINCIPAL */}
+        <section className="space-y-5 pt-6 border-t border-gray-200">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Extrato de Vendas</h3>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm shadow-slate-200/50">
+            <h3 className="text-sm md:text-base font-bold text-gray-900 tracking-tight">Extrato de Movimentações</h3>
+            <span className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-widest bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-sm">
               {vendasFiltradas.length} Registros
             </span>
           </div>
           
           {vendasFiltradas.length === 0 ? (
-            <div className="bg-white p-10 rounded-4xl border border-slate-200 border-dashed flex flex-col items-center justify-center text-center shadow-sm">
-              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-1xl mb-3 border border-slate-100 shadow-inner">$</div>
-              <p className="text-slate-400 font-bold text-[12px]">Nenhuma venda registrada<br/>neste período.</p>
+            <div className="bg-white p-12 rounded-[32px] border border-gray-200 border-dashed flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <LucideIcons.Receipt className="text-gray-300" size={28} />
+              </div>
+              <p className="text-gray-500 font-medium text-base">Nenhuma venda registrada<br/>neste período.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
               {vendasFiltradas.map((venda) => {
-                const pagouTaxa = venda.itens.some(item => item.id === 'taxa-servico-10');
                 const isCancelada = venda.status === 'cancelada';
-
                 return (
                   <button 
                     key={venda.id}
                     onClick={() => setVendaSelecionada(venda)}
-                    className={`group w-full p-4 rounded-[28px] border flex justify-between items-center active:scale-[0.98] transition-all duration-300 text-left overflow-hidden
-                      ${isCancelada 
-                        ? 'bg-slate-50 border-rose-200/40 opacity-70' 
-                        : 'bg-white border-slate-200 shadow-sm shadow-slate-200/50 hover:shadow-md hover:border-teal-600 hover:-translate-y-1'
-                      }
+                    className={`group w-full p-4 md:p-5 rounded-[28px] md:rounded-[32px] border flex justify-between items-center active:scale-[0.99] transition-all duration-200 text-left overflow-hidden
+                      ${isCancelada ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200 shadow-sm hover:border-gray-900 hover:shadow-md'}
                     `}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 rounded-[20px] flex flex-col items-center justify-center border shrink-0
-                        ${isCancelada ? 'bg-rose-50 text-rose-500 border-rose-100 shadow-inner' : 'bg-linear-to-br from-teal-50 to-teal-100 text-teal-600 border-teal-200 shadow-inner shadow-white/50'}
-                      `}>
-                        <span className="text-[9px] font-bold uppercase tracking-tighter opacity-70 mb-0.5">Mesa</span>
-                        <span className="text-xl font-bold leading-none">{venda.numeroMesa}</span>
+                    <div className="flex items-center gap-4 md:gap-6">
+                      <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex flex-col items-center justify-center shrink-0 ${isCancelada ? 'bg-gray-200 text-gray-500' : 'bg-gray-100 text-gray-900'}`}>
+                        <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest opacity-60 mb-0.5">Mesa</span>
+                        <span className="text-lg md:text-xl font-black leading-none">{venda.numeroMesa}</span>
                       </div>
                       <div>
-                        <p className={`font-bold tracking-tight text-sm mb-1 truncate uppercase ${isCancelada ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
-                          Cliente : {venda.nomeCliente || 'sem nome'}
-                        </p>
-                        
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            {formatarHora(venda.dataFechamento)}
-                          </span>
-                          {pagouTaxa && !isCancelada && (
-                            <span className="text-[8px] bg-teal-100 border border-teal-200 text-teal-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest ml-1 shadow-sm">
-                              +10%
-                            </span>
-                          )}
-                          {isCancelada && (
-                            <span className="text-[8px] bg-rose-100 border border-rose-200 text-rose-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest ml-1 shadow-sm">
-                              Cancelada
-                            </span>
-                          )}
+                        <p className={`font-bold tracking-tight text-sm md:text-base mb-1 md:mb-1.5 truncate ${isCancelada ? 'text-gray-500 line-through' : 'text-gray-900'}`}>{venda.nomeCliente || 'Cliente sem nome'}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] md:text-xs text-gray-500 font-medium flex items-center gap-1.5"><LucideIcons.Clock size={12} />{formatarHora(venda.dataFechamento)}</span>
+                          {isCancelada && <span className="text-[9px] md:text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">Cancelada</span>}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right pl-3 border-l border-slate-200">
-                      <p className={`font-bold tracking-tight text-[16px] tabular-nums ${isCancelada ? 'text-slate-400 line-through' : 'text-zinc-500'}`}>
-                        {formatarMoeda(venda.total)}
-                      </p> 
-                      <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isCancelada ? 'text-rose-400' : 'text-zinc-500'}`}>
-                        Recibo &rarr;
-                      </p>
+                    <div className="text-right pl-4">
+                      <p className={`font-black tracking-tight text-lg md:text-xl tabular-nums ${isCancelada ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{formatarMoeda(venda.total)}</p> 
                     </div>
                   </button>
                 );
@@ -191,99 +208,123 @@ export function Painel() {
         </section>
       </main>
 
-      {/* POP-UP DETALHAMENTO DA CONTA */}
-      {vendaSelecionada && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="absolute inset-0" onClick={() => setVendaSelecionada(null)}></div>
+      {/* ================= MODAL: EXTRATO DE RECEBIMENTOS (CORRIGIDO E CENTRALIZADO 100%) ================= */}
+      {modalRecebimentosAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setModalRecebimentosAberto(false)}></div>
           
-          <div className="bg-white rounded-[40px] w-full max-w-sm max-h-[90vh] shadow-2xl relative animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col overflow-hidden border border-white/20">
+          <div className="bg-[#F8F9FA] rounded-[32px] w-full max-w-lg h-auto max-h-[90vh] md:max-h-[85vh] shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
             
-            {/* Header Recibo */}
-            <div className="flex items-center justify-between p-7 border-b border-slate-100 bg-slate-50/80">
+            {/* Header Modal Recebimentos */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white shrink-0">
               <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Recibo Mesa {vendaSelecionada.numeroMesa}</h3>
-                <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest tabular-nums">{formatarDataBR(vendaSelecionada.dataFechamento)} às {formatarHora(vendaSelecionada.dataFechamento)}</p>
+                <h3 className="text-xl font-bold text-gray-900 tracking-tight">Meus Recebimentos</h3>
+                <p className="text-[11px] font-medium text-gray-500 mt-1 uppercase tracking-widest">Histórico Financeiro</p>
               </div>
-              <button onClick={() => setVendaSelecionada(null)} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-500 active:scale-90 shadow-sm hover:bg-slate-100 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <button onClick={() => setModalRecebimentosAberto(false)} className="w-10 h-10 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-full text-gray-900 active:scale-90 shadow-sm hover:bg-gray-100 transition-colors shrink-0">
+                <LucideIcons.X size={18} strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="p-7 overflow-y-auto flex-1 hide-scrollbar bg-white">
-              
-              {/* SELO DE CANCELAMENTO */}
-              {vendaSelecionada.status === 'cancelada' && (
-                <div className="bg-rose-50 border border-rose-200 p-5 rounded-3xl mb-6 shadow-inner">
-                  <h4 className="text-rose-600 font-black text-[11px] uppercase tracking-[0.2em] flex items-center gap-2 mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                    Comanda Cancelada
-                  </h4>
-                  <div className="text-xs text-rose-800/80 font-bold space-y-2">
-                    <p><strong>Por:</strong> {vendaSelecionada.canceladoPor}</p>
-                    <p className="bg-white/50 p-2 rounded-lg border border-rose-100 mt-2"><strong>Motivo:</strong> {vendaSelecionada.motivoCancelamento}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-4 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100">
-                <div className="flex-1">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Cliente</p>
-                  <p className={`font-black text-slate-800 ${vendaSelecionada.status === 'cancelada' ? 'line-through opacity-60' : ''}`}>
-                    {vendaSelecionada.nomeCliente || 'Não identificado'}
-                  </p>
-                </div>
-                <div className="w-px bg-slate-200"></div>
-                <div className="flex-1">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Atendente</p>
-                  <p className="font-black text-slate-800">{vendaSelecionada.garcomNome}</p>
-                </div>
-              </div>
-
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-3">
-                <span className="w-6 h-px bg-slate-200"></span> Itens Consumidos <span className="flex-1 h-px bg-slate-200"></span>
-              </p>
-              
-              <div className={`space-y-4 mb-8 ${vendaSelecionada.status === 'cancelada' ? 'opacity-60' : ''}`}>
-                {vendaSelecionada.itens.map(item => (
-                  <div key={item.id} className={`flex justify-between items-center pb-4 border-b border-slate-100 border-dashed last:border-0 last:pb-0 ${vendaSelecionada.status === 'cancelada' ? 'line-through' : ''}`}>
-                    <div className="flex gap-3 items-center">
-                      <span className="font-black text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-[10px] text-xs shadow-sm border border-slate-100 tabular-nums">{item.quantidade}x</span>
-                      <div>
-                        <p className="font-black text-slate-800 text-sm leading-tight">{item.produto.nome}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tabular-nums">{formatarMoeda(item.produto.preco)} un.</p>
-                      </div>
-                    </div>
-                    <span className="font-black text-slate-900 text-base tabular-nums">
-                      {formatarMoeda(item.produto.preco * item.quantidade)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Resumo do Pagamento */}
-              <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200 shadow-inner">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center">Resumo do Pagamento</p>
-                {vendaSelecionada.pagamentos && vendaSelecionada.pagamentos.length > 0 ? (
-                  <div className="space-y-3">
-                    {vendaSelecionada.pagamentos.map((pag, idx) => (
-                      <div key={idx} className="flex justify-between items-center">
-                        <span className="font-black text-slate-600 text-[11px] uppercase tracking-widest bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">{pag.metodo}</span>
-                        <span className="font-black text-slate-900 text-lg tabular-nums">{formatarMoeda(pag.valor)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs font-bold text-slate-400 text-center italic bg-white py-2 rounded-lg border border-slate-100">Não especificado na época</p>
-                )}
+            {/* Filtro Específico do Modal */}
+            <div className="bg-white px-5 py-4 border-b border-gray-100 shrink-0">
+              <div className="bg-gray-50 px-4 py-2 rounded-full border border-gray-200 flex items-center justify-between md:justify-center gap-2">
+                <LucideIcons.Calendar size={14} className="text-gray-400 hidden md:block" />
+                <input type="date" value={modalDataInicio} onChange={(e) => setModalDataInicio(e.target.value)} className="bg-transparent text-gray-700 text-xs font-bold outline-none cursor-pointer uppercase tracking-wide w-full max-w-[120px] text-center" />
+                <span className="text-gray-400 font-bold text-[10px] uppercase">até</span>
+                <input type="date" value={modalDataFim} onChange={(e) => setModalDataFim(e.target.value)} className="bg-transparent text-gray-700 text-xs font-bold outline-none cursor-pointer uppercase tracking-wide w-full max-w-[120px] text-center" />
               </div>
             </div>
 
-            {/* Total Final Rodapé */}
-            <div className="p-7 bg-slate-50/80 rounded-b-[40px] border-t border-slate-200">
+            {/* Área de Rolagem dos Dados */}
+            <div className="p-5 overflow-y-auto flex-1 hide-scrollbar">
+              
+              {recebimentosFiltrados.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center">
+                  <LucideIcons.SearchX className="text-gray-300 mb-3" size={32} />
+                  <p className="text-gray-500 font-medium text-sm">Nenhum lançamento no período selecionado.</p>
+                </div>
+              ) : (
+                <>
+                  {/* SESSÃO: AGENDADOS (FUTURO) */}
+                  {recebimentosAgendados.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <LucideIcons.CalendarClock size={14} /> Agendados (A Receber)
+                      </h4>
+                      <div className="space-y-3">
+                        {recebimentosAgendados.map(recebimento => (
+                          <div key={recebimento.id} className="bg-white border-2 border-blue-100/50 rounded-[20px] p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex gap-4 items-center">
+                              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+                                <LucideIcons.Clock size={18} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="font-bold text-gray-900 text-sm">{recebimento.descricao}</p>
+                                  <span className="text-[8px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{recebimento.categoria}</span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 font-medium">Data: {formatarDataBR(recebimento.data)}</p>
+                              </div>
+                            </div>
+                            <span className="font-black text-blue-600 text-base tabular-nums sm:text-right pl-14 sm:pl-0">
+                              {formatarMoeda(recebimento.valor)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SESSÃO: HISTÓRICO (PAGO) */}
+                  {recebimentosPagos.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <LucideIcons.CheckCircle2 size={14} /> Histórico Efetivado
+                      </h4>
+                      <div className="space-y-3">
+                        {recebimentosPagos.map(recebimento => (
+                          <div key={recebimento.id} className="bg-white border border-gray-200 rounded-[20px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex gap-4 items-center">
+                              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0">
+                                <LucideIcons.Check size={18} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="font-bold text-gray-700 text-sm">{recebimento.descricao}</p>
+                                  <span className="text-[8px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">{recebimento.categoria}</span>
+                                </div>
+                                <p className="text-[11px] text-gray-400 font-medium">Pago em: {formatarDataBR(recebimento.data)}</p>
+                              </div>
+                            </div>
+                            <span className="font-bold text-gray-900 text-base tabular-nums sm:text-right pl-14 sm:pl-0">
+                              {formatarMoeda(recebimento.valor)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            
+            {/* Rodapé com Totalizadores */}
+            <div className="bg-white p-5 border-t border-gray-200 shrink-0 rounded-b-[32px]">
+              <div className="space-y-2 mb-4 border-b border-gray-100 pb-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-gray-500">Já Recebido:</span>
+                  <span className="font-bold text-gray-900 tabular-nums">{formatarMoeda(totalModalPago)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium text-gray-500">A Receber:</span>
+                  <span className="font-bold text-blue-600 tabular-nums">{formatarMoeda(totalModalAgendado)}</span>
+                </div>
+              </div>
               <div className="flex justify-between items-center">
-                <span className="font-black text-slate-500 uppercase tracking-widest text-sm">Total Final</span>
-                <span className={`text-4xl font-black tracking-tighter tabular-nums drop-shadow-sm ${vendaSelecionada.status === 'cancelada' ? 'text-slate-400 line-through' : 'text-teal-600'}`}>
-                  {formatarMoeda(vendaSelecionada.total)}
+                <span className="font-black text-gray-900 uppercase tracking-widest text-sm">Total do Período</span>
+                <span className="text-2xl font-black text-gray-900 tracking-tighter tabular-nums">
+                  {formatarMoeda(totalModalPago + totalModalAgendado)}
                 </span>
               </div>
             </div>
@@ -292,6 +333,77 @@ export function Painel() {
         </div>
       )}
 
+      {/* ================= MODAL DETALHAMENTO DA CONTA (MANTIDO CENTRALIZADO) ================= */}
+      {vendaSelecionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="absolute inset-0" onClick={() => setVendaSelecionada(null)}></div>
+          
+          <div className="bg-white rounded-[32px] w-full max-w-md max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
+            {/* Header Recibo */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50 shrink-0">
+              <div>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Recibo Mesa {vendaSelecionada.numeroMesa}</h3>
+                <p className="text-[11px] font-medium text-gray-500 mt-1 uppercase tracking-widest tabular-nums">{formatarDataBR(vendaSelecionada.dataFechamento)} às {formatarHora(vendaSelecionada.dataFechamento)}</p>
+              </div>
+              <button onClick={() => setVendaSelecionada(null)} className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full text-gray-900 active:scale-90 shadow-sm hover:bg-gray-100 transition-colors shrink-0">
+                <LucideIcons.X size={18} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 hide-scrollbar bg-white">
+              {vendaSelecionada.status === 'cancelada' && (
+                <div className="bg-gray-100 border border-gray-200 p-5 rounded-[24px] mb-6">
+                  <h4 className="text-gray-900 font-bold text-[12px] uppercase tracking-wider flex items-center gap-2 mb-3">
+                    <LucideIcons.Ban size={16} /> Comanda Cancelada
+                  </h4>
+                  <div className="text-xs text-gray-600 font-medium space-y-2">
+                    <p><strong>Por:</strong> {vendaSelecionada.canceladoPor}</p>
+                    <p className="bg-white p-3 rounded-xl border border-gray-200 mt-2"><strong>Motivo:</strong> {vendaSelecionada.motivoCancelamento}</p>
+                  </div>
+                </div>
+              )}
+              {/* Omitindo o restante visual interno da comanda pois não houve alteração. Mantido igual */}
+              <div className="flex gap-4 mb-8 bg-gray-50 p-5 rounded-[24px] border border-gray-100">
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente</p>
+                  <p className={`font-bold text-gray-900 text-sm md:text-base ${vendaSelecionada.status === 'cancelada' ? 'line-through opacity-60' : ''}`}>{vendaSelecionada.nomeCliente || 'Não identificado'}</p>
+                </div>
+                <div className="w-px bg-gray-200"></div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Atendente</p>
+                  <p className="font-bold text-gray-900 text-sm md:text-base">{vendaSelecionada.garcomNome}</p>
+                </div>
+              </div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-3">
+                Itens Consumidos <span className="flex-1 h-px bg-gray-100"></span>
+              </p>
+              <div className={`space-y-4 mb-8 ${vendaSelecionada.status === 'cancelada' ? 'opacity-50' : ''}`}>
+                {vendaSelecionada.itens.map(item => (
+                  <div key={item.id} className={`flex justify-between items-center pb-4 border-b border-gray-50 last:border-0 last:pb-0 ${vendaSelecionada.status === 'cancelada' ? 'line-through' : ''}`}>
+                    <div className="flex gap-3 items-center">
+                      <span className="font-bold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg text-xs md:text-sm tabular-nums">{item.quantidade}x</span>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm md:text-base leading-tight">{item.produto.nome}</p>
+                        <p className="text-[11px] text-gray-500 font-medium tabular-nums">{formatarMoeda(item.produto.preco)} un.</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-gray-900 text-base md:text-lg tabular-nums">{formatarMoeda(item.produto.preco * item.quantidade)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 md:p-8 bg-gray-50 border-t border-gray-200 shrink-0 rounded-b-[32px]">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-500 uppercase tracking-widest text-sm md:text-base">Total Final</span>
+                <span className={`text-3xl md:text-4xl font-black tracking-tighter tabular-nums ${vendaSelecionada.status === 'cancelada' ? 'text-gray-400 line-through' : 'text-[#111111]'}`}>
+                  {formatarMoeda(vendaSelecionada.total)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

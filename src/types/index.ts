@@ -79,3 +79,19 @@ export interface MovimentacaoEstoque {
   usuarioNome: string;
   tipo: 'entrada' | 'inventario' | 'estorno';
 }
+
+// ================= NOVOS TIPOS FINANCEIROS (LEDGER GARÇONS) =================
+
+export type CategoriaPagamentoGarcom = 'Vale' | 'Comissão' | 'Salário' | 'Bônus' | 'Outros';
+export type StatusPagamentoGarcom = 'pago' | 'agendado';
+
+export interface PagamentoGarcom {
+  id: string;
+  garcomId: string;
+  garcomNome: string;
+  valor: number;
+  data: string; // YYYY-MM-DD
+  descricao: string;
+  categoria: CategoriaPagamentoGarcom;
+  status: StatusPagamentoGarcom;
+}

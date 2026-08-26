@@ -97,7 +97,7 @@ export function Home() {
                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide text-white/90 lucide-shield-check-icon lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
                </div>
                <div className="text-left flex-1 relative z-10">
-                 <span className="block font-black text-white/90 text-[20px] uppercase tracking-wide drop-shadow-md">Administração</span> 
+                 <span className="block font-bold text-white/90 text-[20px] uppercase tracking-wider drop-shadow-md">Administrativo</span> 
                </div>
                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 relative z-10 transition-all duration-300 border border-transparent group-hover:translate-x-1 group-hover:bg-white group-hover:text-slate-700 group-hover:border-teal-400 shadow-md shadow-teal-500/20 group-hover:shadow-lg group-hover:shadow-teal-500/40">
                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
