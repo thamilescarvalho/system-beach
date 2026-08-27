@@ -50,12 +50,6 @@ export function Painel() {
   const totalModalPago = recebimentosPagos.reduce((acc, r) => acc + r.valor, 0);
   const totalModalAgendado = recebimentosAgendados.reduce((acc, r) => acc + r.valor, 0);
 
-  // Exemplo estrutural utilizando o padrão corporativo de prefixo com sublinhado para stubs
-  const _totalRecebidoPrincipal = recebimentosMock
-    .filter(r => r.status === 'pago' && r.data >= dataInicio && r.data <= dataFim)
-    .reduce((acc, r) => acc + r.valor, 0);
-  void _totalRecebidoPrincipal; // Garencia a retenção sem disparar TS6133
-
   // ================= FORMATAÇÕES =================
   const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatarHora = (isoString: string) => new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
