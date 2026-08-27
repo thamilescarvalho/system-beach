@@ -8,7 +8,7 @@ import * as LucideIcons from 'lucide-react';
 export function Painel() {
   const navigate = useNavigate();
   const contexto = useContext(AppContext);
-  
+
   // ================= ESTADOS TELA PRINCIPAL =================
   const dataHoje = new Date().toISOString().split('T')[0];
   const [dataInicio, setDataInicio] = useState(dataHoje);
@@ -17,7 +17,6 @@ export function Painel() {
 
   // ================= ESTADOS MODAL DE RECEBIMENTOS =================
   const [modalRecebimentosAberto, setModalRecebimentosAberto] = useState(false);
-  // Para exibir algo no modal assim que abrir, vamos colocar o início do mês até hoje como padrão
   const primeiroDiaDoMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
@@ -36,8 +35,7 @@ export function Painel() {
   const vendasValidas = vendasFiltradas.filter(v => v.status !== 'cancelada');
   const faturamentoTotal = vendasValidas.reduce((total, venda) => total + venda.total, 0);
 
-  // ================= SIMULAÇÃO DE DADOS FINANCEIROS (Vales/Pagamentos) =================
-  // Simulando estrutura profissional que vai para o types.ts e AppContext
+  // ================= SIMULAÇÃO DE DADOS FINANCEIROS =================
   const recebimentosMock = [
     { id: 1, status: 'agendado', categoria: 'Pagamento', valor: 400.00, data: '2026-08-25', descricao: 'Acerto Semanal (Semana 3)' },
     { id: 2, status: 'pago', categoria: 'Vale', valor: 150.00, data: '2026-08-15', descricao: 'Adiantamento / Vale Transporte' },
@@ -45,16 +43,15 @@ export function Painel() {
     { id: 4, status: 'pago', categoria: 'Comissão', valor: 320.00, data: '2026-08-05', descricao: 'Acerto Semanal (Semana 1)' },
   ];
 
-  // Filtro e Totais específicos do Modal
   const recebimentosFiltrados = recebimentosMock.filter(r => r.data >= modalDataInicio && r.data <= modalDataFim);
   const recebimentosPagos = recebimentosFiltrados.filter(r => r.status === 'pago');
   const recebimentosAgendados = recebimentosFiltrados.filter(r => r.status === 'agendado');
 
   const totalModalPago = recebimentosPagos.reduce((acc, r) => acc + r.valor, 0);
   const totalModalAgendado = recebimentosAgendados.reduce((acc, r) => acc + r.valor, 0);
-  
-  // Total da tela principal (simplificado para pegar tudo que já foi pago no periodo principal)
-  const totalRecebidoPrincipal = recebimentosMock.filter(r => r.status === 'pago' && r.data >= dataInicio && r.data <= dataFim).reduce((acc, r) => acc + r.valor, 0);
+
+  // [CORREÇÃO APLICADA AQUI]: A linha abaixo foi comentada para não gerar o Erro TS6133 no build do Vercel
+  // const totalRecebidoPrincipal = recebimentosMock.filter(r => r.status === 'pago' && r.data >= dataInicio && r.data <= dataFim).reduce((acc, r) => acc + r.valor, 0);
 
   // ================= FORMATAÇÕES =================
   const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -64,7 +61,6 @@ export function Painel() {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   };
 
-  // Travar o scroll do body quando um modal abrir (Boas práticas UI/UX)
   useEffect(() => {
     if (vendaSelecionada || modalRecebimentosAberto) {
       document.body.style.overflow = 'hidden';
@@ -75,7 +71,7 @@ export function Painel() {
 
   return (
     <div className="min-h-screen w-full bg-[#F8F9FA] font-sans pb-24 selection:bg-gray-300 selection:text-black text-gray-900">
-      
+
       {/* ================= HEADER MINIMALISTA ================= */}
       <header className="sticky top-0 z-30 bg-[#F8F9FA]/90 backdrop-blur-md px-6 py-5 flex items-center justify-between mb-4 shadow-sm border-b border-gray-100">
         <button 
@@ -84,7 +80,7 @@ export function Painel() {
         >
           <LucideIcons.ChevronLeft size={24} strokeWidth={2} />
         </button>
-        
+
         <div className="text-center flex flex-col items-center">
           <h1 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-none">
             Meu Caixa
@@ -93,13 +89,13 @@ export function Painel() {
             Desempenho Geral
           </p>
         </div>
-        
+
         <div className="w-12 h-12" /> 
       </header>
 
       {/* ================= CONTAINER PRINCIPAL ================= */}
       <main className="w-full max-w-3xl mx-auto px-5 md:px-8 space-y-8 animate-in zoom-in-95 duration-500">
-        
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="hidden md:block text-2xl font-bold tracking-tight text-gray-900">
             Resumo de Vendas
@@ -116,21 +112,21 @@ export function Painel() {
         {/* CARD VENDAS CONCLUÍDAS */}
         <section className="w-full rounded-[32px] bg-[#111111] p-6 md:p-10 shadow-xl shadow-black/10 flex flex-col relative overflow-hidden transition-all">
           <div className="absolute top-[-20%] right-[-10%] w-56 h-56 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="flex items-center justify-between mb-8 relative z-10">
             <h2 className="text-gray-400 text-sm md:text-base font-bold uppercase tracking-widest">Total Vendido</h2>
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md">
               <LucideIcons.TrendingUp size={20} strokeWidth={2} />
             </div>
           </div>
-          
+
           <div className="flex items-baseline gap-2 mb-8 relative z-10">
             <span className="text-3xl md:text-4xl font-bold text-gray-500">R$</span>
             <span className="text-6xl md:text-7xl font-black text-white tracking-tighter tabular-nums">
               {faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          
+
           <div className="pt-6 border-t border-white/10 flex items-center justify-between relative z-10">
             <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Volume de Comandas</span>
             <span className="text-sm font-bold text-white bg-white/10 px-5 py-2 rounded-full">
@@ -164,7 +160,7 @@ export function Painel() {
               {vendasFiltradas.length} Registros
             </span>
           </div>
-          
+
           {vendasFiltradas.length === 0 ? (
             <div className="bg-white p-12 rounded-[32px] border border-gray-200 border-dashed flex flex-col items-center justify-center text-center shadow-sm">
               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -208,13 +204,13 @@ export function Painel() {
         </section>
       </main>
 
-      {/* ================= MODAL: EXTRATO DE RECEBIMENTOS (CORRIGIDO E CENTRALIZADO 100%) ================= */}
+      {/* ================= MODAL: EXTRATO DE RECEBIMENTOS ================= */}
       {modalRecebimentosAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setModalRecebimentosAberto(false)}></div>
-          
+
           <div className="bg-[#F8F9FA] rounded-[32px] w-full max-w-lg h-auto max-h-[90vh] md:max-h-[85vh] shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
-            
+
             {/* Header Modal Recebimentos */}
             <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white shrink-0">
               <div>
@@ -238,7 +234,7 @@ export function Painel() {
 
             {/* Área de Rolagem dos Dados */}
             <div className="p-5 overflow-y-auto flex-1 hide-scrollbar">
-              
+
               {recebimentosFiltrados.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <LucideIcons.SearchX className="text-gray-300 mb-3" size={32} />
@@ -308,7 +304,7 @@ export function Painel() {
                 </>
               )}
             </div>
-            
+
             {/* Rodapé com Totalizadores */}
             <div className="bg-white p-5 border-t border-gray-200 shrink-0 rounded-b-[32px]">
               <div className="space-y-2 mb-4 border-b border-gray-100 pb-4">
@@ -333,11 +329,11 @@ export function Painel() {
         </div>
       )}
 
-      {/* ================= MODAL DETALHAMENTO DA CONTA (MANTIDO CENTRALIZADO) ================= */}
+      {/* ================= MODAL DETALHAMENTO DA CONTA ================= */}
       {vendaSelecionada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setVendaSelecionada(null)}></div>
-          
+
           <div className="bg-white rounded-[32px] w-full max-w-md max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
             {/* Header Recibo */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50 shrink-0">
@@ -362,7 +358,6 @@ export function Painel() {
                   </div>
                 </div>
               )}
-              {/* Omitindo o restante visual interno da comanda pois não houve alteração. Mantido igual */}
               <div className="flex gap-4 mb-8 bg-gray-50 p-5 rounded-[24px] border border-gray-100">
                 <div className="flex-1">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente</p>
