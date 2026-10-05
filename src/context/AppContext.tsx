@@ -48,6 +48,7 @@ interface AppContextType {
   editarUsuario: (id: string, dadosAtualizados: Partial<Garcom>) => Promise<void>;
   
   adicionarMesa: (numero: number) => Promise<void>;
+  editarMesa: (id: number | string, atualizacao: { numero: number }) => Promise<void>;
   removerMesa: (numero: number) => Promise<void>;
   
   atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => Promise<void>;
@@ -56,7 +57,6 @@ interface AppContextType {
   finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[]) => Promise<void>;
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
 
-  // Novos métodos do Ledger (Extrato de Pagamentos da Equipe)
   lancarPagamentoGarcom: (dados: Omit<PagamentoGarcom, 'id'>) => Promise<void>;
   excluirPagamentoGarcom: (id: string) => Promise<void>;
   atualizarStatusPagamentoGarcom: (id: string, novoStatus: 'pago' | 'agendado') => Promise<void>;
@@ -107,7 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('usuarios').select('id, nome, avatar, cargo'), 
         supabase.from('historico_estoque').select('*').order('data', { ascending: false }),
         supabase.from('categorias').select('*').order('ordem', { ascending: true }),
-        supabase.from('pagamentos_garcons').select('*').order('data_pagamento', { ascending: false }) // Tabela Nova
+        supabase.from('pagamentos_garcons').select('*').order('data_pagamento', { ascending: false })
       ]);
 
       let dadosMesas = resMesas.data;
@@ -124,7 +124,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (resUsers.data) setUsuarios(resUsers.data.map((u: DBUsuario) => ({ id: u.id, nome: u.nome, avatar: u.avatar, pin: '***', cargo: u.cargo })));
       if (resHist.data) setHistoricoEstoque(resHist.data.map((h: DBHistorico) => ({ id: h.id, produtoId: h.produto_id, produtoNome: h.produto_nome, tipo: h.tipo as 'entrada' | 'inventario' | 'estorno', quantidade: h.quantidade, precoCusto: Number(h.preco_custo), usuarioNome: h.usuario_nome, data: h.data })));
       
-      // Mapeamento dos Pagamentos de Garçons
       if (resPagamentos.data) {
         setHistoricoPagamentos(resPagamentos.data.map((p: DBPagamentoGarcom) => ({
           id: p.id,
@@ -162,14 +161,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const excluirProduto = async (id: number) => { await supabase.from('produtos').delete().eq('id', id); await carregarDados(); };
   const alternarStatusProduto = async (id: number) => { const p = produtos.find(x => x.id === id); if (p) { await supabase.from('produtos').update({ ativo: !p.ativo }).eq('id', id); await carregarDados(); } };
 
-  // ESTOQUE & EQUIPE & MESAS
+  // ESTOQUE E USUARIOS
   const registrarLogEstoque = async (produtoId: number, nome: string, qtd: number, custo: number, usuario: string, tipo: string) => { await supabase.from('historico_estoque').insert([{ produto_id: produtoId, produto_nome: nome, tipo, quantidade: qtd, preco_custo: custo, usuario_nome: usuario }]); };
   const darEntradaEstoque = async (idProduto: number, qtdAdicionada: number, precoCusto: number, usuario: string) => { const p = produtos.find(x => x.id === idProduto); if (p) { await supabase.from('produtos').update({ estoque: (p.estoque || 0) + qtdAdicionada, preco_custo: precoCusto }).eq('id', idProduto); await registrarLogEstoque(idProduto, p.nome, qtdAdicionada, precoCusto, usuario, 'entrada'); await carregarDados(); } };
   const registrarInventario = async (idProduto: number, qtdFisicaReal: number, usuario: string) => { const p = produtos.find(x => x.id === idProduto); if (p) { const diff = qtdFisicaReal - (p.estoque || 0); await supabase.from('produtos').update({ estoque: qtdFisicaReal }).eq('id', idProduto); if (diff !== 0) await registrarLogEstoque(idProduto, p.nome, diff, p.precoCusto || 0, usuario, 'inventario'); await carregarDados(); } };
   const adicionarUsuario = async (novoUsuario: Garcom) => { await supabase.from('usuarios').insert([{ nome: novoUsuario.nome, avatar: novoUsuario.avatar, pin: novoUsuario.pin, cargo: novoUsuario.cargo }]); await carregarDados(); };
   const editarUsuario = async (id: string, dadosAtualizados: Partial<Garcom>) => { await supabase.from('usuarios').update({ ...dadosAtualizados }).eq('id', id); await carregarDados(); };
   const removerUsuario = async (id: string) => { await supabase.from('usuarios').delete().eq('id', id); await carregarDados(); };
+  
+  // MESAS
   const adicionarMesa = async (numero: number) => { if (!mesas.some(m => m.numero === numero)) { await supabase.from('mesas').insert([{ numero, status: 'livre', itens: [] }]); await carregarDados(); } };
+  const editarMesa = async (id: number | string, atualizacao: { numero: number }) => { await supabase.from('mesas').update({ numero: atualizacao.numero }).eq('id', id); await carregarDados(); };
   const removerMesa = async (numero: number) => { await supabase.from('mesas').delete().eq('numero', numero); await carregarDados(); };
   
   // FLUXO DE VENDAS
@@ -178,18 +180,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const finalizarMesa = async (numero: number, valorTaxa = 0, pagamentosRealizados: Pagamento[] = []) => { const mesa = mesas.find(m => m.numero === numero); if (mesa && mesa.status === 'ocupada' && mesa.itens.length > 0) { let totalDaMesa = mesa.itens.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0); const itensFinais = [...mesa.itens]; if (valorTaxa > 0) { totalDaMesa += valorTaxa; itensFinais.push({ id: `taxa-${Date.now()}`, produto: { id: 999, nome: 'Guarda-sol / Taxa', preco: valorTaxa, categoria: 'Outros', ativo: true, precoCusto: 0 }, quantidade: 1, statusCozinha: 'entregue' }); } await supabase.from('vendas').insert([{ numero_mesa: mesa.numero, nome_cliente: mesa.nomeCliente || '', garcom_nome: garcomLogado?.nome || 'Sistema', itens: itensFinais, total: totalDaMesa, pagamentos: pagamentosRealizados, status: 'fechada' }]); await supabase.from('mesas').update({ status: 'livre', itens: [], garcom_id: null, garcom_nome: null, nome_cliente: null }).eq('numero', numero); } };
   const cancelarVenda = async (idVenda: string, motivo: string, adminNome: string) => { const venda = historicoVendas.find(v => v.id === idVenda); if (!venda || venda.status === 'cancelada') return; await supabase.from('vendas').update({ status: 'cancelada', cancelado_por: adminNome, motivo_cancelamento: motivo, data_cancelamento: new Date().toISOString() }).eq('id', idVenda); for (const item of venda.itens) { if (item.produto.id !== 999) { const p = produtos.find(x => x.id === item.produto.id); if (p && p.estoque !== undefined) { await supabase.from('produtos').update({ estoque: p.estoque + item.quantidade }).eq('id', p.id); await registrarLogEstoque(p.id, p.nome, item.quantidade, p.precoCusto || 0, adminNome, 'estorno'); } } } };
 
-  // ================= NOVOS MÉTODOS FINANCEIROS (LEDGER DA EQUIPE) =================
-  
+  // NOVOS MÉTODOS FINANCEIROS (LEDGER DA EQUIPE)
   const lancarPagamentoGarcom = async (dados: Omit<PagamentoGarcom, 'id'>) => {
-    await supabase.from('pagamentos_garcons').insert([{
-      garcom_id: dados.garcomId,
-      garcom_nome: dados.garcomNome,
-      valor: dados.valor,
-      data_pagamento: dados.data,
-      descricao: dados.descricao,
-      categoria: dados.categoria,
-      status: dados.status
-    }]);
+    await supabase.from('pagamentos_garcons').insert([{ garcom_id: dados.garcomId, garcom_nome: dados.garcomNome, valor: dados.valor, data_pagamento: dados.data, descricao: dados.descricao, categoria: dados.categoria, status: dados.status }]);
     await carregarDados();
   };
 
@@ -210,9 +203,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       uploadImagemProduto, autenticarUsuario, adicionarProduto, excluirProduto, 
       alternarStatusProduto, adicionarCategoria, editarCategoria, excluirCategoria, 
       reordenarCategorias, darEntradaEstoque, registrarInventario, adicionarUsuario, 
-      removerUsuario, editarUsuario, adicionarMesa, removerMesa, atualizarStatusCozinha, 
+      removerUsuario, editarUsuario, adicionarMesa, editarMesa, removerMesa, atualizarStatusCozinha, 
       salvarComanda, finalizarMesa, cancelarVenda, editarProduto,
-      // Passando as funções novas
       lancarPagamentoGarcom, excluirPagamentoGarcom, atualizarStatusPagamentoGarcom
     }}>
       {children}
