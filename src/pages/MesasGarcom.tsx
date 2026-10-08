@@ -188,7 +188,7 @@ export function MesasGarcom() {
               let corTextoStatus = "text-slate-400";
 
               if (temAlerta) {
-                corBtn = "bg-linear-to-br from-fuchsia-600 to-fuchsia-700 border-fuchsia-600 hover:shadow-xl hover:shadow-fuchsia-600/40 animate-pulse";
+                corBtn = "bg-linear-to-br from-fuchsia-700 to-fuchsia-900 border-fuchsia-700 hover:shadow-xl hover:shadow-fuchsia-600/40 animate-pulse";
                 corTextoNum = "text-white";
                 corTextoStatus = "text-fuchsia-100";
               } else if (isBloqueada) {
