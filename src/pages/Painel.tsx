@@ -27,8 +27,8 @@ export function Painel() {
   const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
 
-  // META DE VENDAS (Preparado para receber valor do Admin)
-  const [metaDeVendas, setMetaDeVendas] = useState(2000);
+  // META DE VENDAS
+  const [metaDeVendas] = useState(2000);
 
   // DADOS DO CONTEXTO
   const historico = contexto?.historicoVendas || [];
