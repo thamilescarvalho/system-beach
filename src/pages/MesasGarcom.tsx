@@ -10,7 +10,6 @@ interface ItemComanda {
   statusCozinha?: string;
   [key: string]: unknown;
 }
-
 interface Mesa {
   id: number | string;
   numero: number;
@@ -175,13 +174,13 @@ export function MesasGarcom() {
           <div className="flex items-center justify-end mb-1 min-h-8">
           </div>
 
-          <div className="grid grid-cols-3 min-[400px]:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4 w-full">
+          <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4 w-full">
             {mesas.map((mesa) => {
               const isOcupada = mesa.status === 'ocupada';
               const isBloqueada = isOcupada && mesa.garcomId !== garcomLogado?.id && garcomLogado?.cargo !== 'admin';
               const temAlerta = mesa.itens.some(item => item.statusCozinha === 'pronto');
 
-              const baseBtnClass = "relative aspect-square rounded-2xl p-1 flex flex-col items-center justify-center transition-all duration-300 ease-out hover:-translate-y-2 active:scale-95 overflow-hidden border";
+              const baseBtnClass = "relative aspect-square rounded-2xl p-1 flex flex-col items-center justify-between transition-all duration-300 ease-out hover:-translate-y-2 active:scale-95 active:translate-y-0 overflow-hidden border";
 
               let corBtn = "bg-white border-slate-300 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-200/50";
               let corTextoNum = "text-slate-800";
@@ -207,40 +206,46 @@ export function MesasGarcom() {
                   onClick={() => handleMesaClick(mesa.numero, mesa.garcomId)}
                   className={`${baseBtnClass} ${corBtn}`}
                 >
-                  {garcomLogado?.cargo === 'admin' && (
-                    <div 
-                      onClick={(e) => abrirModalEditar(mesa, e)}
-                      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all z-20 hover:scale-110 active:scale-90 ${isOcupada ? 'bg-black/10 hover:bg-black/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-500'}`}
-                    >
-                      <LucideIcons.Pencil size={10} strokeWidth={2.5} />
-                    </div>
-                  )}
+                  {/* lápis de edição */}
+                  <div className="w-full flex justify-end h-4">
+                    {garcomLogado?.cargo === 'admin' && (
+                      <div 
+                        onClick={(e) => abrirModalEditar(mesa, e)}
+                        className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-all z-20 hover:scale-110 active:scale-90 ${isOcupada ? 'bg-black/10 hover:bg-black/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-500'}`}
+                      >
+                        <LucideIcons.Pencil size={10} strokeWidth={2.5} />
+                      </div>
+                    )}
 
-                  {temAlerta && (
-                    <span className="absolute top-2 left-2 w-2.5 h-2.5 bg-white rounded-full shadow-sm animate-ping"></span>
-                  )}
+                    {temAlerta && (
+                      <span className="absolute top-2 left-2 w-3 h-3 bg-white rounded-full shadow-sm animate-ping"></span>
+                    )}
 
-                  {isBloqueada && !temAlerta && (
-                    <LucideIcons.Lock size={12} className="absolute top-2 left-2 opacity-40" />
-                  )}
+                    {isBloqueada && !temAlerta && (
+                      <LucideIcons.Lock size={12} className="absolute top-2 left-2 opacity-40" />
+                    )}
+                  </div>
 
-                  <span className={`text-3xl md:text-4xl font-medium tracking-tighter drop-shadow-sm leading-none mt-1 ${corTextoNum}`}>
-                    {mesa.numero}
-                  </span>
+                  {/* Número */}
+                  <div className="flex-1 flex items-center justify-center w-full">
+                    <span className={`text-[28px] md:text-3xl font-medium tracking-tighter drop-shadow-sm leading-none ${corTextoNum}`}>
+                      {mesa.numero}
+                    </span>
+                  </div>
 
-                  {isOcupada ? (
-                    <div className="flex flex-col items-center justify-end h-8 w-full mt-1">
-                      <span className={`text-[9px] md:text-[10px] font-bold uppercase truncate w-full px-1 text-center ${corTextoStatus}`}>
-                        Cliente: {mesa.nomeCliente || 'S/N'}
+                  {/* Cliente com Ícone ou Livre */}
+                  <div className="h-5 w-full flex items-end justify-center pb-1">
+                    {isOcupada ? (
+                      <span className={`text-[10px] font-bold uppercase w-full px-1 flex items-center justify-center gap-1 ${corTextoStatus}`}>
+                        <LucideIcons.User size={11} strokeWidth={2.5} className="shrink-0" /> 
+                        <span className="truncate">{mesa.nomeCliente || 'S/N'}</span>
                       </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-end h-8 w-full mt-1">
+                    ) : (
                       <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider opacity-60 text-center">
                         Livre
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </button>
               );
             })}

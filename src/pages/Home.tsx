@@ -3,6 +3,7 @@ import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { Header } from '../components/Header'; 
+import * as LucideIcons from 'lucide-react'; // Importação do Lucide adicionada para o rodapé
 
 export function Home() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export function Home() {
       {/* HEADER GLOBAL */}
       <Header />
 
-      {/* FUNDO ANIMADO */}
+      {/* FUNDO */}
       <div className="fixed top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-fuchsia-400/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-amber-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
 
@@ -63,7 +64,7 @@ export function Home() {
               <span className="font-bold text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10">Bar</span>
             </button>
 
-            {/* CAIXA DO GARÇOM */}
+            {/* CAIXA */}
             <button 
               onClick={() => navigate('/painel')} 
               className={`group relative w-full rounded-3xl bg-linear-to-br from-teal-700 to-teal-600 border border-teal-600 
@@ -80,7 +81,7 @@ export function Home() {
                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
                </div>
 
-               {/* Adaptação */}
+               {/* condição */}
                {!isAdmin ? (
                   <>
                      <div className="text-left flex-1 relative z-10 md:text-center md:flex-none">
@@ -120,6 +121,28 @@ export function Home() {
           </div>
         </div>
       </main>
+
+      {/* RODAPÉ */}
+      <footer className="w-full pb-6 pt-2 md:pl-[96px] flex flex-col items-center justify-center relative z-10">
+        <div className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
+          
+          {/* Selo de Segurança */}
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+            <LucideIcons.ShieldCheck size={14} className="text-emerald-500" strokeWidth={2.5} />
+            <span>Ambiente Seguro</span>
+          </div>
+
+          {/* Assinatura da Empresa / Dev */}
+          <div className="flex flex-col items-center text-[9px] font-medium uppercase tracking-widest text-slate-400 text-center gap-0.5">
+            <span className="flex items-center gap-1">
+              <LucideIcons.Code size={10} strokeWidth={3} />
+              Desenvolvido pela Empresa <strong className="font-bold text-slate-500">Âncora Dev.</strong>
+            </span>
+            <span>Eng. de Software Thamiles</span>
+          </div>
+          
+        </div>
+      </footer>
     </div>
   );
 }
