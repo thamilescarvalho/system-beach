@@ -46,7 +46,7 @@ export function Header() {
     if (path === '/cozinha') return 'Bar e Cozinha';
     if (path === '/painel') return 'Painel de Vendas';
     if (path === '/admin/estoque') return 'Estoque';
-    if (path === '/admin' || path === '/admin/usuarios') return 'Configurações';
+    if (path === '/admin' || path === '/admin/usuarios') return 'Administrativo';
     return 'System Beach';
   };
 
@@ -158,14 +158,14 @@ export function Header() {
 
                 {garcom.cargo === 'admin' && (
                   <button onClick={() => { navigate('/admin'); setMenuAberto(false); }} className="md:hidden flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-600 hover:bg-slate-50 transition-colors text-left">
-                    <LucideIcons.Settings size={16} /> Configurações
+                    <LucideIcons.Settings size={16} /> Administrativo
                   </button>
                 )}
 
                 <div className="h-px bg-slate-100 my-1 mx-2" />
                 
                 <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left">
-                  <LucideIcons.LogOut size={16} strokeWidth={2.5} /> Encerrar Sessão
+                  <LucideIcons.LogOut size={16} strokeWidth={2.5} /> Sair
                 </button>
               </div>
             </div>
