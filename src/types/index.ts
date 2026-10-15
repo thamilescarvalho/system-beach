@@ -80,11 +80,12 @@ export interface MovimentacaoEstoque {
   tipo: 'entrada' | 'inventario' | 'estorno';
 }
 
-// ================= NOVOS TIPOS FINANCEIROS (LEDGER GARÇONS) =================
+//  TIPOS FINANCEIROS (LEDGER GARÇONS) 
 
 export type CategoriaPagamentoGarcom = 'Vale' | 'Comissão' | 'Salário' | 'Bônus' | 'Outros';
-export type StatusPagamentoGarcom = 'pago' | 'agendado';
+export type StatusPagamentoGarcom = 'pago' | 'agendado' | 'pendente' | 'pendente_faturamento' | 'cancelado';
 
+/** Estrutura Frontend */
 export interface PagamentoGarcom {
   id: string;
   garcomId: string;
@@ -94,4 +95,38 @@ export interface PagamentoGarcom {
   descricao: string;
   categoria: CategoriaPagamentoGarcom;
   status: StatusPagamentoGarcom;
+}
+
+export type NovoPagamentoGarcom = Omit<PagamentoGarcom, 'id'>;
+
+export interface DBPagamentoGarcom {
+  id: string;
+  garcom_id: string;
+  garcom_nome: string;
+  valor: number | string;
+  data_pagamento: string;
+  descricao: string;
+  categoria: string;
+  status: string;
+  created_at?: string;
+}
+
+// META 
+export interface MetaFinanceira {
+  id: string;
+  dataInicio: string;
+  dataFim: string;
+  valorAlvo: number;
+  status: 'ativa' | 'inativa';
+}
+
+export type NovaMetaFinanceira = Omit<MetaFinanceira, 'id' | 'status'>;
+
+export interface DBMetaFinanceira {
+  id: string;
+  data_inicio: string;
+  data_fim: string;
+  valor_alvo: number | string;
+  status: string;
+  created_at?: string;
 }

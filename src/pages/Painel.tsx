@@ -2,7 +2,7 @@
 import { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Header } from '../components/Header';
-import type { VendaFechada } from '../types';
+import type { VendaFechada, PagamentoGarcom } from '../types';
 import * as LucideIcons from 'lucide-react';
 
 export function Painel() {
@@ -14,7 +14,7 @@ export function Painel() {
   const [dataFim, setDataFim] = useState(dataHoje);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaFechada | null>(null);
   const [mostrarValores, setMostrarValores] = useState(true);
-  
+
   // ESTADOS DA PESQUISA
   const [pesquisa, setPesquisa] = useState('');
   const [mostrarPesquisa, setMostrarPesquisa] = useState(false);
@@ -23,6 +23,7 @@ export function Painel() {
   // ESTADOS MODAIS
   const [modalRecebimentosAberto, setModalRecebimentosAberto] = useState(false);
   const [modalMetaAberto, setModalMetaAberto] = useState(false);
+  
   const primeiroDiaDoMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
@@ -30,20 +31,17 @@ export function Painel() {
   // META DE VENDAS
   const [metaDeVendas] = useState(2000);
 
-  // DADOS DO CONTEXTO
+  // DADOS REAIS DO CONTEXTO (SUPABASE)
   const historico = contexto?.historicoVendas || [];
   const garcomLogado = contexto?.garcomLogado;
+  const todosPagamentos = contexto?.historicoPagamentos || [];
 
-  // LÓGICA DE FILTRAGEM (Data, Privacidade e Pesquisa)
+  // LÓGICA DE FILTRAGEM DAS VENDAS
   const vendasFiltradas = historico.filter(venda => {
-    // Filtro 1: Data
     const dataVenda = venda.dataFechamento.split('T')[0];
     const dataValida = dataVenda >= dataInicio && dataVenda <= dataFim;
-    
-    // Filtro 2: Privacidade (Admin vê tudo, garçom só as dele)
     const privacidadeValida = garcomLogado?.cargo === 'admin' ? true : venda.garcomNome === garcomLogado?.nome;
-    
-    // Filtro 3: Pesquisa (Mesa, Cliente ou Valor)
+
     const termo = pesquisa.toLowerCase();
     const pesquisaValida = termo === '' || 
       venda.numeroMesa.toString().includes(termo) ||
@@ -59,17 +57,21 @@ export function Painel() {
   const porcentagemMeta = Math.min((faturamentoTotal / metaDeVendas) * 100, 100);
   const metaBatida = faturamentoTotal >= metaDeVendas;
 
-  // DADOS FINANCEIROS MOCKADOS (Futuro AdminFinanceiro)
-  const recebimentosMock = [
-    { id: 1, status: 'agendado', categoria: 'Pagamento', valor: 400.00, data: '2026-10-15', descricao: 'Acerto Semanal (Semana 3)' },
-    { id: 2, status: 'pago', categoria: 'Vale', valor: 150.00, data: '2026-10-10', descricao: 'Adiantamento / Vale Transporte' },
-    { id: 3, status: 'pago', categoria: 'Vale', valor: 50.00, data: '2026-10-05', descricao: 'Vale' },
-    { id: 4, status: 'pago', categoria: 'Comissão', valor: 320.00, data: '2026-10-02', descricao: 'Acerto Semanal (Semana 1)' },
-  ];
+  // LÓGICA DE RECEBIMENTOS E VALES 100% REAIS (CONECTADO AO SUPABASE)
+  const recebimentosReal = todosPagamentos.filter((pagamento: PagamentoGarcom) => {
+    // Se for admin, exibe todos; se for garçom, exibe apenas os dele
+    const pertenceAoUsuario = garcomLogado?.cargo === 'admin' 
+      ? true 
+      : (pagamento.garcomId === garcomLogado?.id || pagamento.garcomNome === garcomLogado?.nome);
 
-  const recebimentosFiltrados = recebimentosMock.filter(r => r.data >= modalDataInicio && r.data <= modalDataFim);
-  const recebimentosPagos = recebimentosFiltrados.filter(r => r.status === 'pago');
-  const recebimentosAgendados = recebimentosFiltrados.filter(r => r.status === 'agendado');
+    const dataPagamento = pagamento.data.split('T')[0];
+    const dataValida = dataPagamento >= modalDataInicio && dataPagamento <= modalDataFim;
+
+    return pertenceAoUsuario && dataValida;
+  });
+
+  const recebimentosPagos = recebimentosReal.filter(r => r.status === 'pago');
+  const recebimentosAgendados = recebimentosReal.filter(r => r.status === 'agendado');
 
   const totalModalPago = recebimentosPagos.reduce((acc, r) => acc + r.valor, 0);
   const totalModalAgendado = recebimentosAgendados.reduce((acc, r) => acc + r.valor, 0);
@@ -78,6 +80,7 @@ export function Painel() {
   const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatarHora = (isoString: string) => new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const formatarDataBR = (isoString: string) => {
+    if(!isoString) return '';
     const partes = isoString.split('T')[0].split('-');
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   };
@@ -104,22 +107,22 @@ export function Painel() {
 
   const alternarPesquisa = () => {
     setMostrarPesquisa(!mostrarPesquisa);
-    if (mostrarPesquisa) setPesquisa(''); // Limpa a pesquisa ao fechar
+    if (mostrarPesquisa) setPesquisa('');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-200 selection:text-emerald-900 pb-20 md:pb-8">
-      
+
       <div className="print:hidden">
         <Header />
 
         {/* ÁREA DE SALDO */}
         <div className="bg-emerald-950 text-white rounded-b-[60px] md:rounded-b-[40px] pt-18 md:pt-20 md:pl-[72px] relative overflow-hidden shadow-xl shadow-emerald-900/20">
-          <div className="absolute -right-20 -top-20 w-64 h-80 bg-emerald-500/30 rounded-full blur-3xl"></div>
-          <div className="absolute -left-10 bottom-0 w-40 h-40 bg-emerald-700/30 rounded-full blur-2xl"></div>
-          
+          <div className="absolute -right-20 -top-20 w-64 h-80 bg-emerald-500/30 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -left-10 bottom-0 w-40 h-40 bg-emerald-700/30 rounded-full blur-2xl pointer-events-none"></div>
+
           <div className="relative z-10 w-full max-w-4xl mx-auto px-4 py-8 md:py-10 flex flex-col items-center">
-            
+
             <div className="flex items-center gap-2 mb-3 opacity-70 hover:opacity-100 transition-opacity">
               <LucideIcons.TrendingUp size={14} />
               <h2 className="text-[10px] font-bold uppercase tracking-widest text-emerald-50">Vendas Consolidadas</h2>
@@ -159,20 +162,25 @@ export function Painel() {
           </div>
         </div>
 
-        {/* (BOTÕES E EXTRATO)*/}
+        {/* BOTÕES E EXTRATO */}
         <div className="w-full max-w-4xl mx-auto px-4 md:px-8 md:pl-[104px] -mt-6 md:-mt-8 relative z-20 flex flex-col items-center">
-          
-          {/* 2 BOTÕES */}
+
+          {/* 2 BOTÕES DE AÇÃO */}
           <div className="flex items-center justify-center gap-5 w-full max-w-[300px]">
-            
+
             <button 
               onClick={() => setModalRecebimentosAberto(true)}
-              className="flex-1 bg-white rounded-4xl md:rounded-4xl p-3 shadow-lg shadow-slate-200/90 border border-slate-100 flex flex-col items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-200 transition-all active:scale-95 group"
+              className="flex-1 bg-white rounded-4xl md:rounded-4xl p-3 shadow-lg shadow-slate-200/90 border border-slate-100 flex flex-col items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-200 transition-all active:scale-95 group relative"
             >
               <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
                 <LucideIcons.Wallet size={18} strokeWidth={2} />
               </div>
               <span className="text-[10px] md:text-[11px] font-semibold text-slate-700 uppercase tracking-widest">Carteira</span>
+              {recebimentosReal.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[9px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                  {recebimentosReal.length}
+                </span>
+              )}
             </button>
 
             <button 
@@ -191,8 +199,8 @@ export function Painel() {
           <section className="mt-8 w-full">
             <div className="flex items-center justify-between mb-4 px-2">
               <h3 className="text-[12px] font-sans uppercase tracking-widest text-slate-500">Extrato de Vendas</h3>
-              
-              {/* Barra de Pesquisa */}
+
+              {/* Pesquisa */}
               <div className="flex items-center justify-end relative h-8">
                 <div className={`flex items-center transition-all duration-300 ease-out origin-right overflow-hidden ${mostrarPesquisa ? 'w-48 md:w-64 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
                   <input
@@ -209,7 +217,7 @@ export function Painel() {
                     </button>
                   )}
                 </div>
-                
+
                 <button 
                   onClick={alternarPesquisa} 
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${mostrarPesquisa ? 'bg-slate-100 text-slate-800' : 'bg-transparent text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
@@ -219,7 +227,7 @@ export function Painel() {
                 </button>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-4xl border border-slate-300 overflow-hidden shadow-sm">
               {vendasFiltradas.length === 0 ? (
                 <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -279,7 +287,7 @@ export function Painel() {
       {modalMetaAberto && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalMetaAberto(false)}></div>
-          
+
           <div className="bg-white rounded-[24px] w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
             <div className="p-6 flex justify-between items-center border-b border-slate-100">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-900">ACOMPANHAMENTO DE META</h3>
@@ -287,13 +295,13 @@ export function Painel() {
                 <LucideIcons.X size={18} strokeWidth={2.5} />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="flex justify-between items-end mb-3">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">PROGRESSO ATUAL</p>
                 <p className="text-2xl font-bold tracking-tighter text-blue-600">{porcentagemMeta.toFixed(1)}%</p>
               </div>
-              
+
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-6 shadow-inner">
                 <div 
                   className={`h-full rounded-full transition-all duration-1000 ease-out ${
@@ -324,13 +332,13 @@ export function Painel() {
         </div>
       )}
 
-      {/* MODAL: CARTEIRA DE RECEBIMENTOS */}
+      {/* MODAL: CARTEIRA DE RECEBIMENTOS & REPASSES (AGORA 100% REAIS VIA CONTEXTO) */}
       {modalRecebimentosAberto && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalRecebimentosAberto(false)}></div>
 
           <div className="bg-slate-50 rounded-[24px] w-full max-w-md max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
-            
+
             <div className="flex justify-between items-center p-6 bg-white border-b border-slate-100 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-900">CARTEIRA & REPASSES</h3>
               <button onClick={() => setModalRecebimentosAberto(false)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
@@ -350,7 +358,7 @@ export function Painel() {
             </div>
 
             <div className="p-5 overflow-y-auto flex-1 hide-scrollbar bg-slate-50">
-              {recebimentosFiltrados.length === 0 ? (
+              {recebimentosReal.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-200/50 rounded-full flex items-center justify-center mb-4 text-slate-400">
                     <LucideIcons.Wallet size={32} />
@@ -366,7 +374,7 @@ export function Painel() {
                         {recebimentosAgendados.map((recebimento) => (
                           <div key={recebimento.id} className="flex justify-between items-center p-4">
                             <div className="flex flex-col">
-                              <span className="font-sans text-emerald-600 text-[13px] uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
+                              <span className="font-sans text-emerald-600 text-[13px] font-semibold uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
                               <span className="text-[10px] font-medium text-slate-500 mt-1 uppercase">{recebimento.categoria} • {formatarDataBR(recebimento.data)}</span>
                             </div>
                             <span className="font-semibold tracking-tight text-emerald-600 text-[14px] tabular-nums">{formatarMoeda(recebimento.valor)}</span>
@@ -381,7 +389,7 @@ export function Painel() {
                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-1">HISTÓRICO PAGO</h4>
                       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-50">
                         {recebimentosPagos.map((recebimento) => (
-                          <div key={recebimento.id} className="flex justify-between items-center p-4 opacity-70 grayscale-[30%]">
+                          <div key={recebimento.id} className="flex justify-between items-center p-4">
                             <div className="flex flex-col">
                               <span className="font-medium text-emerald-600 text-[13px] uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
                               <span className="text-[10px] font-sans text-slate-500 mt-1 uppercase">{recebimento.categoria} • {formatarDataBR(recebimento.data)}</span>
@@ -410,19 +418,19 @@ export function Painel() {
         </div>
       )}
 
-      {/* MODAL: COMPROVANTE (CENTRALIZADO COM OPÇÃO DE IMPRIMIR) */}
+      {/* MODAL: COMPROVANTE DE VENDA */}
       {vendaSelecionada && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:absolute print:inset-0 print:p-0 print:bg-white print:backdrop-blur-none">
           <div className="absolute inset-0 print:hidden" onClick={() => setVendaSelecionada(null)}></div>
 
           <div className="bg-white rounded-[24px] w-full max-w-sm max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden print:rounded-none print:shadow-none print:max-w-full print:h-auto print:border-0">
-            
+
             <div className="flex justify-between items-center p-6 bg-slate-900 text-white shrink-0 print:bg-white print:text-black print:border-b print:border-dashed print:border-slate-300 print:p-4">
               <div>
                 <h3 className="text-[14px] font-bold uppercase tracking-widest">COMPROVANTE</h3>
                 <p className="text-[10px] font-medium text-slate-400 print:text-slate-600 mt-1 uppercase tracking-wider">{formatarDataBR(vendaSelecionada.dataFechamento)} • {formatarHora(vendaSelecionada.dataFechamento)}</p>
               </div>
-              
+
               <div className="flex items-center gap-2 print:hidden">
                 <button onClick={handleImprimir} className="w-9 h-9 flex items-center justify-center bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors" title="Imprimir Recibo">
                   <LucideIcons.Printer size={18} strokeWidth={2} />
@@ -434,7 +442,7 @@ export function Painel() {
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 hide-scrollbar relative print:p-4 print:overflow-visible">
-              
+
               {vendaSelecionada.status === 'cancelada' && (
                 <div className="bg-rose-50 p-4 rounded-xl mb-6 border border-rose-100 relative z-10 print:bg-transparent print:border-dashed print:border-black">
                   <h4 className="text-rose-700 print:text-black font-semibold uppercase tracking-widest flex items-center gap-2 mb-2 text-[11px]">
@@ -444,10 +452,10 @@ export function Painel() {
                   <p className="text-rose-600/90 print:text-black text-[10px] font-medium uppercase mt-1">MOTIVO: {vendaSelecionada.motivoCancelamento}</p>
                 </div>
               )}
-              
+
               <div className="bg-slate-50 print:bg-transparent rounded-xl border border-slate-200 print:border-none p-4 mb-6 flex gap-4 relative z-10">
                 <div className="flex-1">
-                  <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 print:text-slate-600 mb-1">GUARDA-SOL</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 print:text-slate-600 mb-1">MESA</p>
                   <p className="font-semibold text-slate-900 text-[14px]">{vendaSelecionada.numeroMesa}</p>
                 </div>
                 <div className="w-px bg-slate-200 print:hidden"></div>

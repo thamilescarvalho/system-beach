@@ -14,7 +14,6 @@ import { Login } from './pages/Login';
 import { AdminUsuarios } from './pages/AdminUsuarios';
 import { AdminFinanceiro } from './pages/AdminFinanceiro';
 import { Estoque } from './pages/Estoque'; 
-import { AdminMesas } from './pages/AdminMesas'; 
 import { Cozinha } from './pages/Cozinha';
 
 // SEGURANÇA 1: Garante que está LOGADO
@@ -54,9 +53,7 @@ export function App() {
           <Route path="/admin/equipe" element={<RotaProtegida><RotaAdmin><AdminUsuarios /></RotaAdmin></RotaProtegida>} />
           <Route path="/admin/estoque" element={<RotaProtegida><RotaAdmin><Estoque /></RotaAdmin></RotaProtegida>} />
           
-          {/* ROTA DE MESAS ADICIONADA */}
-          <Route path="/admin/mesas" element={<RotaProtegida><RotaAdmin><AdminMesas /></RotaAdmin></RotaProtegida>} />
-          
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -11,30 +11,23 @@ export function Admin() {
       title: 'Financeiro', 
       icon: <LucideIcons.Wallet size={24} strokeWidth={2.5} className="text-white" />, 
       path: '/admin/financeiro',
-      bg: 'from-green-500 to-green-800 border-green-600/50',
-      shadow: 'shadow-green-800/30 hover:shadow-green-500/50'
+      bg: 'from-green-600 to-green-950 border-green-600/50',
+      shadow: 'shadow-green-100/30 hover:shadow-green-100/50'
     },
     { 
       title: 'Estoque',  
       icon: <LucideIcons.Box size={24} strokeWidth={2.5} className="text-white" />, 
       path: '/admin/estoque',
-      bg: 'from-cyan-900 to-cyan-700 border-cyan-600/50',
-      shadow: 'shadow-cyan-800/30 hover:shadow-cyan-500/50'
+      bg: 'from-cyan-600 to-cyan-950 border-cyan-600/50',
+      shadow: 'shadow-cyan-100/30 hover:shadow-cyan-100/50'
     },
     { 
       title: 'Equipe', 
       icon: <LucideIcons.Users size={24} strokeWidth={2.5} className="text-white" />, 
       path: '/admin/equipe',
-      bg: 'from-slate-600 to-slate-800 border-slate-700/60',
-      shadow: 'shadow-slate-800/30 hover:shadow-slate-500/50'
-    },
-    { 
-      title: 'Guarda-sóis', 
-      icon: <LucideIcons.Umbrella size={24} strokeWidth={2.5} className="text-white" />, 
-      path: '/admin/mesas',
-      bg: 'from-fuchsia-600 to-fuchsia-800 border-fuchsia-700/50',
-      shadow: 'shadow-fuchsia-800/30 hover:shadow-fuchsia-500/50'
-    },
+      bg: 'from-slate-600 to-slate-950 border-slate-700/60',
+      shadow: 'shadow-slate-100/30 hover:shadow-slate-100/50'
+    }
   ];
 
   return (
@@ -48,7 +41,7 @@ export function Admin() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-blue-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
 
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center p-6 md:pl-[96px] relative z-10">
+      <main className="flex-1 w-full flex flex-col items-center justify-center p-6 md:pl-24 relative z-10">
         
         {/* Título */}
         <div className="mb-6 md:mb-10 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in-95 duration-500">
@@ -61,7 +54,7 @@ export function Admin() {
         </div>
 
         {/* BOTÕES */}
-        <div className="w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto max-w-[320px] md:max-w-[750px]">
+        <div className="w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto max-w-[320px] md:max-w-187.5">
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
             {menuOptions.map((opt) => (
@@ -69,7 +62,7 @@ export function Admin() {
                 key={opt.title}
                 onClick={() => navigate(opt.path)}
                 className={`
-                  group relative w-full aspect-square rounded-3xl md:rounded-[32px]
+                  group relative w-full aspect-square rounded-3xl md:rounded-4xl
                   bg-linear-to-br ${opt.bg} border
                   shadow-xl ${opt.shadow}
                   hover:-translate-y-1 hover:shadow-2xl 

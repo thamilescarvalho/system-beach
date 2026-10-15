@@ -154,7 +154,7 @@ export function AdminUsuarios() {
 
                 <div className="flex-[1.2]">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Cargo</label>
-                  <div className="flex gap-2 bg-slate-50 p-2 rounded-3xl border border-slate-300 h-[47px]">
+                  <div className="flex gap-2 bg-slate-50 p-2 rounded-3xl border border-slate-300 h-11.75">
                     <button 
                       type="button" 
                       onClick={() => setCargo('garcom')} 
@@ -176,7 +176,7 @@ export function AdminUsuarios() {
               {/* Botão Salvar */}
               <button 
                 type="submit"
-                className="w-full mt-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 text-white font-bold py-3 rounded-3xl uppercase tracking-widest transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-2"
+                className="w-full mt-2 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 text-white font-bold py-3 rounded-3xl uppercase tracking-widest transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-2"
               > 
                 <LucideIcons.Check size={16} strokeWidth={3} /> Cadastrar Usuário
               </button>
