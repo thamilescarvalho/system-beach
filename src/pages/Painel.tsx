@@ -8,7 +8,7 @@ import * as LucideIcons from 'lucide-react';
 export function Painel() {
   const contexto = useContext(AppContext);
 
-  // ESTADOS TELA PRINCIPAL
+  // ESTADOS
   const dataHoje = new Date().toISOString().split('T')[0];
   const [dataInicio, setDataInicio] = useState(dataHoje);
   const [dataFim, setDataFim] = useState(dataHoje);
@@ -28,15 +28,15 @@ export function Painel() {
   const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
 
-  // META DE VENDAS
-  const [metaDeVendas] = useState(2000);
+  // META DE VENDAS (SUPABASE)
+  const metaAtiva = contexto?.metaAtiva;
 
-  // DADOS REAIS DO CONTEXTO (SUPABASE)
+  // DADOS (SUPABASE)
   const historico = contexto?.historicoVendas || [];
   const garcomLogado = contexto?.garcomLogado;
   const todosPagamentos = contexto?.historicoPagamentos || [];
 
-  // LÓGICA DE FILTRAGEM DAS VENDAS
+  // FILTRAGEM DAS VENDAS PARA O EXTRATO DO PAINEL
   const vendasFiltradas = historico.filter(venda => {
     const dataVenda = venda.dataFechamento.split('T')[0];
     const dataValida = dataVenda >= dataInicio && dataVenda <= dataFim;
@@ -54,12 +54,29 @@ export function Painel() {
   const vendasValidas = vendasFiltradas.filter(v => v.status !== 'cancelada');
   const faturamentoTotal = vendasValidas.reduce((total, venda) => total + venda.total, 0);
 
-  const porcentagemMeta = Math.min((faturamentoTotal / metaDeVendas) * 100, 100);
-  const metaBatida = faturamentoTotal >= metaDeVendas;
+  // META
+  let faturamentoDaMeta = 0;
+  
+  if (metaAtiva) {
+    const vendasDentroDaMeta = historico.filter(venda => {
+      if (venda.status === 'cancelada') return false;
+      
+      const dataVenda = venda.dataFechamento.split('T')[0];
+      const dataDentroDoPeriodoMeta = dataVenda >= metaAtiva.dataInicio && dataVenda <= metaAtiva.dataFim;
+      const privacidadeValida = garcomLogado?.cargo === 'admin' ? true : venda.garcomNome === garcomLogado?.nome;
+      
+      return dataDentroDoPeriodoMeta && privacidadeValida;
+    });
 
-  // LÓGICA DE RECEBIMENTOS E VALES 100% REAIS (CONECTADO AO SUPABASE)
+    faturamentoDaMeta = vendasDentroDaMeta.reduce((acc, v) => acc + v.total, 0);
+  }
+
+  const valorAlvoMeta = metaAtiva ? metaAtiva.valorAlvo : 0;
+  const porcentagemMeta = valorAlvoMeta > 0 ? Math.min((faturamentoDaMeta / valorAlvoMeta) * 100, 100) : 0;
+  const metaBatida = valorAlvoMeta > 0 && faturamentoDaMeta >= valorAlvoMeta;
+
+  // VALES (SUPABASE)
   const recebimentosReal = todosPagamentos.filter((pagamento: PagamentoGarcom) => {
-    // Se for admin, exibe todos; se for garçom, exibe apenas os dele
     const pertenceAoUsuario = garcomLogado?.cargo === 'admin' 
       ? true 
       : (pagamento.garcomId === garcomLogado?.id || pagamento.garcomNome === garcomLogado?.nome);
@@ -117,11 +134,11 @@ export function Painel() {
         <Header />
 
         {/* ÁREA DE SALDO */}
-        <div className="bg-emerald-950 text-white rounded-b-[60px] md:rounded-b-[40px] pt-18 md:pt-20 md:pl-[72px] relative overflow-hidden shadow-xl shadow-emerald-900/20">
+        <div className="bg-emerald-950 text-white rounded-b-4xl pt-18 md:pt-20 md:pl-18 relative overflow-hidden shadow-xl shadow-emerald-900/20">
           <div className="absolute -right-20 -top-20 w-64 h-80 bg-emerald-500/30 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute -left-10 bottom-0 w-40 h-40 bg-emerald-700/30 rounded-full blur-2xl pointer-events-none"></div>
 
-          <div className="relative z-10 w-full max-w-4xl mx-auto px-4 py-8 md:py-10 flex flex-col items-center">
+          <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-8 md:py-10 flex flex-col items-center">
 
             <div className="flex items-center gap-2 mb-3 opacity-70 hover:opacity-100 transition-opacity">
               <LucideIcons.TrendingUp size={14} />
@@ -148,34 +165,28 @@ export function Painel() {
                   type="date" 
                   value={dataInicio} 
                   onChange={(e) => setDataInicio(e.target.value)} 
-                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-[105px] md:w-[115px] text-center uppercase" 
+                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-26 md:w-28 text-center uppercase" 
                 />
                 <span className="text-emerald-500/80 font-bold text-[9px] uppercase mx-2 tracking-widest">Até</span>
                 <input 
                   type="date" 
                   value={dataFim} 
                   onChange={(e) => setDataFim(e.target.value)} 
-                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-[105px] md:w-[115px] text-center uppercase" 
+                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-26 md:w-28 text-center uppercase" 
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* BOTÕES E EXTRATO */}
-        <div className="w-full max-w-4xl mx-auto px-4 md:px-8 md:pl-[104px] -mt-6 md:-mt-8 relative z-20 flex flex-col items-center">
+        {/* QUICK ACTIONS - DESIGN CIRCULAR MODERNO */}
+        <div className="relative z-20 w-full max-w-5xl mx-auto px-4 md:px-8 md:pl-30 -mt-7 mb-8">
+          <div className="flex items-center justify-center gap-6 md:gap-10 bg-transparent">
 
-          {/* 2 BOTÕES DE AÇÃO */}
-          <div className="flex items-center justify-center gap-5 w-full max-w-[300px]">
-
-            <button 
-              onClick={() => setModalRecebimentosAberto(true)}
-              className="flex-1 bg-white rounded-4xl md:rounded-4xl p-3 shadow-lg shadow-slate-200/90 border border-slate-100 flex flex-col items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-200 transition-all active:scale-95 group relative"
-            >
-              <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                <LucideIcons.Wallet size={18} strokeWidth={2} />
+            <button onClick={() => setModalRecebimentosAberto(true)} className="group flex flex-col items-center gap-2 outline-none active:scale-95 transition-all relative">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full shadow-lg shadow-black/5 border border-slate-100 flex items-center justify-center text-emerald-600 group-hover:-translate-y-1 group-hover:shadow-xl transition-all duration-300">
+                <LucideIcons.Wallet size={24} strokeWidth={1.5} />
               </div>
-              <span className="text-[10px] md:text-[11px] font-semibold text-slate-700 uppercase tracking-widest">Carteira</span>
               {recebimentosReal.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[9px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                   {recebimentosReal.length}
@@ -183,20 +194,21 @@ export function Painel() {
               )}
             </button>
 
-            <button 
-              onClick={() => setModalMetaAberto(true)}
-              className="flex-1 bg-white rounded-4xl md:rounded-4xl p-3 shadow-lg shadow-slate-200/90 border border-slate-100 flex flex-col items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-xl hover:border-blue-200 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                <LucideIcons.Target size={18} strokeWidth={2} />
+            <button onClick={() => setModalMetaAberto(true)} className="group flex flex-col items-center gap-2 outline-none active:scale-95 transition-all relative">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full shadow-lg shadow-black/5 border border-slate-100 flex items-center justify-center text-blue-600 group-hover:-translate-y-1 group-hover:shadow-xl transition-all duration-300">
+                <LucideIcons.Target size={24} strokeWidth={1.5} />
               </div>
-              <span className="text-[10px] md:text-[11px] font-semibold text-slate-700 uppercase tracking-widest">Metas</span>
+              {metaAtiva && (
+                <span className="absolute top-0 right-1 w-3 h-3 bg-blue-500 border-2 border-white rounded-full animate-pulse"></span>
+              )}
             </button>
 
           </div>
+        </div>
 
-          {/* EXTRATO DE VENDAS */}
-          <section className="mt-8 w-full">
+        {/* EXTRATO DE VENDAS */}
+        <main className="w-full max-w-5xl mx-auto px-4 md:px-8 md:pl-26 relative z-20">
+          <section className="pb-12">
             <div className="flex items-center justify-between mb-4 px-2">
               <h3 className="text-[12px] font-sans uppercase tracking-widest text-slate-500">Extrato de Vendas</h3>
 
@@ -228,7 +240,7 @@ export function Painel() {
               </div>
             </div>
 
-            <div className="bg-white rounded-4xl border border-slate-300 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-[28px] border border-slate-200 overflow-hidden shadow-sm">
               {vendasFiltradas.length === 0 ? (
                 <div className="p-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
@@ -280,7 +292,7 @@ export function Painel() {
               )}
             </div>
           </section>
-        </div>
+        </main>
       </div>
 
       {/* MODAL: DETALHES DA META */}
@@ -288,96 +300,114 @@ export function Painel() {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalMetaAberto(false)}></div>
 
-          <div className="bg-white rounded-[24px] w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
-            <div className="p-6 flex justify-between items-center border-b border-slate-100">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-900">ACOMPANHAMENTO DE META</h3>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
+            <div className="p-5 flex justify-between items-center border-b border-slate-100">
+              <h3 className="text-[12px] font-bold uppercase tracking-widest text-slate-900">ACOMPANHAMENTO DE META</h3>
               <button onClick={() => setModalMetaAberto(false)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
-                <LucideIcons.X size={18} strokeWidth={2.5} />
+                <LucideIcons.X size={15} strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="p-6">
-              <div className="flex justify-between items-end mb-3">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">PROGRESSO ATUAL</p>
-                <p className="text-2xl font-bold tracking-tighter text-blue-600">{porcentagemMeta.toFixed(1)}%</p>
-              </div>
+            <div className="p-5">
+              {!metaAtiva ? (
+                 <div className="text-center py-8 flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                        <LucideIcons.Target size={24} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                        <p className="text-[12px] font-semibold text-slate-700">Nenhuma meta ativa</p>
+                    </div>
+                 </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-end mb-3">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">PROGRESSO ATUAL</p>
+                      <p className="text-[9px] font-medium text-slate-400 mt-0.5 uppercase tracking-widest">
+                        {formatarDataBR(metaAtiva.dataInicio).slice(0,5)} a {formatarDataBR(metaAtiva.dataFim).slice(0,5)}
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold tracking-tighter text-blue-600">{porcentagemMeta.toFixed(1)}%</p>
+                  </div>
 
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-6 shadow-inner">
-                <div 
-                  className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                    metaBatida ? 'bg-emerald-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${porcentagemMeta}%` }}
-                ></div>
-              </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-6 shadow-inner">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                        metaBatida ? 'bg-emerald-500' : 'bg-blue-500'
+                      }`}
+                      style={{ width: `${porcentagemMeta}%` }}
+                    ></div>
+                  </div>
 
-              <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-200/60">
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">META ESTIPULADA</span>
-                  <span className="font-bold text-[13px] text-slate-800">{formatarMoeda(metaDeVendas)}</span>
-                </div>
-                <div className="flex justify-between items-center pb-3 border-b border-slate-200/60">
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">JÁ FATURADO</span>
-                  <span className="font-bold text-[13px] text-slate-800">{formatarMoeda(faturamentoTotal)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">FALTA P/ ATINGIR</span>
-                  <span className={`font-bold text-[13px] ${metaBatida ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {metaBatida ? 'META BATIDA! 🎉' : formatarMoeda(metaDeVendas - faturamentoTotal)}
-                  </span>
-                </div>
-              </div>
+                  <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-200/60">
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">META ESTIPULADA</span>
+                      <span className="font-bold text-[13px] text-slate-800">{formatarMoeda(valorAlvoMeta)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-200/60">
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">JÁ FATURADO</span>
+                      <span className="font-bold text-[13px] text-slate-800">{formatarMoeda(faturamentoDaMeta)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">FALTA P/ ATINGIR</span>
+                      <span className={`font-bold text-[13px] ${metaBatida ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {metaBatida ? 'META BATIDA! 🎉' : formatarMoeda(valorAlvoMeta - faturamentoDaMeta)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: CARTEIRA DE RECEBIMENTOS & REPASSES (AGORA 100% REAIS VIA CONTEXTO) */}
+      {/* MODAL: CARTEIRA & REPASSES */}
       {modalRecebimentosAberto && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:hidden">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-7 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalRecebimentosAberto(false)}></div>
 
-          <div className="bg-slate-50 rounded-[24px] w-full max-w-md max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
+          <div className="bg-slate-50 rounded-3xl w-full max-w-md max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
 
-            <div className="flex justify-between items-center p-6 bg-white border-b border-slate-100 shrink-0">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-900">CARTEIRA & REPASSES</h3>
-              <button onClick={() => setModalRecebimentosAberto(false)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
-                <LucideIcons.X size={18} strokeWidth={2.5} />
+            <div className="flex justify-between items-center p-4 bg-white border-b border-slate-100 shrink-0">
+              <h3 className="text-[13px] font-medium uppercase tracking-widest text-slate-900">CARTEIRA & REPASSES</h3>
+              <button onClick={() => setModalRecebimentosAberto(false)} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+                <LucideIcons.X size={15} strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="p-4 bg-white border-b border-slate-100 shrink-0 shadow-sm z-10">
-              <div className="bg-slate-50 rounded-xl border border-slate-200 flex items-center p-2 gap-2">
-                <LucideIcons.CalendarDays size={16} className="text-slate-400 ml-2 shrink-0" />
-                <div className="flex-1 flex items-center gap-2">
-                  <input type="date" value={modalDataInicio} onChange={(e) => setModalDataInicio(e.target.value)} className="bg-transparent w-full text-slate-700 text-[12px] font-semibold outline-none text-center uppercase" />
-                  <span className="text-slate-400 font-bold text-[9px] uppercase tracking-widest">ATÉ</span>
-                  <input type="date" value={modalDataFim} onChange={(e) => setModalDataFim(e.target.value)} className="bg-transparent w-full text-slate-700 text-[12px] font-semibold outline-none text-center uppercase" />
+            <div className="p-2 bg-white border-b border-slate-100 shrink-0 shadow-sm z-10">
+              <div className="bg-slate-100 rounded-4xl border border-slate-200 flex items-center p-1 gap-5">
+                <LucideIcons.CalendarDays size={14} className="text-slate-400 ml-3 shrink-0" />
+                <div className="flex-1 flex items-center gap-5">
+                  <input type="date" value={modalDataInicio} onChange={(e) => setModalDataInicio(e.target.value)} className="bg-transparent w-full text-slate-700 text-[11px] font-medium outline-none text-center uppercase" />
+                  <span className="text-slate-400 font-medium text-[9px] uppercase tracking-widest">ATÉ</span>
+                  <input type="date" value={modalDataFim} onChange={(e) => setModalDataFim(e.target.value)} className="bg-transparent w-full text-slate-700 text-[11px] font-medium outline-none text-center uppercase" />
                 </div>
               </div>
             </div>
 
-            <div className="p-5 overflow-y-auto flex-1 hide-scrollbar bg-slate-50">
+            <div className="p-5 overflow-y-auto flex-1 hide-scrollbar bg-slate-100">
               {recebimentosReal.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-200/50 rounded-full flex items-center justify-center mb-4 text-slate-400">
-                    <LucideIcons.Wallet size={32} />
+                    <LucideIcons.Wallet size={30} />
                   </div>
-                  <p className="text-slate-500 font-semibold text-[13px] uppercase">NENHUM LANÇAMENTO NO PERÍODO.</p>
+                  <p className="text-slate-500 font-medium text-[13px] uppercase">NENHUM LANÇAMENTO NO PERÍODO.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {recebimentosAgendados.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-3 px-1">AGENDADOS (A RECEBER)</h4>
+                      <h4 className="text-[10px] font-sans uppercase tracking-widest text-slate-500 mb-3 px-1">AGENDADOS (A RECEBER)</h4>
                       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-50">
                         {recebimentosAgendados.map((recebimento) => (
-                          <div key={recebimento.id} className="flex justify-between items-center p-4">
+                          <div key={recebimento.id} className="flex justify-between items-center p-3">
                             <div className="flex flex-col">
-                              <span className="font-sans text-emerald-600 text-[13px] font-semibold uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
-                              <span className="text-[10px] font-medium text-slate-500 mt-1 uppercase">{recebimento.categoria} • {formatarDataBR(recebimento.data)}</span>
+                              <span className="font-sans text-slate-500 text-[12px] font-medium uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
+                              <span className="text-[9px] font-sans text-slate-400 mt-1 uppercase">{recebimento.categoria} • {formatarDataBR(recebimento.data)}</span>
                             </div>
-                            <span className="font-semibold tracking-tight text-emerald-600 text-[14px] tabular-nums">{formatarMoeda(recebimento.valor)}</span>
+                            <span className="font-medium tracking-tight text-yellow-600 text-[12px] tabular-nums">{formatarMoeda(recebimento.valor)}</span>
                           </div>
                         ))}
                       </div>
@@ -386,15 +416,15 @@ export function Painel() {
 
                   {recebimentosPagos.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-1">HISTÓRICO PAGO</h4>
+                      <h4 className="text-[10px] font-sans uppercase tracking-widest text-slate-400 mb-3 px-1">EXTRATO DE RECEBIMENTOS</h4>
                       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-50">
                         {recebimentosPagos.map((recebimento) => (
                           <div key={recebimento.id} className="flex justify-between items-center p-4">
                             <div className="flex flex-col">
-                              <span className="font-medium text-emerald-600 text-[13px] uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
+                              <span className="font-medium text-slate-500 text-[12px] uppercase tracking-wide leading-tight">{recebimento.descricao}</span>
                               <span className="text-[10px] font-sans text-slate-500 mt-1 uppercase">{recebimento.categoria} • {formatarDataBR(recebimento.data)}</span>
                             </div>
-                            <span className="font-medium text-emerald-600 text-[14px] tabular-nums">{formatarMoeda(recebimento.valor)}</span>
+                            <span className="font-medium text-emerald-700 text-[12px] tabular-nums">{formatarMoeda(recebimento.valor)}</span>
                           </div>
                         ))}
                       </div>
@@ -406,12 +436,12 @@ export function Painel() {
 
             <div className="bg-white p-6 shrink-0 border-t border-slate-200 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-10">
               <div className="flex justify-between items-center mb-3 text-[12px] text-slate-500">
-                <span className="font-semibold uppercase tracking-wide">TOTAL RECEBIDO</span>
-                <span className="font-semibold tabular-nums">{formatarMoeda(totalModalPago)}</span>
+                <span className="font-medium uppercase tracking-wide">TOTAL RECEBIDO</span>
+                <span className="font-medium tabular-nums">{formatarMoeda(totalModalPago)}</span>
               </div>
               <div className="flex justify-between items-center pt-4 border-t border-slate-100 text-slate-900">
-                <span className="font-bold text-[13px] uppercase tracking-widest">A RECEBER</span>
-                <span className="text-2xl font-bold tabular-nums tracking-tighter text-emerald-600">{formatarMoeda(totalModalAgendado)}</span>
+                <span className="font-medium text-[13px] uppercase tracking-widest">A RECEBER</span>
+                <span className="text-xl font-medium tabular-nums tracking-tighter text-yellow-600">{formatarMoeda(totalModalAgendado)}</span>
               </div>
             </div>
           </div>
@@ -423,7 +453,7 @@ export function Painel() {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 font-sans print:absolute print:inset-0 print:p-0 print:bg-white print:backdrop-blur-none">
           <div className="absolute inset-0 print:hidden" onClick={() => setVendaSelecionada(null)}></div>
 
-          <div className="bg-white rounded-[24px] w-full max-w-sm max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden print:rounded-none print:shadow-none print:max-w-full print:h-auto print:border-0">
+          <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden print:rounded-none print:shadow-none print:max-w-full print:h-auto print:border-0">
 
             <div className="flex justify-between items-center p-6 bg-slate-900 text-white shrink-0 print:bg-white print:text-black print:border-b print:border-dashed print:border-slate-300 print:p-4">
               <div>

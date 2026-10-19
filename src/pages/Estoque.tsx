@@ -1,8 +1,8 @@
 // src/pages/Estoque.tsx
 import { useContext, useState, useMemo } from 'react';
 import type { ElementType } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
+import { Header } from '../components/Header';
 import type { Produto, Categoria } from '../types';
 import imageCompression from 'browser-image-compression';
 import * as LucideIcons from 'lucide-react';
@@ -17,7 +17,6 @@ const OPCOES_ICONES = [
 ];
 
 export function Estoque() {
-  const navigate = useNavigate();
   const contexto = useContext(AppContext);
   
   const produtos = useMemo(() => contexto?.produtos || [], [contexto?.produtos]);
@@ -61,7 +60,7 @@ export function Estoque() {
   const [qtdForm, setQtdForm] = useState('');
   const [custoDigitado, setCustoDigitado] = useState('');
 
-  // FUNÇÃO RENDERIZAR ÍCONE LUCIDE
+  // FUNÇÃO RENDERIZAR
   const renderizarIconeDinamicamente = (nomeCategoriaOuIcone: string, classesCss: string = "") => {
     const isIconName = OPCOES_ICONES.includes(nomeCategoriaOuIcone) || nomeCategoriaOuIcone === 'Package';
     const iconeNome = isIconName ? nomeCategoriaOuIcone : categorias.find(c => c.nome === nomeCategoriaOuIcone)?.icone || 'Package';
@@ -185,12 +184,12 @@ export function Estoque() {
   const renderProdutoLista = (produto: Produto) => {
     const estoqueAtual = produto.estoque || 0; const ativo = produto.ativo !== false; const critico = estoqueAtual <= 10;
     return (
-      <button key={produto.id} onClick={() => setProdutoDetalhe(produto)} className={`w-full flex items-center p-4 rounded-3xl border transition-all text-left transform-style-3d group hover:-translate-y-1.5 hover:shadow-lg hover:shadow-indigo-500/10 hover:border-indigo-200 active:scale-[0.98] active:translate-y-0 active:shadow-inner ${ativo ? 'bg-white border-slate-200 shadow-sm shadow-slate-200/50' : 'bg-slate-50 border-slate-200 opacity-60 saturate-50'}`}>
+      <button key={produto.id} onClick={() => setProdutoDetalhe(produto)} className={`w-full flex items-center p-4 rounded-3xl border transition-all text-left group hover:-translate-y-1.5 hover:shadow-lg hover:shadow-indigo-500/10 hover:border-indigo-200 active:scale-[0.98] active:translate-y-0 active:shadow-inner ${ativo ? 'bg-white border-slate-200 shadow-sm shadow-slate-200/50' : 'bg-slate-50 border-slate-200 opacity-60 saturate-50'}`}>
         {produto.imagem_url ? ( <img src={produto.imagem_url} alt={produto.nome} className="w-16 h-16 rounded-2xl object-cover border border-slate-100 shrink-0 shadow-sm shadow-slate-300/50 transition-transform group-hover:scale-105" />
         ) : ( <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200 shadow-inner shadow-slate-200/50 transition-transform group-hover:scale-105">{renderizarIconeDinamicamente(produto.categoria, "text-slate-500")}</div> )}
         <div className="flex-1 px-4 min-w-0">
-          <h3 className={`text-base font-black tracking-tight truncate ${ativo ? 'text-slate-800' : 'text-slate-500 line-through'}`}>{produto.nome}</h3>
-          <div className="flex items-center gap-2 mt-0.5"><span className="text-xs font-bold uppercase tracking-widest text-slate-400">{produto.categoria}</span>{produto.subcategoria && ( <><span className="w-1 h-1 rounded-full bg-slate-300"></span><span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 truncate">{produto.subcategoria}</span></> )}</div>
+          <h3 className={`text-[14px] font-black tracking-tight truncate uppercase ${ativo ? 'text-slate-800' : 'text-slate-500 line-through'}`}>{produto.nome}</h3>
+          <div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{produto.categoria}</span>{produto.subcategoria && ( <><span className="w-1 h-1 rounded-full bg-slate-300"></span><span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 truncate">{produto.subcategoria}</span></> )}</div>
         </div>
         <div className="text-right pl-3 flex flex-col items-end shrink-0"><div className="flex items-baseline gap-1"><span className={`text-[22px] font-black leading-none tabular-nums ${critico && ativo ? 'text-rose-500' : 'text-slate-800'}`}>{estoqueAtual}</span><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">un</span></div>{ativo && critico && <span className="text-[9px] font-black uppercase tracking-widest text-rose-500 mt-1 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">Baixo</span>}{!ativo && <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">Inativo</span>}</div>
       </button>
@@ -198,54 +197,52 @@ export function Estoque() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-200 font-sans pb-24 relative overflow-hidden perspective-distant">
+    <div className="min-h-screen bg-slate-100 font-sans pt-20 md:pt-24 md:pl-18 pb-24 relative overflow-hidden select-none">
       
+      {/* ELEMENTOS DE FUNDO */}
       <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-rose-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200 shadow-sm shadow-slate-200/50 px-4 md:px-8 py-4 flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/admin')} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 shadow-sm shadow-slate-200/50 rounded-2xl text-slate-600 active:scale-95 active:shadow-inner transition-all hover:bg-slate-50">
-             <LucideIcons.ArrowLeft size={20} strokeWidth={2.5}/>
-          </button>
-          <div>
-            <h1 className="text-[20px] font-black text-slate-900 tracking-widest uppercase leading-none">ESTOQUE</h1>
-            <p className="text-indigo-600 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Controle</p>
-          </div>
-        </div>
-        
-        {abaAtiva === 'categorias' ? (
-          <button onClick={abrirModalNovaCategoria} className="flex items-center gap-2 bg-linear-to-b from-indigo-600 to-indigo-700 border border-indigo-700 border-t-indigo-600/50 shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-500/40 active:shadow-inner px-4 py-2.5 rounded-xl text-[11px] uppercase tracking-widest font-black text-white transition-all active:scale-95">
-            <span>+ CATEGORIA</span>
-          </button>
-        ) : (
-          <button onClick={abrirModalNovoProduto} className="flex items-center gap-2 bg-linear-to-b from-indigo-600 to-indigo-700 border border-indigo-700 border-t-indigo-600/50 shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-500/40 active:shadow-inner px-4 py-2.5 rounded-xl text-[11px] uppercase tracking-widest font-black text-white transition-all active:scale-95">
-            <span>+ PRODUTO</span>
-          </button>
-        )}
-      </header>
+      <Header />
 
-      <div className="px-8 md:px-8 mb-7 relative z-10 max-w-6xl mx-auto">
-        <div className="bg-slate-300/50 p-1 rounded-2xl flex flex-wrap md:max-w-xl mx-auto gap-1">
-          <button onClick={() => setAbaAtiva('saldo')} className={`flex-1 min-w-[30%] py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all rounded-xl ${abaAtiva === 'saldo' ? 'bg-white shadow-sm shadow-slate-200/50 text-zinc-700' : 'text-slate-500 hover:text-slate-700'}`}>
+      {/* ABAS E BOTÃO DE AÇÃO */}
+      <div className="px-4 md:px-8 mb-8 relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        
+        {/* Menu de Abas */}
+        <div className="bg-white p-1 rounded-4xl border border-slate-200 shadow-sm flex flex-wrap w-full md:w-auto md:min-w-100 gap-1">
+          <button onClick={() => setAbaAtiva('saldo')} className={`flex-1 min-w-[30%] py-2 text-[10px] font-medium uppercase tracking-widest transition-all rounded-4xl ${abaAtiva === 'saldo' ? 'bg-slate-600 text-white shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
             Estoque
           </button>
-          <button onClick={() => setAbaAtiva('categorias')} className={`flex-1 min-w-[30%] py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all rounded-xl ${abaAtiva === 'categorias' ? 'bg-white shadow-sm shadow-slate-200/50 text-zinc-700' : 'text-slate-500 hover:text-slate-700'}`}>
+          <button onClick={() => setAbaAtiva('categorias')} className={`flex-1 min-w-[30%] py-2 text-[10px] font-medium uppercase tracking-widest transition-all rounded-4xl ${abaAtiva === 'categorias' ? 'bg-slate-600 text-white shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
             Categorias
           </button>
-          <button onClick={() => setAbaAtiva('historico')} className={`flex-1 min-w-[30%] py-2.5 text-[11px] font-bold uppercase tracking-widest transition-all rounded-xl ${abaAtiva === 'historico' ? 'bg-white shadow-sm shadow-slate-200/50 text-zinc-700' : 'text-slate-500 hover:text-slate-700'}`}>
+          <button onClick={() => setAbaAtiva('historico')} className={`flex-1 min-w-[30%] py-2 text-[10px] font-medium uppercase tracking-widest transition-all rounded-4xl ${abaAtiva === 'historico' ? 'bg-slate-600 text-white shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
             Movimentos
           </button>
         </div>
+
+        {/* Botão + Produto ou + Categoria */}
+        <div className="w-max md:w-auto flex justify-end">
+          {abaAtiva === 'categorias' ? (
+            <button onClick={abrirModalNovaCategoria} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-linear-to-b from-indigo-700 to-indigo-800 border border-indigo-800 border-t-indigo-600/50 shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-500/40 active:shadow-inner px-6 py-2 md:py-2.5 rounded-4xl text-[10px] uppercase tracking-widest font-medium text-white transition-all active:scale-95">
+              <span>+ CATEGORIA</span>
+            </button>
+          ) : (
+            <button onClick={abrirModalNovoProduto} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-linear-to-b from-indigo-700 to-indigo-800 border border-indigo-800 border-t-indigo-600/50 shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-500/40 active:shadow-inner px-6 py-2 md:py-2.5 rounded-4xl text-[10px] uppercase tracking-widest font-medium text-white transition-all active:scale-95">
+              <span>+ PRODUTO</span>
+            </button>
+          )}
+        </div>
+
       </div>
 
-      <main className="w-full max-w-6xl mx-auto px-8 md:px-8 space-y-8 relative z-10">
+      <main className="w-full max-w-4xl mx-auto px-4 md:px-8 space-y-8 relative z-10">
         
         {abaAtiva === 'saldo' && (
           <div className="animate-in fade-in duration-300">
             <div className="relative mb-8 max-w-2xl mx-auto">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><LucideIcons.Search size={20} strokeWidth={2.5}/></div>
-              <input type="text" placeholder="Buscar produto" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-12 pr-12 py-4 bg-white border border-slate-200 rounded-[20px] shadow-sm shadow-slate-200/50 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 font-bold text-sm text-slate-800 transition-all placeholder:font-medium placeholder:uppercase placeholder:text-[11px] placeholder:tracking-widest" />
+              <input type="text" placeholder="PESQUISAR" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-12 pr-12 h-10 bg-white border border-slate-300 rounded-[40px] shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-800 font-medium text-sm text-slate-800 transition-all uppercase placeholder:normal-case placeholder:font-medium placeholder:text-[11px] placeholder:tracking-widest" />
               {busca !== '' && (
                 <button onClick={() => setBusca('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"><LucideIcons.X size={20} strokeWidth={2.5}/></button>
               )}
@@ -261,11 +258,11 @@ export function Estoque() {
                     {categorias.map(cat => {
                       const itensNessaCat = produtosComEstoque.filter(p => p.categoria === cat.nome).length;
                       return (
-                        <button key={cat.id} onClick={() => setCategoriaAtiva(cat.nome)} className="bg-white border border-slate-200 p-4 rounded-3xl flex flex-col items-center gap-2 shadow-sm shadow-slate-200/50 hover:border-zinc-400 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-zinc-500/10 transition-all active:scale-[0.96] active:shadow-inner active:translate-y-0">
-                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-inner shadow-slate-200/50">{renderizarIconeDinamicamente(cat.icone, "text-slate-600")}</div>
+                        <button key={cat.id} onClick={() => setCategoriaAtiva(cat.nome)} className="bg-white border border-slate-200 p-4 rounded-3xl flex flex-col items-center gap-1 shadow-sm hover:border-indigo-300 hover:-translate-y-1.5 hover:shadow-md transition-all active:scale-[0.96] active:translate-y-0 group">
+                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">{renderizarIconeDinamicamente(cat.icone, "text-slate-500 group-hover:text-indigo-600")}</div>
                           <div className="text-center w-full mt-1">
-                            <span className="font-bold text-slate-700 text-xs block truncate uppercase tracking-wider">{cat.nome}</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{itensNessaCat} Itens</span>
+                            <span className="font-medium text-slate-800 text-[10px] block truncate uppercase tracking-wider group-hover:text-indigo-700">{cat.nome}</span>
+                            <span className="text-[9px] text-slate-400 font-medium uppercase tracking-widest">{itensNessaCat} Itens</span>
                           </div>
                         </button>
                       );
@@ -274,27 +271,31 @@ export function Estoque() {
                 )}
                 
                 <div className="mt-10 pt-8 border-t border-slate-200/60">
-                  <h2 className="text-[11px] font-bold text-slate-500 tracking-widest uppercase mb-4 pl-1">Visão Geral</h2>
+                  <h2 className="text-[11px] font-medium text-slate-500 tracking-widest uppercase mb-4 pl-1">Visão Geral</h2>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                    <div className="bg-white rounded-[28px] p-5 shadow-sm shadow-slate-200/50 border-t-4 border-rose-500 border-x border-b border-x-slate-200 border-b-slate-200">
-                      <h3 className="text-[12px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2 mb-4"><span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> Urgente</h3>
-                      {produtosEmCritico.length === 0 ? ( <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100"><p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Estoque Seguro</p></div> ) : (
+                    <div className="bg-white rounded-[20px] p-5 shadow-sm border-t-4 border-rose-500 border-x border-b border-x-slate-200 border-b-slate-200">
+                      <h3 className="text-[12px] font-medium text-slate-700 uppercase tracking-widest flex items-center gap-2 mb-4">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> Urgente
+                      </h3>
+                      {produtosEmCritico.length === 0 ? ( <div className="text-center py-2 bg-slate-100 rounded-4xl border border-slate-100"><p className="text-slate-500 font-medium text-[10px] uppercase tracking-widest">Estoque Seguro</p></div> ) : (
                         <div className="flex flex-col gap-2">
                           {produtosEmCritico.slice(0, 4).map(p => (
                             <button key={p.id} onClick={() => setProdutoDetalhe(p)} className="flex justify-between items-center bg-rose-50/50 p-3 rounded-xl border border-rose-100 hover:bg-rose-50 transition-colors">
-                              <span className="font-bold text-slate-700 text-xs truncate pr-2 uppercase tracking-wide">{p.nome}</span><span className="text-rose-600 font-bold text-[10px] uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-rose-100 shadow-sm shadow-rose-200/50 shrink-0">Resta {p.estoque}</span>
+                              <span className="font-bold text-slate-700 text-[11px] truncate pr-2 uppercase tracking-wide">{p.nome}</span><span className="text-rose-600 font-bold text-[10px] uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-rose-100 shadow-sm shrink-0">Resta {p.estoque}</span>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="bg-white rounded-[28px] p-5 shadow-sm shadow-slate-200/50 border-t-4 border-amber-400 border-x border-b border-x-slate-200 border-b-slate-200">
-                      <h3 className="text-[12px] font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">⭐ Populares</h3>
+                    <div className="bg-white rounded-[20px] p-5 shadow-sm border-t-4 border-amber-400 border-x border-b border-x-slate-200 border-b-slate-200">
+                      <h3 className="text-[12px] font-medium text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">
+                        <LucideIcons.Star size={16} className="text-amber-500 fill-amber-400" /> Populares
+                      </h3>
                       {maisVendidos.length === 0 ? ( <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100"><p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sem vendas</p></div> ) : (
                         <div className="flex flex-col gap-2">
                           {maisVendidos.map((p, index) => (
                             <button key={p.id} onClick={() => setProdutoDetalhe(p)} className="flex justify-between items-center p-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
-                              <div className="flex items-center gap-3 min-w-0"><span className="w-7 h-7 shrink-0 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center font-black text-[10px]">{index + 1}º</span><span className="font-bold text-slate-700 text-xs truncate uppercase tracking-wide">{p.nome}</span></div><span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest shrink-0 ml-2">{p.qtdVendida}x</span>
+                              <div className="flex items-center gap-3 min-w-0"><span className="w-7 h-7 shrink-0 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center font-medium text-[10px]">{index + 1}º</span><span className="font-medium text-slate-700 text-[11px] truncate uppercase tracking-wide">{p.nome}</span></div><span className="text-slate-400 font-medium text-[10px] uppercase tracking-widest shrink-0 ml-2">{p.qtdVendida}x</span>
                             </button>
                           ))}
                         </div>
@@ -306,7 +307,7 @@ export function Estoque() {
             ) : (
               <div className="animate-in slide-in-from-right-4 duration-300">
                 <div className="flex items-center gap-4 mb-6">
-                  {categoriaAtiva && ( <button onClick={() => { setCategoriaAtiva(null); setBusca(''); }} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-2xl text-slate-500 hover:bg-slate-50 transition-colors shadow-sm shadow-slate-200/50 active:scale-95"><LucideIcons.ArrowLeft size={20} strokeWidth={2.5} /></button> )}
+                  {categoriaAtiva && ( <button onClick={() => { setCategoriaAtiva(null); setBusca(''); }} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-2xl text-slate-500 hover:bg-slate-50 transition-colors shadow-sm active:scale-95"><LucideIcons.ArrowLeft size={20} strokeWidth={2.5} /></button> )}
                   <h2 className="text-sm font-bold tracking-tight text-slate-600 uppercase">{categoriaAtiva ? `CATEGORIA: ${categoriaAtiva}` : 'Resultados da Busca'}</h2>
                 </div>
                 {produtosExibidos.length === 0 ? ( <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300"><p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Nenhum produto encontrado.</p></div> ) : ( <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">{produtosExibidos.map(renderProdutoLista)}</div> )}
@@ -318,9 +319,9 @@ export function Estoque() {
         {abaAtiva === 'categorias' && (
           <div className="animate-in slide-in-from-bottom-4 duration-300">
             {categorias.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300">
+              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm">
                 <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-4">Você ainda não criou nenhuma categoria.</p>
-                <button onClick={abrirModalNovaCategoria} className="bg-indigo-50 text-indigo-600 font-black uppercase tracking-widest px-6 py-3 rounded-2xl text-[11px] border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm">
+                <button onClick={abrirModalNovaCategoria} className="bg-indigo-50 text-indigo-600 font-medium uppercase tracking-widest px-6 py-3 rounded-2xl text-[11px] border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm">
                   CRIAR PRIMEIRA CATEGORIA
                 </button>
               </div>
@@ -333,7 +334,7 @@ export function Estoque() {
                 {categorias.map((cat, index) => {
                   const numProdutos = produtos.filter(p => p.categoria === cat.nome).length;
                   return (
-                    <div key={cat.id} className="bg-white border border-slate-200 rounded-3xl p-3 shadow-sm shadow-slate-200/50 flex items-center justify-between group hover:shadow-md hover:border-slate-300 transition-all">
+                    <div key={cat.id} className="bg-white border border-slate-200 rounded-3xl p-3 shadow-sm flex items-center justify-between group hover:shadow-md hover:border-slate-300 transition-all">
                       
                       <div className="flex items-center gap-5 flex-1">
                         <div className="flex flex-col gap-1 pl-1">
@@ -341,12 +342,12 @@ export function Estoque() {
                            <button disabled={index === categorias.length - 1} onClick={() => moverCategoria(index, 'desce')} className="text-slate-300 hover:text-indigo-500 disabled:opacity-30 disabled:hover:text-slate-300 transition-colors active:scale-90"><LucideIcons.ChevronDown size={24} strokeWidth={3} /></button>
                         </div>
 
-                        <div className="w-14 h-14 bg-slate-50 rounded-[20px] flex items-center justify-center border border-slate-100 shadow-inner shadow-slate-200/50 shrink-0">
+                        <div className="w-14 h-14 bg-slate-50 rounded-[20px] flex items-center justify-center border border-slate-100 shrink-0">
                           {renderizarIconeDinamicamente(cat.icone, "text-indigo-500")}
                         </div>
                         <div className="flex-1 min-w-0 pr-2">
                           <h4 className="font-bold text-slate-800 tracking-tight uppercase text-sm mb-1 truncate">{cat.nome}</h4>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded border border-slate-100">
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             {numProdutos} Itens
                           </span>
                         </div>
@@ -370,10 +371,10 @@ export function Estoque() {
 
         {abaAtiva === 'historico' && (
           <div className="animate-in slide-in-from-bottom-4 duration-300">
-            {historicoEntradas.length === 0 ? ( <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300"><p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Nenhuma movimentação.</p></div> ) : (
+            {historicoEntradas.length === 0 ? ( <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm"><p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Nenhuma movimentação.</p></div> ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
                 {historicoEntradas.map(log => (
-                  <div key={log.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm shadow-slate-200/50 flex items-center justify-between hover:shadow-md hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 active:scale-[0.98] active:translate-y-0 active:shadow-inner">
+                  <div key={log.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]">
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center gap-2 mb-1.5"><span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-widest border ${log.tipo === 'entrada' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : log.tipo === 'estorno' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>{log.tipo === 'entrada' ? 'Compra' : log.tipo === 'estorno' ? 'Estorno' : 'Ajuste'}</span></div>
                       <h4 className="font-bold text-slate-800 text-sm tracking-tight uppercase truncate">{log.produtoNome}</h4>
@@ -388,10 +389,11 @@ export function Estoque() {
         )}
       </main>
 
+      {/* MODAIS (Configurados com z-50/z-60 para sobrepor o Header Lateral) */}
       {modalNovaCategoriaAberto && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setModalNovaCategoriaAberto(false)}></div>
-          <div className="bg-white rounded-4xl p-6 sm:p-8 w-full max-w-sm shadow-2xl shadow-slate-900/50 relative animate-in zoom-in-95 duration-200 border border-white/20 flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-4xl p-6 sm:p-8 w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <h3 className="text-xl font-black tracking-tight text-slate-900 mb-5 text-center uppercase">
                {editandoCategoriaId ? 'Editar Categoria' : 'Nova Categoria'}
             </h3>
@@ -399,16 +401,16 @@ export function Estoque() {
             <div className="overflow-y-auto scrollbar-hide space-y-5 px-1 pb-2">
                 <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-2 text-center">Nome da Seção</label>
-                    <input type="text" autoFocus placeholder="Ex: Cervejas Especiais" value={textoNovaCategoria} onChange={e => setTextoNovaCategoria(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white font-bold text-slate-800 text-center uppercase tracking-wider text-sm transition-all shadow-inner shadow-slate-100"/>
+                    <input type="text" autoFocus placeholder="Ex: Cervejas Especiais" value={textoNovaCategoria} onChange={e => setTextoNovaCategoria(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white font-bold text-slate-800 text-center uppercase tracking-wider text-sm transition-all"/>
                 </div>
                 
                 <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-2 text-center">Selecione o Ícone Visual</label>
-                    <div className="h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-[20px] p-3 shadow-inner shadow-slate-100 flex flex-wrap gap-2 justify-center scrollbar-hide">
+                    <div className="h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-[20px] p-3 flex flex-wrap gap-2 justify-center scrollbar-hide">
                       {OPCOES_ICONES.map((iconeName) => {
                         const isSelected = iconeName === iconeSelecionado;
                         return (
-                          <button key={iconeName} onClick={() => setIconeSelecionado(iconeName)} className={`w-12 h-12 rounded-[14px] flex items-center justify-center transition-all active:scale-90 ${isSelected ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 border-2 border-indigo-400' : 'bg-white text-slate-400 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-400 hover:border-indigo-200'}`}>
+                          <button key={iconeName} onClick={() => setIconeSelecionado(iconeName)} className={`w-12 h-12 rounded-[14px] flex items-center justify-center transition-all active:scale-90 ${isSelected ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 border-2 border-indigo-400' : 'bg-white text-slate-400 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200'}`}>
                             {renderizarIconeDinamicamente(iconeName, "")}
                           </button>
                         );
@@ -418,8 +420,8 @@ export function Estoque() {
             </div>
 
             <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
-              <button onClick={() => setModalNovaCategoriaAberto(false)} className="flex-1 bg-slate-100 text-slate-500 font-black uppercase tracking-widest py-4 rounded-[20px] text-[10px] transition-all hover:bg-slate-200 active:scale-95">Cancelar</button>
-              <button onClick={handleSalvarCategoria} className="flex-[1.5] bg-slate-900 text-white font-black uppercase tracking-widest py-4 rounded-[20px] text-[11px] transition-all hover:bg-slate-800 shadow-md shadow-slate-900/20 active:scale-95">
+              <button onClick={() => setModalNovaCategoriaAberto(false)} className="flex-1 bg-slate-100 text-slate-500 font-bold uppercase tracking-widest py-4 rounded-[20px] text-[10px] transition-all hover:bg-slate-200 active:scale-95">Cancelar</button>
+              <button onClick={handleSalvarCategoria} className="flex-[1.5] bg-slate-900 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] text-[11px] transition-all hover:bg-slate-800 shadow-md active:scale-95">
                 {editandoCategoriaId ? 'Salvar' : 'Criar Seção'}
               </button>
             </div>
@@ -428,23 +430,23 @@ export function Estoque() {
       )}
 
       {modalNovoProduto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
           <div className="absolute inset-0 min-h-[120%]" onClick={() => !salvandoProduto && setModalNovoProduto(false)}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-md shadow-2xl shadow-slate-900/50 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 my-auto border border-white/20">
-            <h3 className="text-[20px] font-black tracking-tight text-slate-900 mb-6 text-center uppercase">
+          <div className="bg-white rounded-[40px] p-6 w-full max-w-md shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 my-auto">
+            <h3 className="text-[19px] font-bold tracking-tight text-slate-800 mb-6 text-center uppercase">
               {editandoId ? 'Editar Produto' : 'Novo Produto'}
             </h3>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between bg-slate-50 p-4 rounded-[20px] border border-slate-200">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600 ml-1">Exibir no Cardápio</p>
-                <button onClick={() => setNovoProdAtivo(!novoProdAtivo)} className={`w-12 h-7 rounded-full p-1 transition-colors shadow-inner shadow-slate-300/50 ${novoProdAtivo ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                  <div className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${novoProdAtivo ? 'translate-x-5' : 'translate-x-0'}`} />
+              <div className="flex items-center justify-between bg-slate-100 p-2 rounded-[40px] border border-slate-200">
+                <p className="text-[11px] font-medium uppercase tracking-widest text-slate-600 ml-3">Ativar no Cardápio</p>
+                <button onClick={() => setNovoProdAtivo(!novoProdAtivo)} className={`w-10 h-6 rounded-4xl p-1 transition-colors shadow-inner ${novoProdAtivo ? 'bg-emerald-600' : 'bg-slate-300'}`}>
+                  <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${novoProdAtivo ? 'translate-x-4' : 'translate-x-0'}`} />
                 </button>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Foto do Produto (Opcional)</label>
+                <label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Foto do Produto (Opcional)</label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-3xl relative hover:border-indigo-400 hover:bg-slate-50 transition-colors bg-white group cursor-pointer overflow-hidden">
                   {imagemPreview ? (
                     <div className="relative inline-block">
@@ -454,12 +456,12 @@ export function Estoque() {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-2 text-center pointer-events-none">
-                      <div className="mx-auto h-12 w-12 text-slate-400 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center group-hover:text-indigo-500 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors shadow-inner shadow-slate-200/50">
-                         <LucideIcons.ImagePlus size={24} strokeWidth={2} />
+                    <div className="space-y-1 text-center pointer-events-none">
+                      <div className="mx-auto h-10 w-10 text-slate-400 bg-slate-50 border border-slate-100 rounded-4xl flex items-center justify-center group-hover:text-indigo-500 group-hover:bg-indigo-50 group-hover:border-indigo-200 transition-colors">
+                         <LucideIcons.ImagePlus size={22} strokeWidth={1} />
                       </div>
-                      <div className="text-[11px] font-bold uppercase tracking-widest text-slate-500"><span className="text-indigo-500">Toque</span> ou arraste a foto</div>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PNG, JPG (Máx 5MB)</p>
+                      <div className="text-[10px] font-medium uppercase tracking-widest text-slate-500"><span className="text-indigo-500">Toque</span> ou arraste a foto</div>
+                      <p className="text-[8px] text-slate-400 font-sans uppercase tracking-widest">PNG, JPG (Máx 5MB)</p>
                     </div>
                   )}
                   {!imagemPreview && ( <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleImageChange} /> )}
@@ -467,41 +469,41 @@ export function Estoque() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Nome do Produto</label>
-                <input type="text" value={novoProdNome} onChange={e => setNovoProdNome(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:border-zinc-500 focus:bg-white font-bold uppercase text-slate-800 text-sm transition-all"/>
+                <label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Nome do Produto</label>
+                <input type="text" value={novoProdNome} onChange={e => setNovoProdNome(e.target.value)} className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-bold uppercase text-slate-800 text-sm transition-all"/>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1.5 ml-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Categoria</label>
+                    <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400">Categoria</label>
                   </div>
-                  <select value={novoProdCat} onChange={e => setNovoProdCat(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none text-xs font-bold text-slate-800 focus:border-zinc-500 focus:bg-white transition-all uppercase tracking-wide">
+                  <select value={novoProdCat} onChange={e => setNovoProdCat(e.target.value)} className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white text-[10px] font-medium text-slate-700 transition-all uppercase tracking-wide">
                     {categorias.length === 0 && <option value="" disabled>Vá na aba Categorias</option>}
                     {categorias.map(cat => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Tamanho</label>
-                  <input type="text" value={novoProdSubCat} onChange={e => setNovoProdSubCat(e.target.value)} placeholder="Ex: 600ml" className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:border-zinc-500 focus:bg-white font-bold  text-xs text-slate-800 transition-all tracking-wide"/>
+                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Tamanho</label>
+                  <input type="text" value={novoProdSubCat} onChange={e => setNovoProdSubCat(e.target.value)} placeholder="Ex: 600ml" className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-medium  text-xs text-slate-800 transition-all tracking-wide uppercase"/>
                 </div>
               </div>
               
               <div className="flex gap-3">
                 <div className="flex-1 relative">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Preço Venda</label>
-                  <input type="text" placeholder="R$ 0.00" value={novoProdVenda} onChange={e => setNovoProdVenda(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:border-emerald-400 focus:bg-white text-center font-bold text-[15px] text-emerald-600 transition-all placeholder:text-slate-300 tabular-nums"/>
+                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-">Preço Venda</label>
+                  <input type="text" placeholder="R$ 0.00" value={novoProdVenda} onChange={e => setNovoProdVenda(e.target.value)} className="w-full bg-slate-50 p-1 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-800 focus:bg-white text-center font-sans text-[13px] text-emerald-800 transition-all placeholder:text-slate-300 tabular-nums"/>
                 </div>
                 <div className="flex-1 relative">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo (Opcional)</label>
-                  <input type="text" placeholder="R$ 0.00" value={novoProdCusto} onChange={e => setNovoProdCusto(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:border-rose-400 focus:bg-white text-center font-bold text-[15px] text-rose-500 transition-all placeholder:text-slate-300 tabular-nums"/>
+                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-2xl">Custo (Opcional)</label>
+                  <input type="text" placeholder="R$ 0.00" value={novoProdCusto} onChange={e => setNovoProdCusto(e.target.value)} className="w-full bg-slate-50 p-1 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-rose-50 focus:border-rose-800 focus:bg-white text-center font-medium text-[13px] text-rose-800 transition-all placeholder:text-slate-300 tabular-nums"/>
                 </div>
               </div>
               
-              <div className="flex gap-3 pt-5">
-                <button onClick={() => !salvandoProduto && setModalNovoProduto(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-500 font-black uppercase tracking-widest py-4 rounded-[20px] text-[10px] transition-all disabled:opacity-50" disabled={salvandoProduto}>Cancelar</button>
-                <button onClick={handleSalvarProduto} disabled={salvandoProduto} className="flex-[1.5] bg-linear-to-b from-zinc-500 to-zinc-600 border border-zinc-600 border-t-zinc-400/50 shadow-md shadow-zinc-500/30 text-white font-black uppercase tracking-widest py-4 rounded-[20px] text-[11px] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-zinc-500/40 active:scale-95 active:shadow-inner">
-                  {salvandoProduto ? ( <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> SALVANDO</> ) : 'SALVAR NO CARDÁPIO'}
+              <div className="flex gap-3 pt-3">
+                <button onClick={() => !salvandoProduto && setModalNovoProduto(false)} className="flex-1 bg-slate-200 hover:bg-slate-200 text-slate-500 font-medium uppercase tracking-widest py-2 rounded-[40px] text-[10px] transition-all disabled:opacity-50" disabled={salvandoProduto}>Cancelar</button>
+                <button onClick={handleSalvarProduto} disabled={salvandoProduto} className="flex-1 bg-slate-800 text-white font-medium uppercase tracking-widest py-2 rounded-[40px] text-[10px] transition-all flex items-center justify-center gap-2 hover:bg-slate-800 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+                  {salvandoProduto ? ( <><div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin"></div> SALVANDO</> ) : 'SALVAR'}
                 </button>
               </div>
             </div>
@@ -510,28 +512,28 @@ export function Estoque() {
       )}
 
       {produtoDetalhe && !modalEntradaAberto && !modalInventarioAberto && !modalNovoProduto && (
-        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setProdutoDetalhe(null)}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl shadow-slate-900/50 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 border border-white/20">
+          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
             <div className="flex items-center gap-4 mb-6">
-              {produtoDetalhe.imagem_url ? ( <img src={produtoDetalhe.imagem_url} alt={produtoDetalhe.nome} className="w-20 h-20 rounded-[20px] object-cover border border-slate-200 shadow-md shadow-slate-300/50" />
-              ) : ( <div className="w-20 h-20 rounded-[20px] bg-slate-50 border border-slate-100 flex items-center justify-center shadow-inner shadow-slate-200/50">{renderizarIconeDinamicamente(produtoDetalhe.categoria, "text-slate-400 w-8 h-8")}</div> )}
+              {produtoDetalhe.imagem_url ? ( <img src={produtoDetalhe.imagem_url} alt={produtoDetalhe.nome} className="w-20 h-20 rounded-[20px] object-cover border border-slate-200 shadow-sm" />
+              ) : ( <div className="w-20 h-20 rounded-[20px] bg-slate-50 border border-slate-100 flex items-center justify-center">{renderizarIconeDinamicamente(produtoDetalhe.categoria, "text-slate-400 w-8 h-8")}</div> )}
               <div className="flex-1 min-w-0">
                 <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-none mb-1.5 truncate uppercase">{produtoDetalhe.nome}</h3>
-                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md inline-block shadow-sm border ${produtoDetalhe.ativo !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{produtoDetalhe.ativo !== false ? 'Cardápio Ativo' : 'Oculto'}</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md inline-block border ${produtoDetalhe.ativo !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{produtoDetalhe.ativo !== false ? 'Cardápio Ativo' : 'Oculto'}</span>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{produtoDetalhe.categoria} {produtoDetalhe.subcategoria && `• ${produtoDetalhe.subcategoria}`}</p>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200 flex justify-between items-center mb-6 shadow-inner shadow-slate-200/50">
+            <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200 flex justify-between items-center mb-6">
               <span className="font-black text-slate-400 text-[11px] uppercase tracking-widest">Estoque Atual</span><span className={`text-[32px] font-black tabular-nums leading-none ${produtoDetalhe.estoque && produtoDetalhe.estoque <= 10 && produtoDetalhe.ativo !== false ? 'text-rose-500' : 'text-slate-900'}`}>{produtoDetalhe.estoque || 0}</span>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <button onClick={() => setModalEntradaAberto(true)} className="bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm shadow-slate-200/50 hover:shadow-md hover:shadow-emerald-500/10 text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 active:shadow-inner"><LucideIcons.PackagePlus size={20} /> Compra</button>
-              <button onClick={() => setModalInventarioAberto(true)} className="bg-white border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-600 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm shadow-slate-200/50 hover:shadow-md hover:shadow-amber-500/10 text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95 active:shadow-inner"><LucideIcons.Scale size={20} /> Ajuste</button>
+              <button onClick={() => setModalEntradaAberto(true)} className="bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"><LucideIcons.PackagePlus size={20} /> Compra</button>
+              <button onClick={() => setModalInventarioAberto(true)} className="bg-white border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-600 hover:bg-amber-50 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"><LucideIcons.Scale size={20} /> Ajuste</button>
             </div>
             <div className="flex gap-3 mb-4">
-              <button onClick={() => abrirModalEditarProduto(produtoDetalhe)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all shadow-sm shadow-slate-200/50 hover:shadow-md active:scale-95 active:shadow-inner">Editar</button>
-              <button onClick={() => handleToggleStatus(produtoDetalhe.id)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all shadow-sm shadow-slate-200/50 hover:shadow-md active:scale-95 active:shadow-inner">{produtoDetalhe.ativo !== false ? 'Ocultar' : 'Reativar'}</button>
+              <button onClick={() => abrirModalEditarProduto(produtoDetalhe)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all active:scale-95">Editar</button>
+              <button onClick={() => handleToggleStatus(produtoDetalhe.id)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all active:scale-95">{produtoDetalhe.ativo !== false ? 'Ocultar' : 'Reativar'}</button>
             </div>
             <button onClick={() => handleExcluirProduto(produtoDetalhe.id)} className="w-full bg-white text-rose-500 font-black uppercase tracking-widest py-3.5 rounded-2xl border border-rose-200 hover:bg-rose-50 text-[10px] transition-all mb-4 active:scale-95">Excluir Produto</button>
             <button onClick={() => setProdutoDetalhe(null)} className="w-full text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest py-2 text-[10px] transition-colors">Voltar</button>
@@ -542,16 +544,16 @@ export function Estoque() {
       {(modalEntradaAberto || modalInventarioAberto) && produtoDetalhe && (
         <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={fecharModais}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl shadow-slate-900/50 relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 border border-white/20">
+          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
             <h3 className="text-[20px] font-black tracking-tight text-slate-900 text-center mb-1 uppercase">{modalEntradaAberto ? 'Lançar Compra' : 'Ajustar Balanço'}</h3>
-            <p className="text-center text-[11px] font-black uppercase tracking-widest text-indigo-500 mb-6 bg-indigo-50 py-1 px-3 rounded-full inline-block mx-auto border border-indigo-100">{produtoDetalhe.nome}</p>
+            <p className="text-center text-[11px] font-black uppercase tracking-widest text-indigo-600 mb-6 bg-indigo-50 py-1 px-3 rounded-full inline-block mx-auto border border-indigo-100">{produtoDetalhe.nome}</p>
             <div className="space-y-5">
               {modalEntradaAberto ? (
-                <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Qtd</label><input type="number" value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:border-indigo-400 focus:bg-white transition-all"/></div><div className="flex-[1.5]"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo Un. (R$)</label><input type="text" value={custoDigitado} onChange={e => setCustoDigitado(e.target.value)} placeholder="0.00" className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:border-indigo-400 focus:bg-white transition-all"/></div></div>
-              ) : ( <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center block mb-2">Qtd Física (Prateleira)</label><input type="number" placeholder={`Atualmente: ${produtoDetalhe.estoque}`} value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center font-black text-4xl text-slate-800 outline-none focus:border-amber-400 focus:bg-white placeholder:text-slate-300 transition-all"/></div> )}
+                <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Qtd</label><input type="number" value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div><div className="flex-[1.5]"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo Un. (R$)</label><input type="text" value={custoDigitado} onChange={e => setCustoDigitado(e.target.value)} placeholder="0.00" className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div></div>
+              ) : ( <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center block mb-2">Qtd Física (Prateleira)</label><input type="number" placeholder={`Atualmente: ${produtoDetalhe.estoque}`} value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center font-black text-4xl text-slate-800 outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 focus:bg-white placeholder:text-slate-300 transition-all"/></div> )}
               <div className="flex gap-3 pt-2">
                 <button onClick={fecharModais} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-black uppercase tracking-widest py-4 rounded-3xl text-[10px] transition-colors active:scale-95">Cancelar</button>
-                <button onClick={modalEntradaAberto ? handleConfirmarEntrada : handleConfirmarInventario} className={`flex-[1.5] text-white font-black uppercase tracking-widest py-4 rounded-3xl text-[11px] transition-all shadow-md active:scale-95 active:shadow-inner ${modalEntradaAberto ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30'}`}>Confirmar</button>
+                <button onClick={modalEntradaAberto ? handleConfirmarEntrada : handleConfirmarInventario} className={`flex-[1.5] text-white font-black uppercase tracking-widest py-4 rounded-3xl text-[11px] transition-all shadow-md active:scale-95 ${modalEntradaAberto ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'}`}>Confirmar</button>
               </div>
             </div>
           </div>

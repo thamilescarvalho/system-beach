@@ -132,7 +132,7 @@ export function Cozinha() {
                         >
                           <div className="flex-1 pr-4">
                             <div className="flex items-start gap-4">
-                              <span className="bg-slate-100 border border-slate-200 text-slate-900 group-hover/item:bg-slate-900 group-hover/item:border-slate-900 group-hover/item:text-white font-black text-lg min-w-[44px] h-[44px] rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300">
+                              <span className="bg-slate-100 border border-slate-200 text-slate-900 group-hover/item:bg-slate-900 group-hover/item:border-slate-900 group-hover/item:text-white font-black text-lg min-w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300">
                                 {item.quantidade}x
                               </span>
                               
@@ -146,7 +146,7 @@ export function Cozinha() {
                             </div>
                             
                             {item.observacao && (
-                              <div className="mt-3 ml-[60px] bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex gap-2 items-start">
+                              <div className="mt-3 ml-15 bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex gap-2 items-start">
                                 <LucideIcons.MessageSquare size={14} className="text-slate-400 shrink-0 mt-0.5" />
                                 <p className="text-[13px] text-slate-600 font-medium leading-snug">
                                   {item.observacao}
@@ -168,7 +168,7 @@ export function Cozinha() {
                           className="w-full text-left bg-slate-50/50 p-5 flex justify-between items-center opacity-60 hover:opacity-100 transition-all active:bg-slate-100"
                         >
                           <div className="flex items-center gap-4">
-                            <span className="text-slate-400 font-bold text-lg bg-slate-200 min-w-[44px] h-[44px] rounded-xl flex items-center justify-center shrink-0">
+                            <span className="text-slate-400 font-bold text-lg bg-slate-200 min-w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
                               {item.quantidade}x
                             </span>
                             <p className="font-semibold text-slate-500 text-[17px] line-through tracking-tight">{item.produto.nome}</p>

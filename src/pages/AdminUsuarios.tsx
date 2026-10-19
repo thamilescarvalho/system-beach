@@ -1,18 +1,86 @@
 // src/pages/AdminUsuarios.tsx
-import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
+import { Header } from '../components/Header';
 import type { Garcom } from '../types';
 import * as LucideIcons from 'lucide-react';
 
+// COMPONENTE: SELETOR DE AVATAR DROPDOWN
+interface SeletorAvatarProps {
+  avatarAtual: string;
+  setAvatar: (avatar: string) => void;
+  opcoes: string[];
+}
+
+const SeletorAvatarDropdown = ({ avatarAtual, setAvatar, opcoes }: SeletorAvatarProps) => {
+  const [aberto, setAberto] = useState(false);
+
+  return (
+    <div className="relative">
+      {/* Botão avatar atual */}
+      <button
+        type="button"
+        onClick={() => setAberto(!aberto)}
+        className="flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-2 pr-2 rounded-full transition-all duration-200 group active:scale-95"
+      >
+        <div className="w-9 h-9 bg-white shadow-sm border border-slate-100 rounded-full flex items-center justify-center text-[21px] group-hover:scale-105 transition-transform">
+          {avatarAtual}
+        </div>
+        <LucideIcons.ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Menu Dropdown Flutuante */}
+      {aberto && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
+          
+          <div className="absolute top-full left-0 m-2 bg-white rounded-3xl p-3 shadow-xl border border-slate-100 z-50 w-65 animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-[9px] font-medium uppercase tracking-widest text-slate-400 mb-2 px-1 text-center">
+              Selecione
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {opcoes.map(a => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => { setAvatar(a); setAberto(false); }}
+                  className={`
+                    w-11 h-11 rounded-4xl text-[20px] flex items-center justify-center transition-all duration-200 active:scale-90
+                    ${avatarAtual === a 
+                      ? 'bg-indigo-50 border-2 border-indigo-500 shadow-sm scale-105' 
+                      : 'bg-slate-100 border border-transparent hover:bg-slate-100 hover:scale-105'}
+                  `}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+
 export function AdminUsuarios() {
-  const navigate = useNavigate();
   const contexto = useContext(AppContext);
   
+  // Notificações
+  const [toast, setToast] = useState<{ mensagem: string; tipo: 'sucesso' | 'erro' } | null>(null);
+
+  const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
+    setToast({ mensagem, tipo });
+    setTimeout(() => setToast(null), 4000);
+  };
+  
+  // Emojis Avatar
+  const avataresDisponiveis = ['⚡', '🐋', '🌈', '🦖', '😎', '🐱', '🤖', '👑', '🔥', '🚀', '🍕', '🎮'];
+
   // ESTADOS: CRIAÇÃO 
   const [nome, setNome] = useState('');
   const [pin, setPin] = useState('');
-  const [avatar, setAvatar] = useState('⚡');
+  const [avatar, setAvatar] = useState(avataresDisponiveis[0]);
   const [cargo, setCargo] = useState<'admin' | 'garcom'>('garcom');
   const [mostrarPin, setMostrarPin] = useState(false);
 
@@ -20,14 +88,11 @@ export function AdminUsuarios() {
   const [usuarioEditando, setUsuarioEditando] = useState<Garcom | null>(null);
   const [mostrarPinEdicao, setMostrarPinEdicao] = useState(false);
 
-  // Emojis modernos
-  const avataresDisponiveis = ['⚡', '🐋', '🌈', '🦖', '😎', '🐱', '🤖'];
-
   // HANDLERS
   const handleCriarUsuario = (e: React.FormEvent) => {
     e.preventDefault();
-    if (nome.trim().length < 3) { alert("Digite o nome completo (mín. 3 letras)."); return; }
-    if (pin.length !== 4) { alert("O PIN de acesso deve ter exatamente 4 dígitos."); return; }
+    if (nome.trim().length < 3) { mostrarToast("O nome deve ter no mínimo 3 letras.", "erro"); return; }
+    if (pin.length !== 4) { mostrarToast("O código PIN deve ter exatamente 4 dígitos.", "erro"); return; }
 
     contexto?.adicionarUsuario({
       id: Date.now().toString(),
@@ -37,102 +102,98 @@ export function AdminUsuarios() {
       cargo
     });
     
-    setNome(''); setPin(''); setCargo('garcom'); setAvatar('⚡'); setMostrarPin(false);
+    mostrarToast(`Usuário ${nome.trim()} criado com sucesso!`, 'sucesso');
+    setNome(''); setPin(''); setCargo('garcom'); setAvatar(avataresDisponiveis[0]); setMostrarPin(false);
   };
 
   const handleSalvarEdicao = () => {
     if (usuarioEditando) {
-      if (usuarioEditando.nome.trim().length < 3) { alert("Digite o nome completo."); return; }
-      if (usuarioEditando.pin.length !== 4) { alert("O PIN deve ter 4 dígitos."); return; }
+      if (usuarioEditando.nome.trim().length < 3) { mostrarToast("O nome deve ter no mínimo 3 letras.", "erro"); return; }
+      if (usuarioEditando.pin.length !== 4) { mostrarToast("O código PIN deve ter exatamente 4 dígitos.", "erro"); return; }
       
       contexto?.editarUsuario(usuarioEditando.id, usuarioEditando);
+      mostrarToast(`Perfil de ${usuarioEditando.nome} atualizado.`, 'sucesso');
       setUsuarioEditando(null); 
       setMostrarPinEdicao(false);
     }
   };
 
+  // Bloqueia scroll do body se modal de edição estiver aberto
+  useEffect(() => {
+    if (usuarioEditando) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'auto';
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [usuarioEditando]);
+
   return (
-    <div className="min-h-screen w-full bg-slate-200 selection:bg-blue-700/20 selection:text-blue-900 text-slate-900 flex flex-col relative overflow-hidden pb-36">
+    <div className="min-h-screen w-full bg-slate-50 selection:bg-indigo-200 selection:text-indigo-900 text-slate-800 flex flex-col relative pt-20 md:pt-24 md:pl-18 pb-36 font-sans">
       
-      {/* BACKGROUND  */}
-      <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '36px 36px', color: '#cbd5e1' }}></div>
-      <div className="absolute top-[5%] -left-10 w-1/2 aspect-square max-w-3xl bg-blue-200/60 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
-      <div className="absolute bottom-[5%] -right-10 w-2/5 aspect-square max-w-xl bg-slate-200/50 rounded-full blur-3xl pointer-events-none" />
+      {/* NOTIFICAÇÃO */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`px-5 py-3.5 rounded-2xl shadow-xl border backdrop-blur-xl flex items-center gap-3 text-[13px] font-semibold tracking-tight ${
+            toast.tipo === 'sucesso' 
+              ? 'bg-slate-900/95 text-emerald-400 border-emerald-500/30' 
+              : 'bg-slate-900/95 text-rose-400 border-rose-500/30'
+          }`}>
+            {toast.tipo === 'sucesso' ? <LucideIcons.CheckCircle2 size={18} /> : <LucideIcons.AlertCircle size={18} />}
+            <span>{toast.mensagem}</span>
+          </div>
+        </div>
+      )}
 
       {/* HEADER */}
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-2xl border-b border-slate-300/60 shadow-sm shadow-slate-200/50 px-6 py-5 flex items-center justify-between shrink-0">
-        <button 
-          onClick={() => navigate('/admin')} 
-          className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 active:scale-90 transition-all duration-300 shadow-sm"
-        >
-          <LucideIcons.ChevronLeft size={24} strokeWidth={2.5} />
-        </button>
-        
-        <div className="text-center flex flex-col items-center">
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-wide leading-none">
-            EQUIPE
-          </h1>
-          <p className="text-slate-400 font-medium uppercase tracking-widest text-[10px] mt-1.5">
-            Gestão de Usuários
-          </p>
-        </div>
-        
-        <div className="w-12 h-12" />
-      </header>
+      <Header />
 
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="w-full max-w-6xl mx-auto px-5 md:px-8 pt-8 md:pt-10 relative z-10 animate-in zoom-in-95 duration-500">
+      <main className="w-full max-w-5xl mx-auto px-5 md:px-8 mt-4 md:mt-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LADO ESQUERDO: FORMULÁRIO DE CRIAÇÃO  */}
-          <section className="lg:col-span-5 bg-white p-6 md:p-8 rounded-[36px] shadow-xl shadow-slate-200/40 border border-slate-200">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <LucideIcons.UserPlus size={20} strokeWidth={2.5} />
+          <section className="lg:col-span-5 bg-white p-6 md:p-8 rounded-4xl shadow-sm border border-slate-200">
+            <div className="flex flex-col gap-6 mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-4xl bg-slate-50 text-fuchsia-800 flex items-center justify-center shrink-0">
+                  <LucideIcons.UserPlus size={20} strokeWidth={1} />
+                </div>
+                <div>
+                  <h2 className="text-[14px]  font-bold text-slate-800 uppercase tracking-widest">Novo Usuário</h2>
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-slate-800 uppercase tracking-widest">Novo Usuário</h2>
             </div>
 
             <form onSubmit={handleCriarUsuario} className="space-y-6">
-              
-              {/* Avatar */}
+
+              {/* Avatar Selector Dropdown */}
               <div>
-                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-4">Avatar do Perfil</label>
-                <div className="flex flex-wrap gap-2">
-                  {avataresDisponiveis.map(a => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => setAvatar(a)}
-                      className={`
-                        w-12 h-12 rounded-3xl text-2xl flex items-center justify-center transition-all duration-200
-                        ${avatar === a 
-                          ? 'bg-blue-50 border-2 border-blue-500 scale-110 shadow-sm' 
-                          : 'bg-slate-50 border border-slate-300 hover:bg-slate-100 hover:scale-105 opacity-70 hover:opacity-100'}
-                      `}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">Avatar de Perfil</label>
+                <SeletorAvatarDropdown 
+                  avatarAtual={avatar} 
+                  setAvatar={setAvatar} 
+                  opcoes={avataresDisponiveis} 
+                />
               </div>
 
               {/* Nome */}
               <div>
-                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2">Nome / Usuário</label>
-                <input 
-                  type="text" 
-                  value={nome} 
-                  onChange={(e) => setNome(e.target.value)} 
-                  className="w-full bg-slate-50 p-2 rounded-3xl outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 font-bold text-slate-800 border border-slate-300 transition-all placeholder:text-slate-300 placeholder:font-medium" 
-                />
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">Nome do usuário</label>
+                <div className="relative">
+                  <LucideIcons.User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    value={nome} 
+                    onChange={(e) => setNome(e.target.value)} 
+                    className="w-full bg-slate-50 h-10 pl-11 pr-2 rounded-[40px] outline-none focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100 font-medium text-[13px] uppercase text-slate-700 border border-slate-200 transition-all placeholder:text-slate-400" 
+                  />
+                </div>
               </div>
 
               {/* PIN e Cargo */}
-              <div className="flex gap-4">
-                <div className="flex-1 relative">
-                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2">SENHA (4 Dígitos)</label>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">Senha (4 Dígitos)</label>
                   <div className="relative">
+                    <LucideIcons.Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       type={mostrarPin ? "text" : "password"} 
                       maxLength={4} 
@@ -140,32 +201,32 @@ export function AdminUsuarios() {
                       placeholder="••••" 
                       value={pin} 
                       onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} 
-                      className="w-full bg-slate-50 p-2 pr-12 rounded-3xl outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 font-black text-xl text-center tracking-[0.3em] text-slate-800 border border-slate-300 transition-all placeholder:text-slate-300 shadow-inner tabular-nums" 
+                      className="w-full bg-slate-50 h-10 pl-11 pr-12 rounded-[20px] outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 font-bold text-[16px] tracking-[0.3em] text-slate-800 border border-slate-200 transition-all placeholder:text-slate-300 tabular-nums" 
                     />
                     <button 
                       type="button" 
                       onClick={() => setMostrarPin(!mostrarPin)}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors bg-white w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
                     >
-                      {mostrarPin ? <LucideIcons.EyeOff size={18} /> : <LucideIcons.Eye size={18} />}
+                      {mostrarPin ? <LucideIcons.EyeOff size={14} /> : <LucideIcons.Eye size={14} />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-[1.2]">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Cargo</label>
-                  <div className="flex gap-2 bg-slate-50 p-2 rounded-3xl border border-slate-300 h-11.75">
+                <div className="flex-1">
+                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">Permissão</label>
+                  <div className="flex gap-1.5 bg-slate-50 p-1.5 rounded-[20px] border border-slate-200 h-10">
                     <button 
                       type="button" 
                       onClick={() => setCargo('garcom')} 
-                      className={`flex-1 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${cargo === 'garcom' ? 'bg-white text-slate-800 shadow-sm border border-slate-300/50' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`flex-1 rounded-[14px] text-[10px] font-medium uppercase tracking-widest transition-all ${cargo === 'garcom' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       Garçom
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setCargo('admin')} 
-                      className={`flex-1 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${cargo === 'admin' ? 'bg-white text-blue-600 shadow-sm border border-slate-300/50' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`flex-1 rounded-[14px] text-[10px] font-medium uppercase tracking-widest transition-all ${cargo === 'admin' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       Admin
                     </button>
@@ -176,9 +237,9 @@ export function AdminUsuarios() {
               {/* Botão Salvar */}
               <button 
                 type="submit"
-                className="w-full mt-2 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 text-white font-bold py-3 rounded-3xl uppercase tracking-widest transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-2"
+                className="w-full mt-4 bg-slate-700 hover:bg-slate-800 shadow-lg shadow-slate-900/20 text-white font-medium h-8 rounded-[20px] uppercase tracking-widest transition-all active:scale-[0.98] text-[11px] flex items-center justify-center gap-2"
               > 
-                <LucideIcons.Check size={16} strokeWidth={3} /> Cadastrar Usuário
+                <LucideIcons.Check size={18} strokeWidth={2.5} /> Confirmar Cadastro
               </button>
             </form>
           </section>
@@ -186,15 +247,15 @@ export function AdminUsuarios() {
           {/* LADO DIREITO: LISTA DA EQUIPE */}
           <section className="lg:col-span-7">
             <div className="flex items-center justify-between mb-6 px-2">
-              <h2 className="text-sm font-medium text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                <LucideIcons.Users size={18} className="text-slate-400" /> Usuários Ativos
+              <h2 className="text-[12px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                Membros da Equipe
               </h2>
-              <span className="text-[10px] font-medium bg-white border border-slate-300 shadow-sm text-slate-500 px-3 py-1.5 rounded-full uppercase tracking-widest">
-                {contexto?.usuarios.length} Registros
+              <span className="text-[9px] font-sans bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
+                {contexto?.usuarios.length} Usuários
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               {contexto?.usuarios.map(u => (
                 <button 
                   key={u.id}
@@ -202,24 +263,21 @@ export function AdminUsuarios() {
                     setUsuarioEditando(u);
                     setMostrarPinEdicao(false);
                   }}
-                  className="group w-full bg-white uppercase p-3 rounded-[25px] flex items-center justify-between shadow-sm border border-slate-300 hover:border-blue-300 hover:shadow-md active:scale-95 transition-all duration-200 text-left overflow-hidden relative"
+                  className="group w-full bg-white p-3 rounded-4xl flex items-center justify-between shadow-sm border border-slate-300 hover:border-slate-300 hover:shadow-md active:scale-[0.98] transition-all duration-300 text-left"
                 >
-                  {/* Detalhe de cor lateral dependendo do cargo */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${u.cargo === 'admin' ? 'bg-blue-500' : 'bg-orange-400'}`} />
-
-                  <div className="flex items-center gap-4 pl-2">
-                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-2xl border border-slate-100 group-hover:scale-110 transition-transform duration-300">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-11 h-11 bg-slate-50 rounded-full flex items-center justify-center text-2xl border border-slate-100 group-hover:scale-110 transition-transform duration-300 shrink-0">
                       {u.avatar}
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900 text-sm md:text-[12px] leading-tight mb-1">{u.nome}</p>
-                      <span className={`text-[8.5px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-md border ${u.cargo === 'admin' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <p className="font-medium text-slate-800 text-[13px] uppercase tracking-tight truncate">{u.nome}</p>
+                      <span className={`w-max text-[9px] font-sans uppercase tracking-widest px-2.5 py-0.5 rounded-md mt-1 border ${u.cargo === 'admin' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                         {u.cargo === 'admin' ? 'Administrador' : 'Garçom'}
                       </span>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-                    <LucideIcons.Pencil size={14} strokeWidth={2.5} />
+                  <div className="w-9 h-9 rounded-[14px] bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                    <LucideIcons.Pencil size={16} strokeWidth={2.5} />
                   </div>
                 </button>
               ))}
@@ -231,66 +289,49 @@ export function AdminUsuarios() {
 
       {/* MODAL DE EDIÇÃO */}
       {usuarioEditando && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setUsuarioEditando(null)}></div>
           
-          <div className="bg-white rounded-[36px] w-full max-w-md p-6 md:p-8 shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 flex flex-col">
+          <div className="bg-white rounded-4xl w-full max-w-sm p-6 sm:p-8 shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col">
             
             {/* Header Modal */}
-            <div className="flex justify-between items-center mb-8 border-b border-slate-200 pb-5">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl border border-slate-200">
-                  {usuarioEditando.avatar}
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 leading-none tracking-tight uppercase mb-1">Editar Perfil</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Configurações do Usuário</p>
-                </div>
-              </div>
-              <button onClick={() => setUsuarioEditando(null)} className="w-10 h-10 bg-slate-50 border border-slate-300 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors">
-                <LucideIcons.X size={20} strokeWidth={2.5} />
+            <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-[15px] font-medium text-slate-900 uppercase tracking-widest mb-0.5">Editar Perfil</h3>              </div>
+              <button onClick={() => setUsuarioEditando(null)} className="w-9 h-9 bg-slate-100 border border-slate-200 rounded-[14px] flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors active:scale-95">
+                <LucideIcons.X size={17} strokeWidth={2} />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-3">
               
-              {/* Avatar  Edição */}
-              <div>
-                <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest block mb-3">Alterar Avatar</label>
-                <div className="flex flex-wrap gap-2">
-                  {avataresDisponiveis.map(a => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => setUsuarioEditando({...usuarioEditando, avatar: a})}
-                      className={`
-                        w-10 h-10 rounded-3xl text-xl flex items-center justify-center transition-all duration-200
-                        ${usuarioEditando.avatar === a 
-                          ? 'bg-blue-50 border-2 border-blue-500 scale-110 shadow-sm' 
-                          : 'bg-slate-50 border border-slate-200 hover:bg-slate-100'}
-                      `}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
+              {/* Avatar Edição */}
+              <div className="flex justify-center -mt-5">
+                <SeletorAvatarDropdown 
+                  avatarAtual={usuarioEditando.avatar} 
+                  setAvatar={(novoAvatar) => setUsuarioEditando({...usuarioEditando, avatar: novoAvatar})} 
+                  opcoes={avataresDisponiveis} 
+                />
               </div>
 
               {/* Nome */}
               <div>
-                <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest block mb-3">Nome / Usuário</label>
-                <input 
-                  type="text" 
-                  value={usuarioEditando.nome} 
-                  onChange={(e) => setUsuarioEditando({...usuarioEditando, nome: e.target.value})} 
-                  className="w-full bg-slate-50 p-2 rounded-4xl outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 font-medium text-slate-800 border border-slate-300 transition-all" 
-                />
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">Nome</label>
+                <div className="relative">
+                  <LucideIcons.User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    value={usuarioEditando.nome} 
+                    onChange={(e) => setUsuarioEditando({...usuarioEditando, nome: e.target.value})} 
+                    className="w-full bg-slate-50 h-9 pl-11 pr-2 rounded-[40px] outline-none uppercase focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 font-medium text-[13px] text-slate-800 border border-slate-200 transition-all" 
+                  />
+                </div>
               </div>
               
               {/* PIN e Cargo */}
-              <div className="flex gap-8">
-                <div className="flex-1 relative">
-                  <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest block mb-2">Redefinir PIN</label>
+              <div className="flex gap-10">
+                <div className="flex-1">
+                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-1">PIN</label>
                   <div className="relative">
                     <input 
                       type={mostrarPinEdicao ? "text" : "password"} 
@@ -298,32 +339,32 @@ export function AdminUsuarios() {
                       inputMode="numeric" 
                       value={usuarioEditando.pin} 
                       onChange={(e) => setUsuarioEditando({...usuarioEditando, pin: e.target.value.replace(/\D/g, "")})} 
-                      className="w-full bg-slate-50 p-2 pr-7 rounded-4xl outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 font-medium text-xl text-center tracking-[0.4em] text-slate-800 border border-slate-300 transition-all tabular-nums" 
+                      className="w-full bg-slate-50 h-9 pl-4 pr-10 rounded-[40px] outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100 font-bold text-[14px] tracking-[0.3em] text-slate-800 border border-slate-200 transition-all tabular-nums text-center" 
                     />
                     <button 
                       type="button" 
                       onClick={() => setMostrarPinEdicao(!mostrarPinEdicao)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
                     >
-                      {mostrarPinEdicao ? <LucideIcons.EyeOff size={18} /> : <LucideIcons.Eye size={18} />}
+                      {mostrarPinEdicao ? <LucideIcons.EyeOff size={16} /> : <LucideIcons.Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-[1.2]">
-                  <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest block mb-2">Cargo</label>
-                  <div className="flex gap-2 bg-slate-50 p-2 rounded-4xl border border-slate-300 h-[46.5px]">
+                <div className="flex-1">
+                  <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest block mb-2 pl-2">Acesso</label>
+                  <div className="flex gap-1.5 bg-slate-50 p-1.5 rounded-[40px] border border-slate-200 h-9">
                     <button 
                       type="button" 
                       onClick={() => setUsuarioEditando({...usuarioEditando, cargo: 'garcom'})} 
-                      className={`flex-1 rounded-xl text-xs font-medium uppercase tracking-widest transition-all ${usuarioEditando.cargo === 'garcom' ? 'bg-white text-slate-800 shadow-sm border border-slate-300/50' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`flex-1 rounded-[14px] text-[10px] font-medium uppercase tracking-widest transition-all ${usuarioEditando.cargo === 'garcom' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       Garçom
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setUsuarioEditando({...usuarioEditando, cargo: 'admin'})} 
-                      className={`flex-1 rounded-xl text-xs font-medium uppercase tracking-widest transition-all ${usuarioEditando.cargo === 'admin' ? 'bg-white text-blue-600 shadow-sm border border-slate-300/50' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`flex-1 rounded-[14px] text-[10px] font-medium uppercase tracking-widest transition-all ${usuarioEditando.cargo === 'admin' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-200' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       Admin
                     </button>
@@ -332,26 +373,27 @@ export function AdminUsuarios() {
               </div>
 
               {/* Botões de Ação */}
-              <div className="pt-6 flex gap-3">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex gap-5">
                 {usuarioEditando.id !== 'admin-dev' && (
                   <button 
                     onClick={() => {
                       if(window.confirm(`Tem certeza que deseja excluir o usuário ${usuarioEditando.nome}?`)) {
                         contexto?.removerUsuario(usuarioEditando.id);
+                        mostrarToast('Usuário removido com sucesso.', 'sucesso');
                         setUsuarioEditando(null);
                       }
                     }} 
-                    className="flex-[0.6] bg-white text-rose-500 hover:bg-rose-50 hover:border-rose-300 font-medium uppercase tracking-widest py-3 rounded-4xl border border-slate-300 active:scale-95 transition-all text-[10px] flex items-center justify-center"
+                    className="w-10 h-10 bg-white text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-[40px] flex items-center justify-center transition-all shrink-0 active:scale-95"
                     title="Excluir Usuário"
                   >
-                    <LucideIcons.Trash2 size={18} />
+                    <LucideIcons.Trash2 size={17} />
                   </button>
                 )}                
                 <button 
                   onClick={handleSalvarEdicao} 
-                  className="flex-1 bg-blue-900 hover:bg-blue-800 shadow-md shadow-blue-900/20 text-white font-medium uppercase tracking-widest py-2 rounded-4xl transition-all active:scale-[0.98] text-[11px] flex items-center justify-center gap-3"
+                  className="flex-1 bg-slate-700 hover:bg-slate-800 shadow-lg shadow-slate-600/30 text-white font-medium h-10 rounded-[40px] uppercase tracking-widest transition-all active:scale-[0.98] text-[11px] flex items-center justify-center gap-3"
                 >
-                  <LucideIcons.Save size={16} /> Salvar Alterações
+                  <LucideIcons.Save size={16} /> Atualizar usuário
                 </button>
               </div>
             </div>           

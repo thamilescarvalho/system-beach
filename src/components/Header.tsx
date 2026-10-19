@@ -1,8 +1,38 @@
 // src/components/Header.tsx
 import { useState, useContext, useRef, useEffect, Fragment } from 'react';
+import type { ElementType } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import * as LucideIcons from 'lucide-react';
+
+interface NavIconProps {
+  to: string;
+  icon: ElementType;
+  activePaths: string[];
+  currentPath: string;
+}
+
+const NavIcon = ({ to, icon: Icon, activePaths, currentPath }: NavIconProps) => {
+  const isActive = activePaths.some(p => currentPath === p || (p !== '/' && currentPath.startsWith(`${p}/`)));
+  
+  return (
+    <Fragment>
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <Link to={to} className={`w-12 h-12 rounded-xl flex items-center justify-center relative transition-colors ${isActive ? 'bg-fuchsia-50 text-fuchsia-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'}`}>
+          <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-fuchsia-600 rounded-r-full shadow-[2px_0_8px_rgba(192,38,211,0.5)]"></span>}
+        </Link>
+      </div>
+      {/* Mobile Bottom Nav */}
+      <div className="md:hidden flex-1 h-full">
+        <Link to={to} className={`flex items-center justify-center w-full h-full transition-colors ${isActive ? 'text-fuchsia-600' : 'text-slate-400 hover:text-slate-900'}`}>
+          <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+        </Link>
+      </div>
+    </Fragment>
+  );
+};
 
 export function Header() {
   const contexto = useContext(AppContext);
@@ -52,48 +82,25 @@ export function Header() {
 
   const primeiroNome = garcom.nome.split(' ')[0];
 
-  // Componente de Icones
-  const NavIcon = ({ to, icon: Icon, activePaths }: { to: string, icon: any, activePaths: string[] }) => {
-    const isActive = activePaths.some(p => path === p || (p !== '/' && path.startsWith(`${p}/`)));
-    
-    return (
-      <Fragment>
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <Link to={to} className={`w-12 h-12 rounded-xl flex items-center justify-center relative transition-colors ${isActive ? 'bg-fuchsia-50 text-fuchsia-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900'}`}>
-            <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-            {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-fuchsia-600 rounded-r-full shadow-[2px_0_8px_rgba(192,38,211,0.5)]"></span>}
-          </Link>
-        </div>
-        {/* Mobile Bottom Nav */}
-        <div className="md:hidden flex-1 h-full">
-          <Link to={to} className={`flex items-center justify-center w-full h-full transition-colors ${isActive ? 'text-fuchsia-600' : 'text-slate-400 hover:text-slate-900'}`}>
-            <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-          </Link>
-        </div>
-      </Fragment>
-    );
-  };
-
   return (
     <Fragment>
       {/* Barra lateral Desktop */}
-      <aside className="fixed left-0 top-0 bottom-0 w-[72px] bg-white border-r border-slate-200 hidden md:flex flex-col z-50">
+      <aside className="fixed left-0 top-0 bottom-0 w-18 bg-white border-r border-slate-200 hidden md:flex flex-col z-50">
         <div className="h-16 flex items-center justify-center border-b border-slate-100 shrink-0">
           <Link to="/" className="text-fuchsia-600 hover:scale-105 transition-transform">
             <LucideIcons.Umbrella size={26} strokeWidth={2.5} />
           </Link>
         </div>
         <nav className="flex-1 flex flex-col items-center gap-2 py-6">
-          <NavIcon to="/" icon={LucideIcons.Home} activePaths={['/']} />
-          <NavIcon to="/mesas" icon={LucideIcons.Umbrella} activePaths={['/mesas', '/comanda']} />
-          <NavIcon to="/cozinha" icon={LucideIcons.UtensilsCrossed} activePaths={['/cozinha']} />
-          <NavIcon to="/painel" icon={LucideIcons.Wallet} activePaths={['/painel']} />
+          <NavIcon to="/" icon={LucideIcons.Home} activePaths={['/']} currentPath={path} />
+          <NavIcon to="/mesas" icon={LucideIcons.Umbrella} activePaths={['/mesas', '/comanda']} currentPath={path} />
+          <NavIcon to="/cozinha" icon={LucideIcons.UtensilsCrossed} activePaths={['/cozinha']} currentPath={path} />
+          <NavIcon to="/painel" icon={LucideIcons.Wallet} activePaths={['/painel']} currentPath={path} />
         </nav>
       </aside>
 
       {/* Header Superior */}
-      <header className="fixed top-0 right-0 left-0 md:left-[72px] h-16 bg-white/90 backdrop-blur-md border-b border-slate-300 flex items-center justify-between px-4 lg:px-6 z-40">
+      <header className="fixed top-0 right-0 left-0 md:left-18 h-16 bg-white/90 backdrop-blur-md border-b border-slate-300 flex items-center justify-between px-4 lg:px-6 z-40">
         <div className="flex items-center gap-3 z-10">
           
           {/* MOBILE VOLTAR / LOGO */}
@@ -175,11 +182,11 @@ export function Header() {
 
       {/* Barra de Navegação Inferior Mobile */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 flex md:hidden items-center justify-around h-[68px] pb-safe z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-          <NavIcon to="/" icon={LucideIcons.Home} activePaths={['/']} />
-          <NavIcon to="/mesas" icon={LucideIcons.Umbrella} activePaths={['/mesas']} />
-          <NavIcon to="/cozinha" icon={LucideIcons.UtensilsCrossed} activePaths={['/cozinha']} />
-          <NavIcon to="/painel" icon={LucideIcons.Wallet} activePaths={['/painel']} />
+        <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 flex md:hidden items-center justify-around h-17 pb-safe z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+          <NavIcon to="/" icon={LucideIcons.Home} activePaths={['/']} currentPath={path} />
+          <NavIcon to="/mesas" icon={LucideIcons.Umbrella} activePaths={['/mesas']} currentPath={path} />
+          <NavIcon to="/cozinha" icon={LucideIcons.UtensilsCrossed} activePaths={['/cozinha']} currentPath={path} />
+          <NavIcon to="/painel" icon={LucideIcons.Wallet} activePaths={['/painel']} currentPath={path} />
         </nav>
       )}
     </Fragment>

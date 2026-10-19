@@ -23,10 +23,10 @@ export function Home() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-amber-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
 
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center p-6 md:pl-[96px] relative z-10">
+      <main className="flex-1 w-full flex flex-col items-center justify-center p-6 md:pl-24 relative z-10">
         
         {/* TAMANHO DOS BOTÕES */}
-        <div className={`w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto ${isAdmin ? 'max-w-[320px] md:max-w-[750px]' : 'max-w-[300px] md:max-w-[520px]'}`}>
+        <div className={`w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto ${isAdmin ? 'max-w-[320px] md:max-w-187.5' : 'max-w-75 md:max-w-130'}`}>
           
           <div className={`grid grid-cols-2 gap-4 md:gap-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
     
@@ -85,7 +85,7 @@ export function Home() {
                {!isAdmin ? (
                   <>
                      <div className="text-left flex-1 relative z-10 md:text-center md:flex-none">
-                       <span className="block font-bold text-white text-[13px] md:text-[12px] uppercase tracking-widest md:leading-tight">
+                       <span className="block font-medium text-white text-[13px] md:text-[12px] uppercase tracking-widest md:leading-tight">
                          <span className="hidden md:inline">Caixa</span>
                          <span className="md:hidden">Caixa</span>
                        </span>
@@ -95,7 +95,7 @@ export function Home() {
                      </div>
                   </>
                ) : (
-                  <span className="font-bold text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10 text-center leading-tight">Caixa</span>
+                  <span className="font-medium text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10 text-center leading-tight">Caixa</span>
                )}
             </button>
 
@@ -123,7 +123,7 @@ export function Home() {
       </main>
 
       {/* RODAPÉ */}
-      <footer className="w-full pb-6 pt-2 md:pl-[96px] flex flex-col items-center justify-center relative z-10">
+      <footer className="w-full pb-6 pt-2 md:pl-24 flex flex-col items-center justify-center relative z-10">
         <div className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
           
           {/* Selo de Segurança */}
