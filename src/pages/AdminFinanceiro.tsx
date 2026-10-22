@@ -70,7 +70,7 @@ export function AdminFinanceiro() {
 
   const saldoLiquido = faturamentoTotal - taxaServicoTotal;
 
-  // CÁLCULO DE PROGRESSO DA META
+  // META
   let percentualMeta = 0;
   if (metaAtiva && metaAtiva.valorAlvo > 0) {
     percentualMeta = Math.min((saldoLiquido / metaAtiva.valorAlvo) * 100, 100);
@@ -336,10 +336,10 @@ export function AdminFinanceiro() {
 
             {/* FILTRO DE DATAS */}
             <div className="inline-flex items-center bg-black/20 border border-white/10 backdrop-blur-md rounded-full px-4 py-2 shadow-inner self-start mt-2">
-              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0" />
-              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
-              <span className="text-emerald-500/80 font-semibold text-[9px] uppercase mx-2 tracking-widest">ATÉ</span>
-              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
+              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0 pointer-events-none" />
+              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
+              <span className="text-emerald-500/80 font-semibold text-[9px] uppercase mx-2 tracking-widest pointer-events-none">ATÉ</span>
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
             </div>
 
           </div>
@@ -391,7 +391,7 @@ export function AdminFinanceiro() {
                     placeholder="PESQUISAR"
                     value={pesquisa}
                     onChange={(e) => setPesquisa(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-full h-9 pl-4 pr-8 text-[12px] font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 shadow-sm transition-all"
+                    className="w-full appearance-none bg-white border border-slate-200 rounded-full h-9 pl-4 pr-8 text-[12px] font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 shadow-sm transition-all"
                   />
                   {pesquisa && (
                     <button onClick={() => setPesquisa('')} className="absolute right-4 text-slate-400 hover:text-slate-600">
@@ -486,23 +486,23 @@ export function AdminFinanceiro() {
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center justify-between bg-purple-800/50 rounded-xl p-1.5 border border-purple-700/50">
                   <div className="flex items-center">
-                    <LucideIcons.Calendar size={14} className="text-purple-300 ml-2 mr-1" />
-                    <input type="date" value={guardaDataInicio} onChange={(e) => setGuardaDataInicio(e.target.value)} className="bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
+                    <LucideIcons.Calendar size={14} className="text-purple-300 ml-2 mr-1 pointer-events-none" />
+                    <input type="date" value={guardaDataInicio} onChange={(e) => setGuardaDataInicio(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
                   </div>
-                  <span className="text-purple-400 font-medium text-[9px] uppercase tracking-widest">Até</span>
+                  <span className="text-purple-400 font-medium text-[9px] uppercase tracking-widest pointer-events-none">Até</span>
                   <div className="flex items-center">
-                    <input type="date" value={guardaDataFim} onChange={(e) => setGuardaDataFim(e.target.value)} className="bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
+                    <input type="date" value={guardaDataFim} onChange={(e) => setGuardaDataFim(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
                   </div>
                 </div>
                 
                 <div className="relative">
-                  <LucideIcons.Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-300" />
+                  <LucideIcons.Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-300 pointer-events-none" />
                   <input 
                     type="text" 
                     placeholder="Mesa, Cliente ou Valor..." 
                     value={guardaPesquisa}
                     onChange={(e) => setGuardaPesquisa(e.target.value)}
-                    className="w-full bg-purple-800/50 border border-purple-700/50 text-white placeholder:text-purple-300/70 rounded-xl h-10 pl-9 pr-4 text-[12px] font-medium outline-none focus:bg-purple-800 transition-colors"
+                    className="appearance-none w-full bg-purple-800/50 border border-purple-700/50 text-white placeholder:text-purple-300/70 rounded-xl h-10 pl-9 pr-4 text-[12px] font-medium outline-none focus:bg-purple-800 transition-colors"
                   />
                 </div>
               </div>
@@ -678,13 +678,13 @@ export function AdminFinanceiro() {
               {/* Data */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest">Data do Pagamento</label>
-                <div className="relative">
-                  <LucideIcons.CalendarDays size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="relative flex items-center">
+                  <LucideIcons.CalendarDays size={17} className="absolute left-4 text-slate-400 pointer-events-none" />
                   <input 
                     required type="date"
                     disabled={carregandoVale}
                     value={valeData} onChange={(e) => setValeData(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-11 pr-5 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -692,14 +692,14 @@ export function AdminFinanceiro() {
               {/* Colaborador */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest">Colaborador</label>
-                <div className="relative">
-                  <LucideIcons.User size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="relative flex items-center">
+                  <LucideIcons.User size={17} className="absolute left-4 text-slate-400 pointer-events-none" />
                   <select 
                     required 
                     disabled={carregandoVale}
                     value={valeFuncionarioId} 
                     onChange={(e) => setValeFuncionarioId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[12px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-10 text-[12px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   >
                     <option value="" disabled>Selecione</option>
                     {listaFuncionarios.length === 0 && (
@@ -709,14 +709,15 @@ export function AdminFinanceiro() {
                       <option key={func.id} value={func.id}>{func.nome}</option>
                     ))}
                   </select>
+                  <LucideIcons.ChevronDown size={16} className="absolute right-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
               {/* Valor Monetário  */}
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest">Valor (R$)</label>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[14px]">R$</span>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-slate-400 font-semibold text-[14px] pointer-events-none">R$</span>
                   <input 
                     required 
                     type="text" 
@@ -725,7 +726,7 @@ export function AdminFinanceiro() {
                     disabled={carregandoVale}
                     value={valeValor} 
                     onChange={handleValorChange}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-11 pr-5 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -756,12 +757,15 @@ export function AdminFinanceiro() {
               {/* Descrição */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest">Descrição / Observação</label>
-                <input 
-                  type="text"
-                  disabled={carregandoVale}
-                  value={valeDescricao} onChange={(e) => setValeDescricao(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50"
-                />
+                <div className="relative flex items-center">
+                  <LucideIcons.MessageSquare size={17} className="absolute left-4 text-slate-400 pointer-events-none" />
+                  <input 
+                    type="text"
+                    disabled={carregandoVale}
+                    value={valeDescricao} onChange={(e) => setValeDescricao(e.target.value)}
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
+                  />
+                </div>
               </div>
 
               <button 
@@ -859,16 +863,16 @@ export function AdminFinanceiro() {
                 <div className="flex flex-col gap-2 text-left">
                   <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest ml-1">Período</label>
                   <div className="flex items-center gap-3">
-                    <input disabled={carregandoMeta} required type="date" value={metaDataInicio} onChange={(e) => setMetaDataInicio(e.target.value)} className="w-full bg-white border border-slate-200 shadow-sm rounded-4xl h-11 px-3 text-[11px] font-sans text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase disabled:opacity-50 transition-all text-center" />
-                    <span className="text-[10px] font-sans text-slate-400 uppercase">Até</span>
-                    <input disabled={carregandoMeta} required type="date" value={metaDataFim} onChange={(e) => setMetaDataFim(e.target.value)} className="w-full bg-white border border-slate-200 shadow-sm rounded-4xl h-11 px-3 text-[11px] font-sans text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase disabled:opacity-50 transition-all text-center" />
+                    <input disabled={carregandoMeta} required type="date" value={metaDataInicio} onChange={(e) => setMetaDataInicio(e.target.value)} className="appearance-none w-full bg-white border border-slate-200 shadow-sm rounded-4xl h-11 px-3 text-[11px] font-sans text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase disabled:opacity-50 transition-all text-center" />
+                    <span className="text-[10px] font-sans text-slate-400 uppercase pointer-events-none">Até</span>
+                    <input disabled={carregandoMeta} required type="date" value={metaDataFim} onChange={(e) => setMetaDataFim(e.target.value)} className="appearance-none w-full bg-white border border-slate-200 shadow-sm rounded-4xl h-11 px-3 text-[11px] font-sans text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 uppercase disabled:opacity-50 transition-all text-center" />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2 text-left">
                   <label className="text-[10px] font-sans text-slate-500 uppercase tracking-widest ml-1">Valor Alvo (R$)</label>
-                  <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[16px]">R$</span>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-slate-400 font-semibold text-[16px] pointer-events-none">R$</span>
                     <input 
                       required 
                       type="text" 
@@ -877,7 +881,7 @@ export function AdminFinanceiro() {
                       disabled={carregandoMeta}
                       value={novaMetaInput} 
                       onChange={handleMetaValorChange}
-                      className="w-full bg-white border border-slate-300 shadow-sm rounded-[30px] h-11 pl-12 pr-4 text-[15px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 placeholder:text-slate-300 disabled:opacity-50 font-sans tabular-nums transition-all"
+                      className="appearance-none w-full bg-white border border-slate-300 shadow-sm rounded-[30px] h-11 pl-12 pr-4 text-[15px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 placeholder:text-slate-300 disabled:opacity-50 font-sans tabular-nums transition-all"
                     />
                   </div>
                 </div>
@@ -988,7 +992,7 @@ export function AdminFinanceiro() {
               placeholder="Ex: Lançamento duplicado..." 
               value={motivoCancelamento} 
               onChange={(e) => setMotivoCancelamento(e.target.value)} 
-              className="w-full bg-slate-50 p-4 h-14 rounded-[20px] outline-none focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100 font-medium text-[13px] border border-slate-200 transition-all mb-6" 
+              className="appearance-none w-full bg-slate-50 p-4 h-14 rounded-[20px] outline-none focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100 font-medium text-[13px] border border-slate-200 transition-all mb-6" 
             />
 
             <div className="flex gap-3">

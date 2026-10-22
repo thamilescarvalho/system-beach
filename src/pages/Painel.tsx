@@ -158,24 +158,25 @@ export function Painel() {
             </div>
 
             {/* Pílula de Data */}
-            <div className="inline-flex items-center justify-center bg-black/20 border border-white/10 backdrop-blur-md rounded-full px-4 py-2 shadow-inner">
-              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0" />
-              <div className="flex items-center justify-center">
+            <div className="inline-flex items-center justify-center bg-black/20 border border-white/10 backdrop-blur-md rounded-full px-3 sm:px-4 py-2 shadow-inner w-full max-w-85 sm:max-w-none">
+              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0 pointer-events-none hidden sm:block" />
+              <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-auto">
                 <input 
                   type="date" 
                   value={dataInicio} 
                   onChange={(e) => setDataInicio(e.target.value)} 
-                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-26 md:w-28 text-center uppercase" 
+                  className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-30 sm:w-32.25 text-center uppercase shrink-0" 
                 />
-                <span className="text-emerald-500/80 font-bold text-[9px] uppercase mx-2 tracking-widest">Até</span>
+                <span className="text-emerald-500/80 font-bold text-[9px] uppercase tracking-widest shrink-0 pointer-events-none">Até</span>
                 <input 
                   type="date" 
                   value={dataFim} 
                   onChange={(e) => setDataFim(e.target.value)} 
-                  className="bg-transparent text-white text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-26 md:w-28 text-center uppercase" 
+                  className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-30 sm:w-32.25 text-center uppercase shrink-0" 
                 />
               </div>
             </div>
+
           </div>
         </div>
 
@@ -376,13 +377,24 @@ export function Painel() {
               </button>
             </div>
 
-            <div className="p-2 bg-white border-b border-slate-100 shrink-0 shadow-sm z-10">
-              <div className="bg-slate-100 rounded-4xl border border-slate-200 flex items-center p-1 gap-5">
-                <LucideIcons.CalendarDays size={14} className="text-slate-400 ml-3 shrink-0" />
-                <div className="flex-1 flex items-center gap-5">
-                  <input type="date" value={modalDataInicio} onChange={(e) => setModalDataInicio(e.target.value)} className="bg-transparent w-full text-slate-700 text-[11px] font-medium outline-none text-center uppercase" />
-                  <span className="text-slate-400 font-medium text-[9px] uppercase tracking-widest">ATÉ</span>
-                  <input type="date" value={modalDataFim} onChange={(e) => setModalDataFim(e.target.value)} className="bg-transparent w-full text-slate-700 text-[11px] font-medium outline-none text-center uppercase" />
+            {/* Pílula de Data no Modal */}
+            <div className="p-3 bg-white border-b border-slate-100 shrink-0 shadow-sm z-10">
+              <div className="bg-slate-100 rounded-full border border-slate-200 flex items-center justify-between px-3 py-2">
+                <LucideIcons.CalendarDays size={14} className="text-slate-400 shrink-0 pointer-events-none hidden sm:block" />
+                <div className="flex-1 flex items-center justify-center gap-1 sm:gap-2">
+                  <input 
+                    type="date" 
+                    value={modalDataInicio} 
+                    onChange={(e) => setModalDataInicio(e.target.value)} 
+                    className="appearance-none bg-transparent w-30 sm:w-32.5 text-slate-700 text-[11px] font-medium outline-none text-center uppercase shrink-0" 
+                  />
+                  <span className="text-slate-400 font-bold text-[9px] uppercase tracking-widest shrink-0 pointer-events-none">ATÉ</span>
+                  <input 
+                    type="date" 
+                    value={modalDataFim} 
+                    onChange={(e) => setModalDataFim(e.target.value)} 
+                    className="appearance-none bg-transparent w-30 sm:w-32.5 text-slate-700 text-[11px] font-medium outline-none text-center uppercase shrink-0" 
+                  />
                 </div>
               </div>
             </div>
