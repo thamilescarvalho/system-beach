@@ -1,12 +1,12 @@
 // src/pages/AdminFinanceiro.tsx
-import { useContext, useState, useRef, useEffect } from 'react';
-import { AppContext } from '../context/AppContext';
+import { useState, useRef, useEffect } from 'react';
+import { useAppContext } from '../context/AppContext';
 import { Header } from '../components/Header';
 import * as LucideIcons from 'lucide-react';
 import type { VendaFechada, StatusPagamentoGarcom } from '../types';
 
 export function AdminFinanceiro() {
-  const contexto = useContext(AppContext);
+  const contexto = useAppContext();
   const adminLogado = contexto?.garcomLogado?.nome || 'Admin';
 
   // DATAS GERAIS (PAINEL)
@@ -306,7 +306,7 @@ export function AdminFinanceiro() {
         <Header />
 
         {/* DASHBOARD HEADER */}
-        <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white rounded-b-[40px] pt-20 md:pt-24 md:pl-24 pb-12 relative overflow-hidden shadow-2xl shadow-emerald-900/20">
+        <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white rounded-b-4xl pt-20 md:pt-24 md:pl-24 pb-12 relative overflow-hidden shadow-2xl shadow-emerald-900/20">
           <div className="absolute -right-20 -top-20 w-64 h-80 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute -left-10 bottom-0 w-40 h-40 bg-teal-500/20 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -335,11 +335,23 @@ export function AdminFinanceiro() {
             </div>
 
             {/* FILTRO DE DATAS */}
-            <div className="inline-flex items-center bg-black/20 border border-white/10 backdrop-blur-md rounded-full px-4 py-2 shadow-inner self-start mt-2">
-              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0 pointer-events-none" />
-              <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
-              <span className="text-emerald-500/80 font-semibold text-[9px] uppercase mx-2 tracking-widest pointer-events-none">ATÉ</span>
-              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] md:text-[12px] font-medium outline-none cursor-pointer w-23 md:w-23.25 uppercase text-center" />
+            <div className="inline-flex items-center justify-center bg-black/20 border border-white/10 backdrop-blur-md rounded-full px-3 sm:px-4 py-2 shadow-inner self-start mt-2 w-full max-w-85 sm:max-w-none">
+              <LucideIcons.CalendarDays size={14} className="text-emerald-400 mr-2 shrink-0 pointer-events-none hidden sm:block" />
+              <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-auto">
+                <input 
+                  type="date" 
+                  value={dataInicio} 
+                  onChange={(e) => setDataInicio(e.target.value)} 
+                  className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-30 sm:w-32.5 text-center uppercase shrink-0" 
+                />
+                <span className="text-emerald-500/80 font-bold text-[9px] uppercase tracking-widest shrink-0 pointer-events-none">Até</span>
+                <input 
+                  type="date" 
+                  value={dataFim} 
+                  onChange={(e) => setDataFim(e.target.value)} 
+                  className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] md:text-[13px] font-medium outline-none cursor-pointer w-30 sm:w-32.5 text-center uppercase shrink-0" 
+                />
+              </div>
             </div>
 
           </div>
@@ -408,7 +420,7 @@ export function AdminFinanceiro() {
               </div>
             </div>
 
-            <div className="bg-white rounded-[28px] shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               {historicoFiltrado.length === 0 ? (
                 <div className="text-center py-16 flex flex-col items-center">
                   <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
@@ -484,15 +496,23 @@ export function AdminFinanceiro() {
               </div>
 
               <div className="flex flex-col gap-2 mt-2">
-                <div className="flex items-center justify-between bg-purple-800/50 rounded-xl p-1.5 border border-purple-700/50">
-                  <div className="flex items-center">
-                    <LucideIcons.Calendar size={14} className="text-purple-300 ml-2 mr-1 pointer-events-none" />
-                    <input type="date" value={guardaDataInicio} onChange={(e) => setGuardaDataInicio(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
-                  </div>
-                  <span className="text-purple-400 font-medium text-[9px] uppercase tracking-widest pointer-events-none">Até</span>
-                  <div className="flex items-center">
-                    <input type="date" value={guardaDataFim} onChange={(e) => setGuardaDataFim(e.target.value)} className="appearance-none bg-transparent text-white text-[11px] font-medium outline-none cursor-pointer w-23.75 uppercase text-center" />
-                  </div>
+                
+                {/* FILTRO DE DATAS MODAL GUARDA-SOL (Ajustado p/ Mobile/iPhone XR) */}
+                <div className="flex items-center justify-center gap-1 sm:gap-2 bg-purple-800/50 rounded-xl py-2 px-1 sm:px-3 border border-purple-700/50 w-full">
+                  <LucideIcons.CalendarDays size={14} className="text-purple-300 shrink-0 pointer-events-none hidden sm:block" />
+                  <input 
+                    type="date" 
+                    value={guardaDataInicio} 
+                    onChange={(e) => setGuardaDataInicio(e.target.value)} 
+                    className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] font-medium outline-none cursor-pointer w-30 sm:w-32.5 text-center uppercase shrink-0" 
+                  />
+                  <span className="text-purple-400 font-bold text-[9px] uppercase tracking-widest shrink-0 pointer-events-none">ATÉ</span>
+                  <input 
+                    type="date" 
+                    value={guardaDataFim} 
+                    onChange={(e) => setGuardaDataFim(e.target.value)} 
+                    className="appearance-none bg-transparent text-white text-[11px] sm:text-[12px] font-medium outline-none cursor-pointer w-30 sm:w-32.5 text-center uppercase shrink-0" 
+                  />
                 </div>
                 
                 <div className="relative">
@@ -523,7 +543,7 @@ export function AdminFinanceiro() {
               </div>
             </div>
 
-            <div className="p-4 overflow-y-auto flex-1 bg-slate-50 hide-scrollbar">
+            <div className="p-4 overflow-y-auto flex-1 bg-slate-50">
               {historicoGuardaSolModal.length === 0 ? (
                 <p className="text-slate-400 text-[11px] font-medium uppercase tracking-widest text-center py-10">Nenhuma taxa encontrada nestes filtros.</p>
               ) : (
@@ -536,7 +556,7 @@ export function AdminFinanceiro() {
                     const valorLocacao = itemGuarda ? itemGuarda.produto.preco * itemGuarda.quantidade : 0;
 
                     return (
-                      <div key={venda.id} className="bg-white p-4 rounded-[20px] border border-slate-200 shadow-sm flex items-center justify-between hover:border-purple-200 transition-colors">
+                      <div key={venda.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-purple-200 transition-colors">
                         <div className="flex flex-col">
                           <span className="text-[13px] font-semibold uppercase text-slate-800 tracking-tight">Mesa {venda.numeroMesa} <span className="text-slate-300 font-normal mx-1">•</span> {venda.nomeCliente || 'S/ nome'}</span>
                           <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-1">
@@ -591,7 +611,7 @@ export function AdminFinanceiro() {
               </div>
             </div>
 
-            <div className="p-4 overflow-y-auto flex-1 bg-slate-50 hide-scrollbar">
+            <div className="p-4 overflow-y-auto flex-1 bg-slate-50">
               {mesasOcupadas.length === 0 ? (
                 <p className="text-slate-400 text-[11px] font-medium uppercase tracking-widest text-center py-10">O salão está vazio no momento.</p>
               ) : (
@@ -599,7 +619,7 @@ export function AdminFinanceiro() {
                   {mesasOcupadas.map(mesa => {
                     const totalMesa = mesa.itens.reduce((sum, item) => sum + (item.produto.preco * item.quantidade), 0);
                     return (
-                      <div key={mesa.id} className="bg-white p-4 rounded-[20px] border border-slate-200 shadow-sm flex items-center justify-between">
+                      <div key={mesa.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                         <div className="flex flex-col">
                           <span className="text-[13px] font-semibold uppercase text-slate-800 tracking-tight">Mesa {mesa.numero}</span>
                           <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-1">
@@ -640,9 +660,9 @@ export function AdminFinanceiro() {
                 Object.entries(resumoPagamentos).map(([metodo, valor]) => {
                   const config = configPagamentos[metodo] || configPagamentos['Não Especificado'];
                   return (
-                    <div key={metodo} className="bg-white p-3 rounded-[50px] border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div key={metodo} className="bg-white p-3 rounded-full border border-slate-200 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-[50px] flex items-center justify-center border shadow-inner ${config.border} ${config.corBg} ${config.corTexto}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border shadow-inner ${config.border} ${config.corBg} ${config.corTexto}`}>
                           {config.icon}
                         </div>
                         <span className="text-[12px] font-semibold uppercase tracking-widest text-slate-700">{metodo}</span>
@@ -684,7 +704,7 @@ export function AdminFinanceiro() {
                     required type="date"
                     disabled={carregandoVale}
                     value={valeData} onChange={(e) => setValeData(e.target.value)}
-                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-4xl h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -699,7 +719,7 @@ export function AdminFinanceiro() {
                     disabled={carregandoVale}
                     value={valeFuncionarioId} 
                     onChange={(e) => setValeFuncionarioId(e.target.value)}
-                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-10 text-[12px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-4xl h-10 pl-12 pr-10 text-[12px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   >
                     <option value="" disabled>Selecione</option>
                     {listaFuncionarios.length === 0 && (
@@ -726,7 +746,7 @@ export function AdminFinanceiro() {
                     disabled={carregandoVale}
                     value={valeValor} 
                     onChange={handleValorChange}
-                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-4xl h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -763,7 +783,7 @@ export function AdminFinanceiro() {
                     type="text"
                     disabled={carregandoVale}
                     value={valeDescricao} onChange={(e) => setValeDescricao(e.target.value)}
-                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-[40px] h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
+                    className="w-full appearance-none bg-slate-50 border border-slate-300 rounded-4xl h-10 pl-12 pr-4 text-[13px] font-sans text-slate-800 outline-none focus:border-emerald-800 uppercase disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -771,7 +791,7 @@ export function AdminFinanceiro() {
               <button 
                 type="submit" 
                 disabled={carregandoVale}
-                className="mt-2 w-full bg-slate-800 text-white rounded-[40px] h-10 font-sans text-[12px] uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-2 w-full bg-slate-800 text-white rounded-4xl h-10 font-sans text-[12px] uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {carregandoVale ? (
                   <LucideIcons.Loader2 size={19} className="animate-spin text-emerald-400" />
@@ -807,7 +827,7 @@ export function AdminFinanceiro() {
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-6 bg-slate-50 flex-1 overflow-y-auto hide-scrollbar">
+            <div className="p-6 flex flex-col gap-6 bg-slate-50 flex-1 overflow-y-auto">
               
               {/* CARD DA META ATUAL */}
               <div className="flex flex-col gap-2 text-left">
@@ -881,12 +901,12 @@ export function AdminFinanceiro() {
                       disabled={carregandoMeta}
                       value={novaMetaInput} 
                       onChange={handleMetaValorChange}
-                      className="appearance-none w-full bg-white border border-slate-300 shadow-sm rounded-[30px] h-11 pl-12 pr-4 text-[15px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 placeholder:text-slate-300 disabled:opacity-50 font-sans tabular-nums transition-all"
+                      className="appearance-none w-full bg-white border border-slate-300 shadow-sm rounded-3xl h-11 pl-12 pr-4 text-[15px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 placeholder:text-slate-300 disabled:opacity-50 font-sans tabular-nums transition-all"
                     />
                   </div>
                 </div>
 
-                <button disabled={carregandoMeta} type="submit" className="mt-1 w-full bg-blue-950 text-white rounded-[30px] h-11 font-semibold text-[11px] uppercase tracking-widest shadow-xl shadow-blue-600/10 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                <button disabled={carregandoMeta} type="submit" className="mt-1 w-full bg-blue-950 text-white rounded-3xl h-11 font-semibold text-[11px] uppercase tracking-widest shadow-xl shadow-blue-600/10 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                   {carregandoMeta ? <LucideIcons.Loader2 size={19} className="animate-spin text-white" /> : <><LucideIcons.Check size={19} strokeWidth={2.5} /> ATUALIZAR META</>}
                 </button>
               </form>
@@ -912,7 +932,7 @@ export function AdminFinanceiro() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50 hide-scrollbar">
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
               {vendaSelecionada.status === 'cancelada' && (
                 <div className="bg-rose-50 border border-rose-200 p-5 rounded-2xl mb-6 shadow-sm">
                   <h4 className="text-rose-600 font-semibold text-[11px] uppercase tracking-widest flex items-center gap-2 mb-2">
@@ -922,7 +942,7 @@ export function AdminFinanceiro() {
                 </div>
               )}
 
-              <div className="flex gap-4 mb-6 bg-white p-5 rounded-[20px] border border-slate-200 shadow-sm">
+              <div className="flex gap-4 mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="flex-1">
                   <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Cliente</p>
                   <p className="font-semibold text-[13px] text-slate-800 uppercase truncate">{vendaSelecionada.nomeCliente || 'Não identificado'}</p>
@@ -934,7 +954,7 @@ export function AdminFinanceiro() {
                 </div>
               </div>
 
-              <div className="space-y-4 mb-6 bg-white p-5 rounded-[20px] border border-slate-200 shadow-sm">
+              <div className="space-y-4 mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 {vendaSelecionada.itens.map(item => (
                   <div key={item.id} className={`flex justify-between items-center pb-4 border-b border-slate-100 border-dashed last:border-0 last:pb-0 ${vendaSelecionada.status === 'cancelada' ? 'line-through opacity-50' : ''}`}>
                     <div className="flex gap-3 items-center min-w-0 pr-2">
@@ -959,11 +979,11 @@ export function AdminFinanceiro() {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => window.print()} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-4 rounded-[20px] uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20 active:scale-95">
+                <button onClick={() => window.print()} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-4 rounded-2xl uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20 active:scale-95">
                   <LucideIcons.Printer size={18} strokeWidth={2} /> Imprimir
                 </button>
                 {vendaSelecionada.status !== 'cancelada' && (
-                  <button onClick={() => setModalCancelarAberto(true)} className="flex-1 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-semibold py-4 rounded-[20px] uppercase tracking-widest text-[11px] transition-colors active:scale-95 shadow-sm">
+                  <button onClick={() => setModalCancelarAberto(true)} className="flex-1 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-semibold py-4 rounded-2xl uppercase tracking-widest text-[11px] transition-colors active:scale-95 shadow-sm">
                     Estornar
                   </button>
                 )}
@@ -977,7 +997,7 @@ export function AdminFinanceiro() {
       {modalCancelarAberto && vendaSelecionada && (
         <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200 print:hidden">
           <div className="bg-white rounded-4xl p-8 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 flex flex-col">
-            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-[20px] flex items-center justify-center mx-auto mb-5 border border-rose-100">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-rose-100">
               <LucideIcons.AlertTriangle size={32} strokeWidth={2} />
             </div>
             <h3 className="text-xl font-semibold text-slate-900 text-center uppercase tracking-tight mb-2">Estornar Venda?</h3>
@@ -992,14 +1012,14 @@ export function AdminFinanceiro() {
               placeholder="Ex: Lançamento duplicado..." 
               value={motivoCancelamento} 
               onChange={(e) => setMotivoCancelamento(e.target.value)} 
-              className="appearance-none w-full bg-slate-50 p-4 h-14 rounded-[20px] outline-none focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100 font-medium text-[13px] border border-slate-200 transition-all mb-6" 
+              className="appearance-none w-full bg-slate-50 p-4 h-14 rounded-2xl outline-none focus:border-rose-400 focus:bg-white focus:ring-4 focus:ring-rose-100 font-medium text-[13px] border border-slate-200 transition-all mb-6" 
             />
 
             <div className="flex gap-3">
-              <button onClick={() => setModalCancelarAberto(false)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-semibold py-4 rounded-[20px] text-[11px] uppercase tracking-widest transition-colors active:scale-95">
+              <button onClick={() => setModalCancelarAberto(false)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-semibold py-4 rounded-2xl text-[11px] uppercase tracking-widest transition-colors active:scale-95">
                 Voltar
               </button>
-              <button onClick={confirmarCancelamento} className="flex-[1.5] bg-rose-600 hover:bg-rose-700 text-white font-semibold py-4 rounded-[20px] text-[11px] uppercase tracking-widest transition-colors active:scale-95 shadow-lg shadow-rose-600/30">
+              <button onClick={confirmarCancelamento} className="flex-[1.5] bg-rose-600 hover:bg-rose-700 text-white font-semibold py-4 rounded-2xl text-[11px] uppercase tracking-widest transition-colors active:scale-95 shadow-lg shadow-rose-600/30">
                 Confirmar
               </button>
             </div>

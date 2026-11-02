@@ -1,11 +1,12 @@
 // src/pages/Estoque.tsx
-import { useContext, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { ElementType } from 'react';
-import { AppContext } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext'; // ✅ Padrão Pro Clean Architecture
 import { Header } from '../components/Header';
 import type { Produto, Categoria } from '../types';
 import imageCompression from 'browser-image-compression';
 import * as LucideIcons from 'lucide-react';
+import { ModalConfirmacao } from '../components/ModalConfirmacao';
 
 const OPCOES_ICONES = [
   'Beer', 'Martini', 'CupSoda', 'Coffee', 'Wine', 'WineGlass', 
@@ -17,13 +18,14 @@ const OPCOES_ICONES = [
 ];
 
 export function Estoque() {
-  const contexto = useContext(AppContext);
+  // ✅ Nova chamada do Hook Global (Sem necessidade de "?.")
+  const contexto = useAppContext();
   
-  const produtos = useMemo(() => contexto?.produtos || [], [contexto?.produtos]);
-  const categorias = useMemo(() => contexto?.categorias || [], [contexto?.categorias]);
-  const historicoEntradas = contexto?.historicoEstoque || [];
-  const historicoVendas = contexto?.historicoVendas || [];
-  const garcomLogado = contexto?.garcomLogado;
+  const produtos = useMemo(() => contexto.produtos || [], [contexto.produtos]);
+  const categorias = useMemo(() => contexto.categorias || [], [contexto.categorias]);
+  const historicoEntradas = contexto.historicoEstoque || [];
+  const historicoVendas = contexto.historicoVendas || [];
+  const garcomLogado = contexto.garcomLogado;
 
   const produtosComEstoque = produtos.filter(p => p.estoque !== undefined);
 
@@ -38,6 +40,24 @@ export function Estoque() {
   const [modalInventarioAberto, setModalInventarioAberto] = useState(false);
   const [modalNovoProduto, setModalNovoProduto] = useState(false);
   const [modalNovaCategoriaAberto, setModalNovaCategoriaAberto] = useState(false);
+  const [modalConfirmacao, setModalConfirmacao] = useState<{
+    aberto: boolean;
+    titulo: string;
+    descricao: string;
+    textoConfirmar?: string;
+    textoCancelar?: string;
+    tipo?: 'perigo' | 'aviso' | 'primario';
+    onConfirmar: () => void | Promise<void>;
+  }>({
+    aberto: false,
+    titulo: '',
+    descricao: '',
+    onConfirmar: () => {}
+  });
+
+  const fecharConfirmacao = () => {
+    setModalConfirmacao((prev) => ({ ...prev, aberto: false }));
+  };
   
   // ESTADOS CADASTRO CATEGORIA
   const [textoNovaCategoria, setTextoNovaCategoria] = useState('');
@@ -102,19 +122,29 @@ export function Estoque() {
   // CATEGORIAS: Salvar
   const handleSalvarCategoria = async () => {
     if (!textoNovaCategoria.trim()) { alert("Dê um nome para a categoria."); return; }
+    
     if (editandoCategoriaId) {
-      if (contexto?.editarCategoria) { await contexto.editarCategoria(editandoCategoriaId, textoNovaCategoria.trim(), iconeSelecionado); }
+      await contexto.editarCategoria(editandoCategoriaId, textoNovaCategoria.trim(), iconeSelecionado);
     } else {
-      if (contexto?.adicionarCategoria) { await contexto.adicionarCategoria(textoNovaCategoria.trim(), iconeSelecionado); }
+      await contexto.adicionarCategoria(textoNovaCategoria.trim(), iconeSelecionado);
     }
+    
     setModalNovaCategoriaAberto(false); setTextoNovaCategoria(''); setIconeSelecionado('Package');
   };
 
   // CATEGORIAS: Excluir
-  const handleExcluirCategoria = async (id: number) => {
-    if (confirm("Atenção: Excluir esta categoria NÃO excluirá os produtos, mas eles perderão o vínculo. Tem certeza?")) {
-      if (contexto?.excluirCategoria) { await contexto.excluirCategoria(id); }
-    }
+  const handleExcluirCategoria = (id: number) => {
+    setModalConfirmacao({
+      aberto: true,
+      titulo: 'Excluir Categoria?',
+      descricao: 'Atenção: Excluir esta categoria NÃO excluirá os produtos cadastrados, mas eles perderão o vínculo de categoria.',
+      textoConfirmar: 'Excluir Categoria',
+      tipo: 'perigo',
+      onConfirmar: async () => {
+        fecharConfirmacao();
+        await contexto.excluirCategoria(id);
+      }
+    });
   };
 
   // CATEGORIAS: Reordenar
@@ -126,7 +156,7 @@ export function Estoque() {
       [novas[index + 1], novas[index]] = [novas[index], novas[index + 1]];
     }
     const updatedCategorias = novas.map((c, i) => ({ ...c, ordem: i }));
-    if (contexto?.reordenarCategorias) { contexto.reordenarCategorias(updatedCategorias); }
+    contexto.reordenarCategorias(updatedCategorias);
   };
 
   // PRODUTOS
@@ -154,8 +184,11 @@ export function Estoque() {
 
   const handleSalvarProduto = async () => {
     if (!novoProdNome || !novoProdCat || !novoProdVenda) { alert('Preencha nome, categoria e preço de venda!'); return; }
-    setSalvandoProduto(true); let urlFinal = novoProdImagemUrl;
-    if (novoProdImagemFile && contexto?.uploadImagemProduto) {
+    
+    setSalvandoProduto(true); 
+    let urlFinal = novoProdImagemUrl;
+    
+    if (novoProdImagemFile) {
       try { 
         const opcoesCompressao = { maxSizeMB: 0.1, maxWidthOrHeight: 1024, useWebWorker: true, initialQuality: 0.8 }; 
         const arquivoComprimido = await imageCompression(novoProdImagemFile, opcoesCompressao); 
@@ -165,17 +198,38 @@ export function Estoque() {
         console.error('Erro:', erro); alert('Erro na foto.'); setSalvandoProduto(false); return; 
       }
     }
+    
     const dadosSalvar = { nome: novoProdNome, categoria: novoProdCat, subcategoria: novoProdSubCat, imagem_url: urlFinal, preco: parseFloat(novoProdVenda.replace(',', '.')) || 0, precoCusto: parseFloat(novoProdCusto.replace(',', '.')) || 0, ativo: novoProdAtivo };
-    if (editandoId) { if (contexto?.editarProduto) { await contexto.editarProduto(editandoId, dadosSalvar); } } else { if (contexto?.adicionarProduto) { await contexto.adicionarProduto({ ...dadosSalvar, estoque: 0 }); } }
+    
+    if (editandoId) { 
+      await contexto.editarProduto(editandoId, dadosSalvar);
+    } else { 
+      await contexto.adicionarProduto({ ...dadosSalvar, estoque: 0 });
+    }
+    
     setSalvandoProduto(false); setModalNovoProduto(false); setNovoProdNome(''); setNovoProdCat(''); setNovoProdSubCat(''); setNovoProdImagemUrl(''); setNovoProdImagemFile(null); setImagemPreview(null); setNovoProdVenda(''); setNovoProdCusto(''); setNovoProdAtivo(true); setEditandoId(null);
   };
 
-  const handleExcluirProduto = (id: number) => { if (confirm('Tem certeza?')) { contexto?.excluirProduto(id); setProdutoDetalhe(null); } };
-  const handleToggleStatus = (id: number) => { contexto?.alternarStatusProduto(id); setProdutoDetalhe(null); };
+  const handleExcluirProduto = (id: number) => {
+    const prod = produtos.find(p => p.id === id) || produtoDetalhe;
+    setModalConfirmacao({
+      aberto: true,
+      titulo: 'Excluir Produto?',
+      descricao: `Tem certeza que deseja remover o produto "${prod?.nome || 'selecionado'}" do estoque e cardápio?`,
+      textoConfirmar: 'Excluir Produto',
+      tipo: 'perigo',
+      onConfirmar: async () => {
+        fecharConfirmacao();
+        await contexto.excluirProduto(id);
+        setProdutoDetalhe(null);
+      }
+    });
+  };
+  const handleToggleStatus = (id: number) => { contexto.alternarStatusProduto(id); setProdutoDetalhe(null); };
 
   // ENTRADAS E AJUSTES
-  const handleConfirmarEntrada = () => { if (produtoDetalhe && qtdForm !== '' && custoDigitado !== '') { const qtd = parseInt(qtdForm) || 0; const custo = parseFloat(custoDigitado.replace(',', '.')) || 0; if (qtd <= 0) { alert('Maior que zero.'); return; } contexto?.darEntradaEstoque(produtoDetalhe.id, qtd, custo, garcomLogado?.nome || 'Admin'); fecharModais(); } };
-  const handleConfirmarInventario = () => { if (produtoDetalhe && qtdForm !== '') { const qtdFisica = parseInt(qtdForm) || 0; if (qtdFisica < 0) { alert('Não pode negativo.'); return; } contexto?.registrarInventario(produtoDetalhe.id, qtdFisica, garcomLogado?.nome || 'Admin'); fecharModais(); } };
+  const handleConfirmarEntrada = () => { if (produtoDetalhe && qtdForm !== '' && custoDigitado !== '') { const qtd = parseInt(qtdForm) || 0; const custo = parseFloat(custoDigitado.replace(',', '.')) || 0; if (qtd <= 0) { alert('Maior que zero.'); return; } contexto.darEntradaEstoque(produtoDetalhe.id, qtd, custo, garcomLogado?.nome || 'Admin'); fecharModais(); } };
+  const handleConfirmarInventario = () => { if (produtoDetalhe && qtdForm !== '') { const qtdFisica = parseInt(qtdForm) || 0; if (qtdFisica < 0) { alert('Não pode negativo.'); return; } contexto.registrarInventario(produtoDetalhe.id, qtdFisica, garcomLogado?.nome || 'Admin'); fecharModais(); } };
   const fecharModais = () => { setModalEntradaAberto(false); setModalInventarioAberto(false); setQtdForm(''); setCustoDigitado(''); setProdutoDetalhe(null); };
 
   const formatarHora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -188,10 +242,10 @@ export function Estoque() {
         {produto.imagem_url ? ( <img src={produto.imagem_url} alt={produto.nome} className="w-16 h-16 rounded-2xl object-cover border border-slate-100 shrink-0 shadow-sm shadow-slate-300/50 transition-transform group-hover:scale-105" />
         ) : ( <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-200 shadow-inner shadow-slate-200/50 transition-transform group-hover:scale-105">{renderizarIconeDinamicamente(produto.categoria, "text-slate-500")}</div> )}
         <div className="flex-1 px-4 min-w-0">
-          <h3 className={`text-[14px] font-black tracking-tight truncate uppercase ${ativo ? 'text-slate-800' : 'text-slate-500 line-through'}`}>{produto.nome}</h3>
-          <div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{produto.categoria}</span>{produto.subcategoria && ( <><span className="w-1 h-1 rounded-full bg-slate-300"></span><span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 truncate">{produto.subcategoria}</span></> )}</div>
+          <h3 className={`text-sm font-medium tracking-tight truncate uppercase ${ativo ? 'text-slate-800' : 'text-slate-500 line-through'}`}>{produto.nome}</h3>
+          <div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{produto.categoria}</span>{produto.subcategoria && ( <><span className="w-1 h-1 rounded-full bg-slate-300"></span><span className="text-[9px] font-medium uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 truncate">{produto.subcategoria}</span></> )}</div>
         </div>
-        <div className="text-right pl-3 flex flex-col items-end shrink-0"><div className="flex items-baseline gap-1"><span className={`text-[22px] font-black leading-none tabular-nums ${critico && ativo ? 'text-rose-500' : 'text-slate-800'}`}>{estoqueAtual}</span><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">un</span></div>{ativo && critico && <span className="text-[9px] font-black uppercase tracking-widest text-rose-500 mt-1 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">Baixo</span>}{!ativo && <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">Inativo</span>}</div>
+        <div className="text-right pl-3 flex flex-col items-end shrink-0"><div className="flex items-baseline gap-1"><span className={`text-[20px] font-medium leading-none tabular-nums ${critico && ativo ? 'text-rose-500' : 'text-slate-800'}`}>{estoqueAtual}</span><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">un</span></div>{ativo && critico && <span className="text-[9px] font-medium uppercase tracking-widest text-rose-500 mt-1 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">Baixo</span>}{!ativo && <span className="text-[9px] font-medium uppercase tracking-widest text-slate-400 mt-1">Inativo</span>}</div>
       </button>
     );
   };
@@ -200,8 +254,8 @@ export function Estoque() {
     <div className="min-h-screen bg-slate-100 font-sans pt-20 md:pt-24 md:pl-18 pb-24 relative overflow-hidden select-none">
       
       {/* ELEMENTOS DE FUNDO */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-rose-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-100 max-h-100 bg-rose-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
       <Header />
 
@@ -242,7 +296,7 @@ export function Estoque() {
           <div className="animate-in fade-in duration-300">
             <div className="relative mb-8 max-w-2xl mx-auto">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><LucideIcons.Search size={20} strokeWidth={2.5}/></div>
-              <input type="text" placeholder="PESQUISAR" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-12 pr-12 h-10 bg-white border border-slate-300 rounded-[40px] shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-800 font-medium text-sm text-slate-800 transition-all uppercase placeholder:normal-case placeholder:font-medium placeholder:text-[11px] placeholder:tracking-widest" />
+              <input type="text" placeholder="PESQUISAR" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full pl-12 pr-12 h-10 bg-white border border-slate-300 rounded-full shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-800 font-medium text-sm text-slate-800 transition-all uppercase placeholder:normal-case placeholder:font-medium placeholder:text-[11px] placeholder:tracking-widest" />
               {busca !== '' && (
                 <button onClick={() => setBusca('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"><LucideIcons.X size={20} strokeWidth={2.5}/></button>
               )}
@@ -273,7 +327,7 @@ export function Estoque() {
                 <div className="mt-10 pt-8 border-t border-slate-200/60">
                   <h2 className="text-[11px] font-medium text-slate-500 tracking-widest uppercase mb-4 pl-1">Visão Geral</h2>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                    <div className="bg-white rounded-[20px] p-5 shadow-sm border-t-4 border-rose-500 border-x border-b border-x-slate-200 border-b-slate-200">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border-t-4 border-rose-500 border-x border-b border-x-slate-200 border-b-slate-200">
                       <h3 className="text-[12px] font-medium text-slate-700 uppercase tracking-widest flex items-center gap-2 mb-4">
                         <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> Urgente
                       </h3>
@@ -287,7 +341,7 @@ export function Estoque() {
                         </div>
                       )}
                     </div>
-                    <div className="bg-white rounded-[20px] p-5 shadow-sm border-t-4 border-amber-400 border-x border-b border-x-slate-200 border-b-slate-200">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border-t-4 border-amber-400 border-x border-b border-x-slate-200 border-b-slate-200">
                       <h3 className="text-[12px] font-medium text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4">
                         <LucideIcons.Star size={16} className="text-amber-500 fill-amber-400" /> Populares
                       </h3>
@@ -342,7 +396,7 @@ export function Estoque() {
                            <button disabled={index === categorias.length - 1} onClick={() => moverCategoria(index, 'desce')} className="text-slate-300 hover:text-indigo-500 disabled:opacity-30 disabled:hover:text-slate-300 transition-colors active:scale-90"><LucideIcons.ChevronDown size={24} strokeWidth={3} /></button>
                         </div>
 
-                        <div className="w-14 h-14 bg-slate-50 rounded-[20px] flex items-center justify-center border border-slate-100 shrink-0">
+                        <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shrink-0">
                           {renderizarIconeDinamicamente(cat.icone, "text-indigo-500")}
                         </div>
                         <div className="flex-1 min-w-0 pr-2">
@@ -354,10 +408,10 @@ export function Estoque() {
                       </div>
                       
                       <div className="flex items-center gap-2 pr-2">
-                        <button onClick={() => abrirModalEditarCategoria(cat)} className="w-10 h-10 rounded-[14px] bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 border border-transparent hover:border-indigo-200 transition-colors active:scale-95 shadow-sm">
+                        <button onClick={() => abrirModalEditarCategoria(cat)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 border border-transparent hover:border-indigo-200 transition-colors active:scale-95 shadow-sm">
                           <LucideIcons.Pencil size={18} strokeWidth={2.5}/>
                         </button>
-                        <button onClick={() => handleExcluirCategoria(cat.id)} className="w-10 h-10 rounded-[14px] bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200 transition-colors active:scale-95 shadow-sm">
+                        <button onClick={() => handleExcluirCategoria(cat.id)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200 transition-colors active:scale-95 shadow-sm">
                           <LucideIcons.Trash2 size={18} strokeWidth={2.5}/>
                         </button>
                       </div>
@@ -380,7 +434,7 @@ export function Estoque() {
                       <h4 className="font-bold text-slate-800 text-sm tracking-tight uppercase truncate">{log.produtoNome}</h4>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{formatarData(log.data)} às {formatarHora(log.data)}<br/>Por: {log.usuarioNome}</p>
                     </div>
-                    <div className="text-right pl-3 border-l border-slate-100 shrink-0"><span className={`font-black text-[22px] tabular-nums leading-none ${log.quantidade > 0 ? 'text-emerald-500' : 'text-slate-700'}`}>{log.quantidade > 0 ? '+' : ''}{log.quantidade}</span></div>
+                    <div className="text-right pl-3 border-l border-slate-100 shrink-0"><span className={`font-semibold text-lg tabular-nums leading-none ${log.quantidade > 0 ? 'text-emerald-500' : 'text-slate-700'}`}>{log.quantidade > 0 ? '+' : ''}{log.quantidade}</span></div>
                   </div>
                 ))}
               </div>
@@ -394,23 +448,23 @@ export function Estoque() {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setModalNovaCategoriaAberto(false)}></div>
           <div className="bg-white rounded-4xl p-6 sm:p-8 w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <h3 className="text-xl font-black tracking-tight text-slate-900 mb-5 text-center uppercase">
+            <h3 className="text-lg font-medium tracking-tight text-slate-900 mb-5 text-center uppercase">
                {editandoCategoriaId ? 'Editar Categoria' : 'Nova Categoria'}
             </h3>
             
-            <div className="overflow-y-auto scrollbar-hide space-y-5 px-1 pb-2">
+            <div className="overflow-y-auto space-y-5 px-1 pb-2">
                 <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-2 text-center">Nome da Seção</label>
-                    <input type="text" autoFocus placeholder="Ex: Cervejas Especiais" value={textoNovaCategoria} onChange={e => setTextoNovaCategoria(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white font-bold text-slate-800 text-center uppercase tracking-wider text-sm transition-all"/>
+                    <input type="text" autoFocus placeholder="Ex: Cervejas Especiais" value={textoNovaCategoria} onChange={e => setTextoNovaCategoria(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white font-bold text-slate-800 text-center uppercase tracking-wider text-sm transition-all"/>
                 </div>
                 
                 <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 block mb-2 text-center">Selecione o Ícone Visual</label>
-                    <div className="h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-[20px] p-3 flex flex-wrap gap-2 justify-center scrollbar-hide">
+                    <div className="h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-wrap gap-2 justify-center">
                       {OPCOES_ICONES.map((iconeName) => {
                         const isSelected = iconeName === iconeSelecionado;
                         return (
-                          <button key={iconeName} onClick={() => setIconeSelecionado(iconeName)} className={`w-12 h-12 rounded-[14px] flex items-center justify-center transition-all active:scale-90 ${isSelected ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 border-2 border-indigo-400' : 'bg-white text-slate-400 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200'}`}>
+                          <button key={iconeName} onClick={() => setIconeSelecionado(iconeName)} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-90 ${isSelected ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 border-2 border-indigo-400' : 'bg-white text-slate-400 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200'}`}>
                             {renderizarIconeDinamicamente(iconeName, "")}
                           </button>
                         );
@@ -420,8 +474,8 @@ export function Estoque() {
             </div>
 
             <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
-              <button onClick={() => setModalNovaCategoriaAberto(false)} className="flex-1 bg-slate-100 text-slate-500 font-bold uppercase tracking-widest py-4 rounded-[20px] text-[10px] transition-all hover:bg-slate-200 active:scale-95">Cancelar</button>
-              <button onClick={handleSalvarCategoria} className="flex-[1.5] bg-slate-900 text-white font-bold uppercase tracking-widest py-4 rounded-[20px] text-[11px] transition-all hover:bg-slate-800 shadow-md active:scale-95">
+              <button onClick={() => setModalNovaCategoriaAberto(false)} className="flex-1 bg-slate-100 text-slate-500 font-bold uppercase tracking-widest py-4 rounded-2xl text-[10px] transition-all hover:bg-slate-200 active:scale-95">Cancelar</button>
+              <button onClick={handleSalvarCategoria} className="flex-[1.5] bg-slate-900 text-white font-bold uppercase tracking-widest py-4 rounded-2xl text-[11px] transition-all hover:bg-slate-800 shadow-md active:scale-95">
                 {editandoCategoriaId ? 'Salvar' : 'Criar Seção'}
               </button>
             </div>
@@ -432,13 +486,13 @@ export function Estoque() {
       {modalNovoProduto && (
         <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
           <div className="absolute inset-0 min-h-[120%]" onClick={() => !salvandoProduto && setModalNovoProduto(false)}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-md shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 my-auto">
+          <div className="bg-white rounded-4xl p-6 w-full max-w-md shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 my-auto">
             <h3 className="text-[19px] font-bold tracking-tight text-slate-800 mb-6 text-center uppercase">
               {editandoId ? 'Editar Produto' : 'Novo Produto'}
             </h3>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between bg-slate-100 p-2 rounded-[40px] border border-slate-200">
+              <div className="flex items-center justify-between bg-slate-100 p-2 rounded-4xl border border-slate-200">
                 <p className="text-[11px] font-medium uppercase tracking-widest text-slate-600 ml-3">Ativar no Cardápio</p>
                 <button onClick={() => setNovoProdAtivo(!novoProdAtivo)} className={`w-10 h-6 rounded-4xl p-1 transition-colors shadow-inner ${novoProdAtivo ? 'bg-emerald-600' : 'bg-slate-300'}`}>
                   <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${novoProdAtivo ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -450,7 +504,7 @@ export function Estoque() {
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-3xl relative hover:border-indigo-400 hover:bg-slate-50 transition-colors bg-white group cursor-pointer overflow-hidden">
                   {imagemPreview ? (
                     <div className="relative inline-block">
-                      <img src={imagemPreview} alt="Preview" className="mx-auto h-28 w-28 object-cover rounded-[20px] shadow-sm border border-slate-200" />
+                      <img src={imagemPreview} alt="Preview" className="mx-auto h-28 w-28 object-cover rounded-2xl shadow-sm border border-slate-200" />
                       <button type="button" onClick={(e) => { e.preventDefault(); setImagemPreview(null); setNovoProdImagemFile(null); setNovoProdImagemUrl(''); }} className="absolute -top-3 -right-3 bg-rose-100 text-rose-600 rounded-full p-1.5 shadow-sm hover:bg-rose-200 transition-colors border border-rose-200">
                          <LucideIcons.X size={14} strokeWidth={3} />
                       </button>
@@ -470,7 +524,7 @@ export function Estoque() {
 
               <div>
                 <label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Nome do Produto</label>
-                <input type="text" value={novoProdNome} onChange={e => setNovoProdNome(e.target.value)} className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-bold uppercase text-slate-800 text-sm transition-all"/>
+                <input type="text" value={novoProdNome} onChange={e => setNovoProdNome(e.target.value)} className="w-full bg-slate-50 p-2 rounded-4xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-bold uppercase text-slate-800 text-sm transition-all"/>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -478,31 +532,31 @@ export function Estoque() {
                   <div className="flex items-center justify-between mb-1.5 ml-1">
                     <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400">Categoria</label>
                   </div>
-                  <select value={novoProdCat} onChange={e => setNovoProdCat(e.target.value)} className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white text-[10px] font-medium text-slate-700 transition-all uppercase tracking-wide">
+                  <select value={novoProdCat} onChange={e => setNovoProdCat(e.target.value)} className="w-full bg-slate-50 p-2 rounded-4xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white text-[10px] font-medium text-slate-700 transition-all uppercase tracking-wide">
                     {categorias.length === 0 && <option value="" disabled>Vá na aba Categorias</option>}
                     {categorias.map(cat => <option key={cat.id} value={cat.nome}>{cat.nome}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 ml-1 block mb-1.5">Tamanho</label>
-                  <input type="text" value={novoProdSubCat} onChange={e => setNovoProdSubCat(e.target.value)} placeholder="Ex: 600ml" className="w-full bg-slate-50 p-2 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-medium  text-xs text-slate-800 transition-all tracking-wide uppercase"/>
+                  <input type="text" value={novoProdSubCat} onChange={e => setNovoProdSubCat(e.target.value)} placeholder="Ex: 600ml" className="w-full bg-slate-50 p-2 rounded-4xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-medium  text-xs text-slate-800 transition-all tracking-wide uppercase"/>
                 </div>
               </div>
               
               <div className="flex gap-3">
                 <div className="flex-1 relative">
-                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-">Preço Venda</label>
-                  <input type="text" placeholder="R$ 0.00" value={novoProdVenda} onChange={e => setNovoProdVenda(e.target.value)} className="w-full bg-slate-50 p-1 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-800 focus:bg-white text-center font-sans text-[13px] text-emerald-800 transition-all placeholder:text-slate-300 tabular-nums"/>
+                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Preço Venda</label>
+                  <input type="text" placeholder="R$ 0.00" value={novoProdVenda} onChange={e => setNovoProdVenda(e.target.value)} className="w-full bg-slate-50 p-1 rounded-4xl border border-slate-200 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-800 focus:bg-white text-center font-sans text-[13px] text-emerald-800 transition-all placeholder:text-slate-300 tabular-nums"/>
                 </div>
                 <div className="flex-1 relative">
-                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-2xl">Custo (Opcional)</label>
-                  <input type="text" placeholder="R$ 0.00" value={novoProdCusto} onChange={e => setNovoProdCusto(e.target.value)} className="w-full bg-slate-50 p-1 rounded-[40px] border border-slate-200 outline-none focus:ring-4 focus:ring-rose-50 focus:border-rose-800 focus:bg-white text-center font-medium text-[13px] text-rose-800 transition-all placeholder:text-slate-300 tabular-nums"/>
+                  <label className="text-[9px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo (Opcional)</label>
+                  <input type="text" placeholder="R$ 0.00" value={novoProdCusto} onChange={e => setNovoProdCusto(e.target.value)} className="w-full bg-slate-50 p-1 rounded-4xl border border-slate-200 outline-none focus:ring-4 focus:ring-rose-50 focus:border-rose-800 focus:bg-white text-center font-medium text-[13px] text-rose-800 transition-all placeholder:text-slate-300 tabular-nums"/>
                 </div>
               </div>
               
               <div className="flex gap-3 pt-3">
-                <button onClick={() => !salvandoProduto && setModalNovoProduto(false)} className="flex-1 bg-slate-200 hover:bg-slate-200 text-slate-500 font-medium uppercase tracking-widest py-2 rounded-[40px] text-[10px] transition-all disabled:opacity-50" disabled={salvandoProduto}>Cancelar</button>
-                <button onClick={handleSalvarProduto} disabled={salvandoProduto} className="flex-1 bg-slate-800 text-white font-medium uppercase tracking-widest py-2 rounded-[40px] text-[10px] transition-all flex items-center justify-center gap-2 hover:bg-slate-800 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+                <button onClick={() => !salvandoProduto && setModalNovoProduto(false)} className="flex-1 bg-slate-200 hover:bg-slate-200 text-slate-500 font-medium uppercase tracking-widest py-2 rounded-4xl text-[10px] transition-all disabled:opacity-50" disabled={salvandoProduto}>Cancelar</button>
+                <button onClick={handleSalvarProduto} disabled={salvandoProduto} className="flex-1 bg-slate-800 text-white font-medium uppercase tracking-widest py-2 rounded-4xl text-[10px] transition-all flex items-center justify-center gap-2 hover:bg-slate-800 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                   {salvandoProduto ? ( <><div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin"></div> SALVANDO</> ) : 'SALVAR'}
                 </button>
               </div>
@@ -514,29 +568,29 @@ export function Estoque() {
       {produtoDetalhe && !modalEntradaAberto && !modalInventarioAberto && !modalNovoProduto && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setProdutoDetalhe(null)}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
+          <div className="bg-white rounded-4xl p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
             <div className="flex items-center gap-4 mb-6">
-              {produtoDetalhe.imagem_url ? ( <img src={produtoDetalhe.imagem_url} alt={produtoDetalhe.nome} className="w-20 h-20 rounded-[20px] object-cover border border-slate-200 shadow-sm" />
-              ) : ( <div className="w-20 h-20 rounded-[20px] bg-slate-50 border border-slate-100 flex items-center justify-center">{renderizarIconeDinamicamente(produtoDetalhe.categoria, "text-slate-400 w-8 h-8")}</div> )}
+              {produtoDetalhe.imagem_url ? ( <img src={produtoDetalhe.imagem_url} alt={produtoDetalhe.nome} className="w-20 h-20 rounded-2xl object-cover border border-slate-200 shadow-sm" />
+              ) : ( <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">{renderizarIconeDinamicamente(produtoDetalhe.categoria, "text-slate-400 w-8 h-8")}</div> )}
               <div className="flex-1 min-w-0">
-                <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-none mb-1.5 truncate uppercase">{produtoDetalhe.nome}</h3>
-                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md inline-block border ${produtoDetalhe.ativo !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{produtoDetalhe.ativo !== false ? 'Cardápio Ativo' : 'Oculto'}</span>
+                <h3 className="text-lg font-medium text-slate-900 tracking-tight leading-snug mb-1.5 truncate uppercase">{produtoDetalhe.nome}</h3>
+                <span className={`text-[10px] font-medium uppercase tracking-wider px-2.5 py-1 rounded-lg inline-block border ${produtoDetalhe.ativo !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{produtoDetalhe.ativo !== false ? 'Cardápio Ativo' : 'Oculto'}</span>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{produtoDetalhe.categoria} {produtoDetalhe.subcategoria && `• ${produtoDetalhe.subcategoria}`}</p>
               </div>
             </div>
             <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200 flex justify-between items-center mb-6">
-              <span className="font-black text-slate-400 text-[11px] uppercase tracking-widest">Estoque Atual</span><span className={`text-[32px] font-black tabular-nums leading-none ${produtoDetalhe.estoque && produtoDetalhe.estoque <= 10 && produtoDetalhe.ativo !== false ? 'text-rose-500' : 'text-slate-900'}`}>{produtoDetalhe.estoque || 0}</span>
+              <span className="font-medium text-slate-400 text-xs uppercase tracking-widest">Estoque Atual</span><span className={`text-2xl font-semibold tabular-nums leading-none ${produtoDetalhe.estoque && produtoDetalhe.estoque <= 10 && produtoDetalhe.ativo !== false ? 'text-rose-500' : 'text-slate-900'}`}>{produtoDetalhe.estoque || 0}</span>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <button onClick={() => setModalEntradaAberto(true)} className="bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"><LucideIcons.PackagePlus size={20} /> Compra</button>
-              <button onClick={() => setModalInventarioAberto(true)} className="bg-white border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-600 hover:bg-amber-50 font-black uppercase tracking-widest py-3.5 rounded-2xl shadow-sm text-[10px] transition-all flex flex-col items-center justify-center gap-1 active:scale-95"><LucideIcons.Scale size={20} /> Ajuste</button>
+              <button onClick={() => setModalEntradaAberto(true)} className="bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 font-medium uppercase tracking-wider py-3 rounded-2xl shadow-xs text-xs transition-all flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer"><LucideIcons.PackagePlus size={20} /> Compra</button>
+              <button onClick={() => setModalInventarioAberto(true)} className="bg-white border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-600 hover:bg-amber-50 font-medium uppercase tracking-wider py-3 rounded-2xl shadow-xs text-xs transition-all flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer"><LucideIcons.Scale size={20} /> Ajuste</button>
             </div>
             <div className="flex gap-3 mb-4">
-              <button onClick={() => abrirModalEditarProduto(produtoDetalhe)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all active:scale-95">Editar</button>
-              <button onClick={() => handleToggleStatus(produtoDetalhe.id)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-black uppercase tracking-widest py-3.5 rounded-2xl text-[10px] transition-all active:scale-95">{produtoDetalhe.ativo !== false ? 'Ocultar' : 'Reativar'}</button>
+              <button onClick={() => abrirModalEditarProduto(produtoDetalhe)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-medium uppercase tracking-wider py-3 rounded-2xl text-xs transition-all active:scale-95 cursor-pointer">Editar</button>
+              <button onClick={() => handleToggleStatus(produtoDetalhe.id)} className="flex-1 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-medium uppercase tracking-wider py-3 rounded-2xl text-xs transition-all active:scale-95 cursor-pointer">{produtoDetalhe.ativo !== false ? 'Ocultar' : 'Reativar'}</button>
             </div>
-            <button onClick={() => handleExcluirProduto(produtoDetalhe.id)} className="w-full bg-white text-rose-500 font-black uppercase tracking-widest py-3.5 rounded-2xl border border-rose-200 hover:bg-rose-50 text-[10px] transition-all mb-4 active:scale-95">Excluir Produto</button>
-            <button onClick={() => setProdutoDetalhe(null)} className="w-full text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest py-2 text-[10px] transition-colors">Voltar</button>
+            <button onClick={() => handleExcluirProduto(produtoDetalhe.id)} className="w-full bg-white text-rose-600 font-medium uppercase tracking-wider py-3 rounded-2xl border border-rose-200 hover:bg-rose-50 text-xs transition-all mb-3 active:scale-95 cursor-pointer">Excluir Produto</button>
+            <button onClick={() => setProdutoDetalhe(null)} className="w-full text-slate-400 hover:text-slate-600 font-medium uppercase tracking-wider py-2 text-xs transition-colors cursor-pointer">Voltar</button>
           </div>
         </div>
       )}
@@ -544,21 +598,22 @@ export function Estoque() {
       {(modalEntradaAberto || modalInventarioAberto) && produtoDetalhe && (
         <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={fecharModais}></div>
-          <div className="bg-white rounded-[40px] p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
-            <h3 className="text-[20px] font-black tracking-tight text-slate-900 text-center mb-1 uppercase">{modalEntradaAberto ? 'Lançar Compra' : 'Ajustar Balanço'}</h3>
-            <p className="text-center text-[11px] font-black uppercase tracking-widest text-indigo-600 mb-6 bg-indigo-50 py-1 px-3 rounded-full inline-block mx-auto border border-indigo-100">{produtoDetalhe.nome}</p>
+          <div className="bg-white rounded-4xl p-6 w-full max-w-sm shadow-2xl relative animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200">
+            <h3 className="text-lg font-medium tracking-tight text-slate-900 text-center mb-1 uppercase">{modalEntradaAberto ? 'Lançar Compra' : 'Ajustar Balanço'}</h3>
+            <p className="text-center text-xs font-medium uppercase tracking-wider text-indigo-600 mb-5 bg-indigo-50 py-1 px-3 rounded-full inline-block mx-auto border border-indigo-100">{produtoDetalhe.nome}</p>
             <div className="space-y-5">
               {modalEntradaAberto ? (
-                <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Qtd</label><input type="number" value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div><div className="flex-[1.5]"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo Un. (R$)</label><input type="text" value={custoDigitado} onChange={e => setCustoDigitado(e.target.value)} placeholder="0.00" className="w-full bg-slate-50 p-4 rounded-[20px] border border-slate-200 text-center font-black text-xl text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div></div>
-              ) : ( <div><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center block mb-2">Qtd Física (Prateleira)</label><input type="number" placeholder={`Atualmente: ${produtoDetalhe.estoque}`} value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center font-black text-4xl text-slate-800 outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 focus:bg-white placeholder:text-slate-300 transition-all"/></div> )}
+                <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Qtd</label><input type="number" value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center font-medium text-lg text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div><div className="flex-[1.5]"><label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 block mb-1.5 text-center">Custo Un. (R$)</label><input type="text" value={custoDigitado} onChange={e => setCustoDigitado(e.target.value)} placeholder="0.00" className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center font-medium text-lg text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 focus:bg-white transition-all"/></div></div>
+              ) : ( <div><label className="text-[10px] font-medium uppercase tracking-widest text-slate-400 text-center block mb-2">Qtd Física (Prateleira)</label><input type="number" placeholder={`Atualmente: ${produtoDetalhe.estoque}`} value={qtdForm} onChange={e => setQtdForm(e.target.value)} className="w-full bg-slate-50 p-5 rounded-3xl border border-slate-200 text-center font-semibold text-3xl text-slate-800 outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-400 focus:bg-white placeholder:text-slate-300 transition-all"/></div> )}
               <div className="flex gap-3 pt-2">
-                <button onClick={fecharModais} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-black uppercase tracking-widest py-4 rounded-3xl text-[10px] transition-colors active:scale-95">Cancelar</button>
-                <button onClick={modalEntradaAberto ? handleConfirmarEntrada : handleConfirmarInventario} className={`flex-[1.5] text-white font-black uppercase tracking-widest py-4 rounded-3xl text-[11px] transition-all shadow-md active:scale-95 ${modalEntradaAberto ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'}`}>Confirmar</button>
+                <button onClick={fecharModais} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-medium uppercase tracking-wider py-3.5 rounded-3xl text-xs transition-colors active:scale-95 cursor-pointer">Cancelar</button>
+                <button onClick={modalEntradaAberto ? handleConfirmarEntrada : handleConfirmarInventario} className={`flex-[1.5] text-white font-medium uppercase tracking-wider py-3.5 rounded-3xl text-xs transition-all shadow-md active:scale-95 cursor-pointer ${modalEntradaAberto ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'}`}>Confirmar</button>
               </div>
             </div>
           </div>
         </div>
       )}
+      <ModalConfirmacao {...modalConfirmacao} onCancelar={fecharConfirmacao} />
     </div>
   );
 }

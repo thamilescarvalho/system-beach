@@ -1,10 +1,62 @@
 /* No seu index.css */
 @import "tailwindcss";
 
+/* ==============================================================================
+   BARRA DE ROLAGEM MINIMALISTA, FINA E TRANSLÚCIDA (PADRÃO SAAS MODERNO)
+   - Largura sutil de 6px (discreta, limpa e elegante).
+   - Fundo do trilho (track) transparente.
+   - Polegar (thumb) em cinza translúcido arredondado (estilo macOS / Linear / Vercel).
+   - Suporte universal: WebKit (Chrome, Edge, Safari, Android/iOS) e Firefox (W3C standard).
+   ============================================================================== */
+
+/* Suporte WebKit (Chrome, Edge, Safari, Opera e navegadores baseados em Chromium) */
 ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: rgba(71, 85, 105, 0.9);
+}
+
+/* Suporte Firefox / Padrão W3C */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+/* Rolagem suave no documento e aceleração de toque */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Utilitário opcional caso queira esconder a barra apenas em carrosséis horizontais de chips */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-* {
+
+.no-scrollbar,
+.scrollbar-none,
+.scrollbar-hide,
+.hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

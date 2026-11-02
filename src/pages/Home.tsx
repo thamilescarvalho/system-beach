@@ -10,10 +10,10 @@ export function Home() {
   const contexto = useContext(AppContext);
   const usuario = contexto?.garcomLogado;
   
-  const isAdmin = usuario?.cargo === 'admin';
+  const isAdmin = usuario?.cargo === 'admin' || usuario?.cargo === 'super_admin';
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col justify-between relative overflow-x-hidden">
       
       {/* HEADER GLOBAL */}
       <Header />
@@ -23,12 +23,12 @@ export function Home() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-amber-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
 
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center p-6 md:pl-24 relative z-10">
+      <main className="flex-1 w-full flex flex-col items-center justify-center px-4 pt-24 sm:pt-26 md:pt-20 pb-4 md:pb-6 md:pl-24 relative z-10 my-auto">
         
         {/* TAMANHO DOS BOTÕES */}
-        <div className={`w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto ${isAdmin ? 'max-w-[320px] md:max-w-187.5' : 'max-w-75 md:max-w-130'}`}>
+        <div className={`w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto ${isAdmin ? 'max-w-68 sm:max-w-78 md:max-w-187.5' : 'max-w-68 sm:max-w-75 md:max-w-130'}`}>
           
-          <div className={`grid grid-cols-2 gap-4 md:gap-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+          <div className={`grid grid-cols-2 gap-3.5 sm:gap-4 md:gap-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
     
             {/* MESAS */}
             <button 
@@ -123,7 +123,7 @@ export function Home() {
       </main>
 
       {/* RODAPÉ */}
-      <footer className="w-full pb-6 pt-2 md:pl-24 flex flex-col items-center justify-center relative z-10">
+      <footer className="w-full pb-22 md:pb-6 pt-2 md:pl-24 flex flex-col items-center justify-center relative z-10 shrink-0">
         <div className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
           
           {/* Selo de Segurança */}

@@ -241,7 +241,7 @@ export function Painel() {
               </div>
             </div>
 
-            <div className="bg-white rounded-[28px] border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               {vendasFiltradas.length === 0 ? (
                 <div className="p-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
@@ -399,7 +399,7 @@ export function Painel() {
               </div>
             </div>
 
-            <div className="p-5 overflow-y-auto flex-1 hide-scrollbar bg-slate-100">
+            <div className="p-5 overflow-y-auto flex-1 bg-slate-100">
               {recebimentosReal.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-200/50 rounded-full flex items-center justify-center mb-4 text-slate-400">
@@ -446,7 +446,7 @@ export function Painel() {
               )}
             </div>
 
-            <div className="bg-white p-6 shrink-0 border-t border-slate-200 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-10">
+            <div className="bg-white p-6 shrink-0 border-t border-slate-200 pb-safe shadow-md z-10">
               <div className="flex justify-between items-center mb-3 text-[12px] text-slate-500">
                 <span className="font-medium uppercase tracking-wide">TOTAL RECEBIDO</span>
                 <span className="font-medium tabular-nums">{formatarMoeda(totalModalPago)}</span>
@@ -483,7 +483,7 @@ export function Painel() {
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 hide-scrollbar relative print:p-4 print:overflow-visible">
+            <div className="p-6 overflow-y-auto flex-1 relative print:p-4 print:overflow-visible">
 
               {vendaSelecionada.status === 'cancelada' && (
                 <div className="bg-rose-50 p-4 rounded-xl mb-6 border border-rose-100 relative z-10 print:bg-transparent print:border-dashed print:border-black">

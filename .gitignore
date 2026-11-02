@@ -12,6 +12,24 @@ dist
 dist-ssr
 *.local
 
+# Variáveis de Ambiente
+.env
+.env.*
+!.env.example
+
+# Arquivos temporários do Supabase CLI
+supabase/.temp
+supabase/.branches
+
+# Variáveis de Ambiente e Segredos (NUNCA commitar no Git)
+.env
+.env.*
+!.env.example
+
+# Arquivos temporários do Supabase CLI
+supabase/.temp
+supabase/.branches
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,0 +1,26 @@
+{
+  "name": "T-System Beach — Gestão Costeira",
+  "short_name": "System Beach",
+  "description": "Plataforma SaaS para gestão de guarda-sóis, mesas, comandas, bar/cozinha e financeiro em tempo real.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/logo-apple.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
+

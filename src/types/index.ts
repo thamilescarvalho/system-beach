@@ -61,12 +61,17 @@ export interface VendaFechada {
   motivoCancelamento?: string;
 }
 
+export type CargoUsuario = 'garcom' | 'admin' | 'super_admin';
+export type StatusUsuario = 'ativo' | 'bloqueado';
+
 export interface Garcom {
   id: string;
   nome: string;
   avatar: string;
-  pin: string;
-  cargo?: 'garcom' | 'admin';
+  email?: string;
+  status?: StatusUsuario;
+  cargo?: CargoUsuario;
+  empresaId?: string;
 }
 
 export interface MovimentacaoEstoque {
@@ -80,12 +85,10 @@ export interface MovimentacaoEstoque {
   tipo: 'entrada' | 'inventario' | 'estorno';
 }
 
-//  TIPOS FINANCEIROS (LEDGER GARÇONS) 
-
+// TIPOS FINANCEIROS (LEDGER GARÇONS)
 export type CategoriaPagamentoGarcom = 'Vale' | 'Comissão' | 'Salário' | 'Bônus' | 'Outros';
 export type StatusPagamentoGarcom = 'pago' | 'agendado' | 'pendente' | 'pendente_faturamento' | 'cancelado';
 
-/** Estrutura Frontend */
 export interface PagamentoGarcom {
   id: string;
   garcomId: string;
@@ -109,9 +112,10 @@ export interface DBPagamentoGarcom {
   categoria: string;
   status: string;
   created_at?: string;
+  empresa_id?: string;
 }
 
-// META 
+// META FINANCEIRA
 export interface MetaFinanceira {
   id: string;
   dataInicio: string;
@@ -129,4 +133,5 @@ export interface DBMetaFinanceira {
   valor_alvo: number | string;
   status: string;
   created_at?: string;
+  empresa_id?: string;
 }

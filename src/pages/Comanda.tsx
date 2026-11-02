@@ -1,9 +1,9 @@
 // src/pages/Comanda.tsx
-import { useState, useContext, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ElementType } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { AppContext } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import type { Produto, ItemComanda, Pagamento, MetodoPagamento, Categoria } from '../types';
 import * as LucideIcons from 'lucide-react';
 
@@ -69,10 +69,10 @@ const agruparItensParaInterface = (itens: ItemComanda[]): ItemComanda[] => {
 export function Comanda() {
   const { idMesa } = useParams();
   const navigate = useNavigate();
-  const contexto = useContext(AppContext);
+  const contexto = useAppContext();
   
-  const mesaAtual = contexto?.mesas.find(m => m.numero === Number(idMesa));
-  const categorias = useMemo(() => contexto?.categorias || [], [contexto?.categorias]);
+  const mesaAtual = contexto.mesas.find(m => m.numero === Number(idMesa));
+  const categorias = useMemo(() => contexto.categorias || [], [contexto.categorias]);
 
   const [itensPedidos, setItensPedidos] = useState<ItemComanda[]>([]);
   const [nomeCliente, setNomeCliente] = useState<string>('');
@@ -89,7 +89,7 @@ export function Comanda() {
     }
   }, [mesaAtual, mesaIdCarregada]);
 
-  const cardapioAtivo = useMemo(() => (contexto?.produtos || []).filter(p => p.ativo !== false && p.id !== 999), [contexto?.produtos]);
+  const cardapioAtivo = useMemo(() => (contexto.produtos || []).filter(p => p.ativo !== false && p.id !== 999), [contexto.produtos]);
   
   const categoriasDisponiveis = useMemo(() => {
     if (categorias && categorias.length > 0) {
@@ -165,7 +165,7 @@ export function Comanda() {
     ) || [];
 
     lotesProntosNoBanco.forEach(itemCru => {
-      contexto?.atualizarStatusCozinha(Number(idMesa), itemCru.id, 'entregue');
+      contexto.atualizarStatusCozinha(Number(idMesa), itemCru.id, 'entregue');
     });
 
     setItensPedidos(prev => prev.map(item => 
@@ -183,7 +183,7 @@ export function Comanda() {
   const troco = totalJaPago > totalCobrarFinal ? totalJaPago - totalCobrarFinal : 0;
 
   const handleConfirmarPedido = async () => {
-    if (contexto && idMesa) {
+    if (idMesa) {
       await contexto.salvarComanda(Number(idMesa), itensPedidos, nomeCliente);
       setStatusSalvo(true);
       dispararToast("Comanda salva com sucesso!");
@@ -218,7 +218,7 @@ export function Comanda() {
 
   const concluirMesaFinal = async () => {
     if (faltaPagar > 0.01) { alert('Ainda faltam valores a receber!'); return; }
-    await contexto?.finalizarMesa(Number(idMesa), valorTaxa, pagamentosLancados);
+    await contexto.finalizarMesa(Number(idMesa), valorTaxa, pagamentosLancados);
     navigate('/');
   };
 
@@ -459,7 +459,6 @@ export function Comanda() {
       </main>
 
       {/* BARRA FIXA INFERIOR */}
-
       <div className="fixed bottom-0 left-0 right-0 md:left-18 p-3 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-2xl pb-safe select-none">
         <div className="flex items-center gap-4 max-w-4xl mx-auto">
           <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-rose text-red-500 border border-red-500 hover:bg-rose-50 hover:border-rose-200 h-10 rounded-4xl font-medium text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-sm">
