@@ -13,6 +13,7 @@ import {
   validarTelefoneBR,
   validarEmail
 } from '../utils/validadores';
+import { obterUrlBaseSistema } from '../utils/configuracoesSaaS';
 
 export function Cadastro() {
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ export function Cadastro() {
         email: emailLimpo,
         password: senha,
         options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmado=sucesso`,
+          emailRedirectTo: `${obterUrlBaseSistema()}/login?confirmado=sucesso`,
           data: {
             nome_empresa: nomeEmpresa.trim(),
             documento: docLimpo,
@@ -182,7 +183,7 @@ export function Cadastro() {
         type: 'signup',
         email: email.trim().toLowerCase(),
         options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmado=sucesso`
+          emailRedirectTo: `${obterUrlBaseSistema()}/login?confirmado=sucesso`
         }
       });
 

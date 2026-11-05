@@ -2320,7 +2320,7 @@ export function SuperAdminDashboard() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-500 pl-1">
-                    WhatsApp Comercial (Com DDI 55 + DDD)
+                    WhatsApp de Suporte (&quot;Obtenha Suporte&quot; no Admin + Comercial)
                   </label>
                   <input
                     type="text"

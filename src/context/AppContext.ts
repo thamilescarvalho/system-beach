@@ -68,7 +68,7 @@ export interface AppContextType {
   removerMesa: (numero: number) => Promise<void>;
   atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => Promise<void>;
   salvarComanda: (numeroMesa: number, itens: ItemComanda[], nomeCliente: string) => Promise<void>;
-  finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[]) => Promise<void>;
+  finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[], valorDesconto?: number) => Promise<void>;
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
   registrarValeFuncionario: (dados: NovoPagamentoGarcom) => Promise<void>;
   excluirPagamentoGarcom: (id: string) => Promise<void>;

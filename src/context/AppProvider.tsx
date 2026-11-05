@@ -236,7 +236,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return (perfil as DBUsuario | null) ?? null;
   }, []);
 
-
   const carregarENormalizarEmpresa = useCallback(async (
     empresaId: string,
     metadata?: Record<string, unknown>
@@ -252,9 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const statusAtual = String(rawEmpresa.status_assinatura || 'pendente');
     const valorMensal = Number(rawEmpresa.valor_mensalidade ?? 149.90);
-    const veioDeAutoAtendimentoSemTrialSuperAdmin =
-      (statusAtual === 'degustacao' && valorMensal > 0) ||
-      metadata?.requer_plano_inicial === true;
+    const veioDeAutoAtendimentoSemTrialSuperAdmin = metadata?.requer_plano_inicial === true;
 
     if (veioDeAutoAtendimentoSemTrialSuperAdmin) {
       await supabase
@@ -265,11 +262,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
         .eq('id', empresaId);
 
-      if (metadata?.requer_plano_inicial === true) {
-        await supabase.auth.updateUser({
-          data: { requer_plano_inicial: false }
-        }).catch(() => null);
-      }
+      await supabase.auth.updateUser({
+        data: { requer_plano_inicial: false }
+      }).catch(() => null);
 
       return {
         id: String(rawEmpresa.id),
@@ -491,11 +486,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const [resMesas, resProds, resVendas, resUsers, resHist, resCats, resPagamentos, resMeta, resEmpresa] = await Promise.all([
         supabase.from('mesas').select('*').eq('empresa_id', eid).is('deletado_em', null).order('numero'),
         supabase.from('produtos').select('*').eq('empresa_id', eid).is('deletado_em', null).order('id'),
-        supabase.from('vendas').select('*').eq('empresa_id', eid).order('data_fechamento', { ascending: false }),
+        supabase.from('vendas').select('*').eq('empresa_id', eid).order('data_fechamento', { ascending: false }).limit(500),
         supabase.from('usuarios').select('id, nome, avatar, cargo, empresa_id, email, status').eq('empresa_id', eid).is('deletado_em', null),
-        supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }),
+        supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }).limit(300),
         supabase.from('categorias').select('*').eq('empresa_id', eid).is('deletado_em', null).order('ordem', { ascending: true }),
-        supabase.from('pagamentos_garcons').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_pagamento', { ascending: false }),
+        supabase.from('pagamentos_garcons').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_pagamento', { ascending: false }).limit(200),
         supabase.from('metas_financeiras').select('*').eq('empresa_id', eid).eq('status', 'ativa').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle()
       ]);
@@ -608,39 +603,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (resEmpresa.data) {
         const statusBanco = String(resEmpresa.data.status_assinatura || 'pendente');
         const valorMensalBanco = Number(resEmpresa.data.valor_mensalidade ?? 149.90);
-        if (statusBanco === 'degustacao' && valorMensalBanco > 0) {
-          await supabase
-            .from('empresas')
-            .update({ status_assinatura: 'pendente', data_vencimento: null })
-            .eq('id', resEmpresa.data.id);
-          setDadosEmpresa({
-            id: resEmpresa.data.id,
-            nome_fantasia: resEmpresa.data.nome_fantasia,
-            status_assinatura: 'pendente',
-            data_vencimento: '',
-            valor_mensalidade: valorMensalBanco,
-            plano_nome: resEmpresa.data.plano_nome || 'Assinatura Premium',
-            ciclo_cobranca: resEmpresa.data.ciclo_cobranca || 'semestral',
-            documento: resEmpresa.data.documento || '',
-            telefone: resEmpresa.data.telefone || '',
-            nome_exibicao: resEmpresa.data.nome_exibicao || '',
-            email_contato: resEmpresa.data.email_contato || ''
-          });
-        } else {
-          setDadosEmpresa({
-            id: resEmpresa.data.id,
-            nome_fantasia: resEmpresa.data.nome_fantasia,
-            status_assinatura: statusBanco,
-            data_vencimento: resEmpresa.data.data_vencimento || '',
-            valor_mensalidade: valorMensalBanco,
-            plano_nome: resEmpresa.data.plano_nome || 'Assinatura Premium',
-            ciclo_cobranca: resEmpresa.data.ciclo_cobranca || 'semestral',
-            documento: resEmpresa.data.documento || '',
-            telefone: resEmpresa.data.telefone || '',
-            nome_exibicao: resEmpresa.data.nome_exibicao || '',
-            email_contato: resEmpresa.data.email_contato || ''
-          });
-        }
+        setDadosEmpresa({
+          id: resEmpresa.data.id,
+          nome_fantasia: resEmpresa.data.nome_fantasia,
+          status_assinatura: statusBanco,
+          data_vencimento: resEmpresa.data.data_vencimento || '',
+          valor_mensalidade: valorMensalBanco,
+          plano_nome: resEmpresa.data.plano_nome || 'Assinatura Premium',
+          ciclo_cobranca: resEmpresa.data.ciclo_cobranca || 'semestral',
+          documento: resEmpresa.data.documento || '',
+          telefone: resEmpresa.data.telefone || '',
+          nome_exibicao: resEmpresa.data.nome_exibicao || '',
+          email_contato: resEmpresa.data.email_contato || ''
+        });
       } else {
         setDadosEmpresa(null);
       }
@@ -726,22 +701,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } : prev));
   }, [obterEmpresaId]);
 
-  // Logout automático por inatividade (30 minutos)
+  // Logout automático por inatividade (30 minutos) — Otimizado com Throttle + Passive Listeners
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
+    let ultimoResetMs = 0;
     const fazerLogout = () => setGarcomLogado(null);
+
     const resetarTimer = () => {
+      const agora = Date.now();
+      if (agora - ultimoResetMs < 10000) return;
+      ultimoResetMs = agora;
       clearTimeout(timeoutId);
       timeoutId = setTimeout(fazerLogout, 30 * 60 * 1000);
     };
 
     if (garcomLogado) {
       resetarTimer();
-      window.addEventListener('mousemove', resetarTimer);
-      window.addEventListener('keydown', resetarTimer);
-      window.addEventListener('touchstart', resetarTimer);
-      window.addEventListener('click', resetarTimer);
-      window.addEventListener('scroll', resetarTimer);
+      window.addEventListener('mousemove', resetarTimer, { passive: true });
+      window.addEventListener('keydown', resetarTimer, { passive: true });
+      window.addEventListener('touchstart', resetarTimer, { passive: true });
+      window.addEventListener('click', resetarTimer, { passive: true });
+      window.addEventListener('scroll', resetarTimer, { passive: true });
     }
 
     return () => {
@@ -1168,7 +1148,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       garcom_nome: donoNome
     }).eq('numero', numero).eq('empresa_id', eid);
 
-    // 3. Atualizaçãode Estoque
+    // 3. Atualização de Estoque
     for (const [id, diff] of diferencasEstoque) {
       if (diff === 0) continue;
       const p = produtos.find(x => x.id === id);
@@ -1187,7 +1167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await carregarDados(true);
   };
 
-  const finalizarMesa = async (numero: number, valorTaxa = 0, pagamentosRealizados: Pagamento[] = []) => {
+  const finalizarMesa = async (numero: number, valorTaxa = 0, pagamentosRealizados: Pagamento[] = [], valorDesconto = 0) => {
     const eid = obterEmpresaId();
     const mesa = mesas.find(m => m.numero === numero);
     if (mesa && mesa.status === 'ocupada' && eid) {
@@ -1199,6 +1179,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         itensFinais.push({
           id: `taxa-${Date.now()}`,
           produto: { id: 999, nome: 'Guarda-sol / Taxa', preco: valorTaxa, categoria: 'Outros', ativo: true, precoCusto: 0 },
+          quantidade: 1,
+          statusCozinha: 'entregue'
+        });
+      }
+
+      if (valorDesconto > 0) {
+        const descontoEfetivo = Math.min(totalDaMesa, valorDesconto);
+        totalDaMesa = Math.max(0, Number((totalDaMesa - descontoEfetivo).toFixed(2)));
+        itensFinais.push({
+          id: `desconto-${Date.now()}`,
+          produto: { id: 998, nome: 'Desconto Aplicado', preco: -descontoEfetivo, categoria: 'Outros', ativo: true, precoCusto: 0 },
           quantidade: 1,
           statusCozinha: 'entregue'
         });
@@ -1240,7 +1231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }).eq('id', idVenda).eq('empresa_id', eid);
 
     for (const item of venda.itens) {
-      if (item.produto.id !== 999) {
+      if (item.produto.id !== 999 && item.produto.id !== 998) {
         const { data: pData } = await supabase
           .from('produtos')
           .select('id, estoque, preco_custo, nome')

@@ -18,6 +18,8 @@ import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
 import { AdminUsuarios } from './pages/AdminUsuarios';
 import { AdminFinanceiro } from './pages/AdminFinanceiro';
+import { AdminImpressora } from './pages/AdminImpressora';
+import { AdminAssinatura } from './pages/AdminAssinatura';
 import { Estoque } from './pages/Estoque';
 import { Cozinha } from './pages/Cozinha';
 import { AssinaturaPendente } from './pages/AssinaturaPendente';
@@ -107,6 +109,12 @@ export function App() {
           } />
           <Route path="/admin/estoque" element={
             <ProtectedRoute><AdminRoute><Estoque /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/admin/impressora" element={
+            <ProtectedRoute><AdminRoute><AdminImpressora /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/admin/assinatura" element={
+            <ProtectedRoute><AdminRoute><AdminAssinatura /></AdminRoute></ProtectedRoute>
           } />
 
           {/* FALLBACK */}

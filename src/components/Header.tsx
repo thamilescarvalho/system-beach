@@ -58,7 +58,7 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickFora);
   }, []);
 
-  // Aba do navegador com a identidade do estabelecimento (ex: "Barraca Coral · System Beach")
+  // Aba do navegador com a identidade do estabelecimento
   const nomeExibicaoEmpresa = contexto?.dadosEmpresa?.nome_exibicao?.trim();
   useEffect(() => {
     document.title = nomeExibicaoEmpresa
@@ -68,7 +68,7 @@ export function Header() {
 
   const isAdmin = garcom?.cargo === 'admin' || garcom?.cargo === 'super_admin';
 
-  // Motor de Alertas em Tempo Real ordenados por horário (mais recentes no topo)
+  // Motor de Alertas
   const alertasSistema = useMemo<AlertaSistema[]>(() => {
     if (!contexto || !garcom) return [];
     const lista: AlertaSistema[] = [];
@@ -124,7 +124,7 @@ export function Header() {
     const formatarMoeda = (valor: number) =>
       valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    // 1. PEDIDOS PRONTOS NO BAR / COZINHA
+    // 1. PEDIDOS PRONTOS NO BAR
     contexto.mesas.forEach((mesa) => {
       if (mesa.status !== 'ocupada' || !Array.isArray(mesa.itens)) return;
       mesa.itens.forEach((item, idx) => {
@@ -305,9 +305,28 @@ export function Header() {
     }
   });
 
+  // Sincronização em tempo real caso o usuário altere nas Configurações (Admin.tsx)
+  useEffect(() => {
+    const sincronizarPreferencias = () => {
+      try {
+        const somSalvo = localStorage.getItem('tsystem_alerta_som');
+        if (somSalvo !== null) setAlertaSonoroAtivo(somSalvo === 'true');
+        const navSalvo = localStorage.getItem('tsystem_notificacoes_navegador');
+        if (navSalvo !== null) setNotificacoesNavegadorAtivo(navSalvo === 'true');
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          setPermissaoNavegador(Notification.permission);
+        }
+      } catch {
+        // Ignora
+      }
+    };
+    window.addEventListener('tsystem:notificacoes-sync', sincronizarPreferencias);
+    return () => window.removeEventListener('tsystem:notificacoes-sync', sincronizarPreferencias);
+  }, []);
+
   const alertasAnterioresRef = useRef<string[] | null>(null);
 
-  // Sintetizador harmônico de sino via Web Audio API (D5: 587.33Hz -> A5: 880Hz suave estilo iFood/Square)
+  // Sintetizador de sino via Web Audio API (D5: 587.33Hz -> A5: 880Hz)
   const tocarSomNotificacao = () => {
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -318,7 +337,7 @@ export function Header() {
       }
       const agora = ctx.currentTime;
 
-      // Primeiro tom suave (587.33 Hz)
+      // Primeiro tom (587.33 Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
@@ -331,7 +350,7 @@ export function Header() {
       osc1.start(agora);
       osc1.stop(agora + 0.27);
 
-      // Segundo tom ascendente harmônico (880 Hz)
+      // Segundo tom (880 Hz)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
@@ -353,6 +372,7 @@ export function Header() {
     setAlertaSonoroAtivo(novo);
     try {
       localStorage.setItem('tsystem_alerta_som', novo ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
     } catch {
       // Ignora erro de storage
     }
@@ -379,17 +399,19 @@ export function Header() {
         if (resultado === 'granted') {
           setNotificacoesNavegadorAtivo(true);
           localStorage.setItem('tsystem_notificacoes_navegador', 'true');
+          window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
           try {
             new Notification('Notificações Ativadas! 🔔', {
               body: 'Você receberá avisos em tempo real de pedidos prontos no bar e metas.',
               icon: '/favicon.ico'
             });
           } catch {
-            // Ignora restrição de sandbox móvel
+            // Ignora
           }
         } else {
           setNotificacoesNavegadorAtivo(false);
           localStorage.setItem('tsystem_notificacoes_navegador', 'false');
+          window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
         }
       } catch {
         // Ignora
@@ -401,12 +423,13 @@ export function Header() {
     setNotificacoesNavegadorAtivo(novo);
     try {
       localStorage.setItem('tsystem_notificacoes_navegador', novo ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
     } catch {
       // Ignora
     }
   };
 
-  // Dispara alerta sonoro e notificação no navegador ao chegarem novos alertas
+  // Alerta sonoro e notificação
   useEffect(() => {
     const idsAtuais = alertasSistema.map((a) => a.id);
 
@@ -475,7 +498,7 @@ export function Header() {
     ...(isAdmin ? [{ to: '/admin', icon: LucideIcons.ShieldCheck, label: 'Gestão', activePaths: ['/admin'] }] : [])
   ], [isAdmin]);
 
-  // Efeito 3D Interativo no Menu Inferior (Dock magnético touch e mouse)
+  // Menu Inferior
   const [dockHoverIndex, setDockHoverIndex] = useState<number | null>(null);
   const [dockScrubIndex, setDockScrubIndex] = useState<number | null>(null);
   const activeDockIndex = dockScrubIndex ?? dockHoverIndex;
@@ -539,6 +562,22 @@ export function Header() {
     navigate(destino);
   };
 
+  const handleVoltar = () => {
+    if (path.startsWith('/admin/') && path !== '/admin') {
+      navigate('/admin');
+      return;
+    }
+    if (path.startsWith('/comanda/')) {
+      navigate('/mesas');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   const getPageTitle = () => {
     if (isHome) return nomeMarca;
     if (path === '/mesas') return 'Guarda-Sóis';
@@ -547,7 +586,9 @@ export function Header() {
     if (path === '/painel') return 'Painel de Vendas';
     if (path === '/admin/estoque') return 'Estoque';
     if (path === '/admin/financeiro') return 'Financeiro';
-    if (path === '/admin/equipe') return 'Equipe';
+    if (path === '/admin/equipe') return 'Usuários';
+    if (path === '/admin/impressora') return 'Impressora';
+    if (path === '/admin/assinatura') return 'Assinatura';
     if (path === '/admin') return 'Administrativo';
     return nomeMarca;
   };
@@ -558,14 +599,14 @@ export function Header() {
 
   return (
     <Fragment>
-      {/* Barra lateral Desktop com Quick Actions 3D */}
+      {/* Barra lateral Desktop */}
       <aside className="fixed left-0 top-0 bottom-0 w-18 bg-white border-r border-slate-200 hidden md:flex flex-col z-50">
-        <div className="h-16 flex items-center justify-center border-b border-slate-100 shrink-0">
-          <Link to="/" className="text-fuchsia-600 hover:scale-110 transition-transform duration-300" aria-label="Início">
-            <LucideIcons.Umbrella size={26} strokeWidth={2.5} />
+        <div className="h-16 flex items-center justify-center border-b border-slate-50 shrink-0">
+          <Link to="/" className="text-yellow-600 hover:scale-110 transition-transform duration-300" aria-label="Início">
+            <LucideIcons.Umbrella size={22} strokeWidth={2} />
           </Link>
         </div>
-        <nav className="flex-1 flex flex-col items-center gap-3 py-6">
+        <nav className="flex-1 flex flex-col items-center gap-6 py-10">
           {navItems.map((item) => {
             const isCurrentActive = item.activePaths.some(p => path === p || (p !== '/' && path.startsWith(`${p}/`)));
             const ItemIcon = item.icon;
@@ -575,18 +616,18 @@ export function Header() {
                 to={item.to}
                 title={item.label}
                 aria-label={item.label}
-                className={`group relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ease-out hover:scale-120 hover:translate-x-1.5 hover:shadow-xl hover:shadow-fuchsia-500/20 active:scale-95 ${
+                className={`group relative w-11 h-11 rounded-4xl flex items-center justify-center transition-all duration-300 ease-out hover:scale-120 hover:translate-x-5 hover:shadow-3xl hover:shadow-slate-500/40 active:scale-95 ${
                   isCurrentActive
-                    ? 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/80 shadow-md shadow-fuchsia-500/15'
-                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-900 hover:border hover:border-slate-200'
+                    ? 'bg-yellow-50 text-yellow-500 border border-yellow-200/80 shadow-md shadow-yellow-500/30'
+                    : 'text-slate-400 hover:bg-yellow-50 hover:text-yellow-500 hover:border hover:border-yellow-200'
                 }`}
               >
-                <ItemIcon size={22} strokeWidth={isCurrentActive ? 2.5 : 2} className="transition-transform duration-300 group-hover:scale-110" />
+                <ItemIcon size={22} strokeWidth={2} className="transition-transform duration-300 group-hover:scale-110" />
                 {isCurrentActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-fuchsia-600 rounded-r-full shadow-sm shadow-fuchsia-500/50" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 bg-yellow-500 rounded-r-full shadow-sm shadow-yellow-500/50" />
                 )}
-                {/* Tooltip flutuante 3D */}
-                <span className="absolute left-full ml-3 px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[11px] font-sans font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 pointer-events-none shadow-lg shadow-slate-900/20 z-50">
+                {/* Tooltip flutuante */}
+                <span className="absolute left-full ml-3 px-2.5 py-1 rounded-4xl bg-slate-800 text-white text-[10px] font-sans whitespace-nowrap opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 pointer-events-none shadow-lg shadow-slate-900/20 z-50">
                   {item.label}
                 </span>
               </Link>
@@ -596,35 +637,34 @@ export function Header() {
       </aside>
 
       {/* Header Superior Fixo (com BannerDegustacao integrado quando ativo) */}
-      <header className="fixed top-0 right-0 left-0 md:left-18 bg-white/90 backdrop-blur-md border-b border-slate-200 flex flex-col z-40">
+      <header className="fixed top-0 right-0 left-0 md:left-18 bg-white/80 backdrop-blur-md border-b border-slate-300 flex flex-col z-40">
         <BannerDegustacao />
         <div className="h-16 flex items-center justify-between px-4 lg:px-6 w-full relative">
-          <div className="flex items-center gap-2 sm:gap-3 z-10 min-w-0">
-            {/* MOBILE VOLTAR / LOGO */}
-            <div className="md:hidden flex items-center shrink-0">
-              {!isHome ? (
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  aria-label="Voltar"
-                  className="text-slate-500 hover:text-slate-900 p-2 -ml-2 rounded-full transition-colors active:scale-95"
-                >
-                  <LucideIcons.ArrowLeft size={20} strokeWidth={2.5} />
-                </button>
-              ) : (
-                <div className="text-fuchsia-600 pl-1">
-                  <LucideIcons.Umbrella size={24} strokeWidth={2.5} />
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2.5 sm:gap-3 z-10 min-w-0">
+            {/* BOTÃO VOLTAR (MOBILE E DESKTOP) / LOGO MOBILE NA HOME */}
+            {!isHome ? (
+              <button
+                type="button"
+                onClick={handleVoltar}
+                title="Voltar"
+                aria-label="Voltar"
+                className="group w-9 h-9 rounded-full flex items-center justify-center text-slate-400 bg-white/90 border border-slate-200/80 shadow-xs hover:bg-yellow-50 hover:text-yellow-500 hover:border-yellow-200 hover:scale-110 hover:-translate-y-0.5 hover:shadow-md hover:shadow-yellow-500/20 active:scale-95 active:translate-y-0 transition-all duration-300 ease-out cursor-pointer shrink-0"
+              >
+                <LucideIcons.ArrowLeft size={18} strokeWidth={2} className="transition-transform duration-300 group-hover:-translate-x-0.5" />
+              </button>
+            ) : (
+              <div className="md:hidden flex items-center shrink-0 text-yellow-600 pl-1">
+                <LucideIcons.Umbrella size={22} strokeWidth={2} />
+              </div>
+            )}
 
             {/* TÍTULO DA PÁGINA */}
             <div className="flex flex-col justify-center gap-1 min-w-0">
-              <h1 className="font-sans text-base md:text-lg font-medium text-slate-800 tracking-tight leading-none truncate">
+              <h1 className="font-sans text-[12px] md:text-[12px] font-normal uppercase text-slate-500 tracking-wide leading-none truncate">
                 {getPageTitle()}
               </h1>
               {isHome && marcaPersonalizada && (
-                <span className="font-sans text-xs font-normal text-slate-400 leading-none truncate">
+                <span className="font-sans text-[8px] font-normal uppercase text-yellow-900 tracking-wide leading-none truncate">
                   {NOME_PADRAO_SISTEMA}
                 </span>
               )}
@@ -642,17 +682,17 @@ export function Header() {
               aria-label="Notificações e Alertas"
               className={`w-9 h-9 flex items-center justify-center rounded-full transition-all relative cursor-pointer ${
                 alertasAberto
-                  ? 'bg-fuchsia-50 text-fuchsia-700'
+                  ? 'bg-yellow-50 text-yellow-700'
                   : 'text-slate-400 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <LucideIcons.Bell
                 size={20}
                 strokeWidth={2}
-                className={temPedidoProntoNaoLido ? 'animate-bounce text-fuchsia-600' : ''}
+                className={temPedidoProntoNaoLido ? 'animate-bounce text-yellow-600' : ''}
               />
               {alertasNaoLidos.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-xs scale-75 font-black rounded-full border-2 border-white flex items-center justify-center leading-none">
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-xs scale-75 font-medium rounded-full border-2 border-white flex items-center justify-center leading-none">
                   {alertasNaoLidos.length > 9 ? '9+' : alertasNaoLidos.length}
                 </span>
               )}
@@ -679,19 +719,19 @@ export function Header() {
               </div>
             </button>
 
-            {/* Dropdown Minimalista do Sino de Alertas */}
+            {/* Dropdown de Alertas */}
             {alertasAberto && (
               <div className="absolute top-14 right-3 md:right-12 w-72 sm:w-80 bg-white border border-slate-200/90 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden p-2 flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 font-sans antialiased">
-                {/* Cabeçalho Delicado */}
+                {/* Cabeçalho */}
                 <div className="px-3 py-2.5 mb-1 border-b border-slate-100 bg-slate-50/50 rounded-xl flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-800 truncate">Notificações</p>
+                    <p className="text-xs font-medium text-slate-700 truncate">Notificações</p>
                     <p className="text-xs scale-90 origin-left font-normal text-slate-400 mt-0.5">
                       {alertasNaoLidos.length > 0
                         ? `${alertasNaoLidos.length} ${
                             alertasNaoLidos.length === 1 ? 'nova notificação' : 'novas notificações'
                           }`
-                        : 'Em dia'}
+                        : 'Sem novas notificações'}
                     </p>
                   </div>
 
@@ -699,14 +739,14 @@ export function Header() {
                     <button
                       type="button"
                       onClick={marcarTodosComoLidos}
-                      className="text-xs scale-90 origin-right font-medium text-fuchsia-600 hover:text-fuchsia-700 hover:bg-fuchsia-50 px-2 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                      className="text-xs scale-90 origin-right font-sans text-slate-400 hover:text-yellow-700 hover:bg-yellow-100 px-2 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
                     >
-                      Marcar lidas
+                      Limpar
                     </button>
                   )}
                 </div>
 
-                {/* Controles de Alerta Sonoro e Notificações de Navegador */}
+                {/* Alerta e Notificações de Navegador */}
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 mb-1.5 bg-slate-50/80 rounded-xl border border-slate-100 text-[11px]">
                   <button
                     type="button"
@@ -714,12 +754,12 @@ export function Header() {
                     title={alertaSonoroAtivo ? 'Silenciar alerta sonoro' : 'Ativar alerta sonoro'}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg transition-all cursor-pointer font-medium ${
                       alertaSonoroAtivo
-                        ? 'bg-white text-fuchsia-700 shadow-xs border border-fuchsia-200/70'
+                        ? 'bg-white text-yellow-600 shadow-xs border border-yellow-200/70'
                         : 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
                     }`}
                   >
                     {alertaSonoroAtivo ? (
-                      <LucideIcons.Volume2 size={13} strokeWidth={2.2} className="text-fuchsia-600" />
+                      <LucideIcons.Volume2 size={13} strokeWidth={2.2} className="text-yellow-600" />
                     ) : (
                       <LucideIcons.VolumeX size={13} strokeWidth={2.2} className="text-slate-400" />
                     )}
@@ -762,10 +802,7 @@ export function Header() {
                       <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center">
                         <LucideIcons.Bell size={15} strokeWidth={1.8} />
                       </div>
-                      <p className="text-xs font-medium text-slate-600">Sem notificações agora</p>
-                      <p className="text-xs scale-90 font-normal text-slate-400 leading-relaxed">
-                        Alertas do bar, lançamentos e metas aparecerão aqui por ordem de horário.
-                      </p>
+                      <p className="text-xs font-sans text-slate-600">Sem notificações</p>
                     </div>
                   ) : (
                     alertasSistema.map((alerta) => {
@@ -776,17 +813,17 @@ export function Header() {
                               Icone: LucideIcons.UtensilsCrossed,
                               cor: alerta.prioridadeAlta
                                 ? 'bg-emerald-50 text-emerald-600'
-                                : 'bg-amber-50 text-amber-600'
+                                : 'bg-yellow-50 text-yellow-600'
                             }
                           : alerta.categoria === 'financeiro'
                             ? {
                                 Icone: LucideIcons.Wallet,
-                                cor: 'bg-indigo-50 text-indigo-600'
+                                cor: 'bg-green-50 text-green-600'
                               }
                             : alerta.categoria === 'meta'
                               ? {
                                   Icone: LucideIcons.Target,
-                                  cor: 'bg-fuchsia-50 text-fuchsia-600'
+                                  cor: 'bg-yellow-50 text-yellow-600'
                                 }
                               : {
                                   Icone: LucideIcons.PackageSearch,
@@ -826,15 +863,15 @@ export function Header() {
                                 {alerta.titulo}
                               </p>
                               <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="text-xs scale-90 origin-right font-normal text-slate-400">
+                                <span className="text-xs scale-90 origin-right font-sans text-slate-400">
                                   {alerta.detalheTempo}
                                 </span>
                                 {!lido && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-600 shrink-0" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
                                 )}
                               </div>
                             </div>
-                            <p className="text-xs scale-95 origin-left font-normal text-slate-500 leading-snug mt-0.5 truncate">
+                            <p className="text-xs scale-95 origin-left font-sans text-slate-500 leading-snug mt-0.5 truncate">
                               {alerta.descricao}
                             </p>
                           </div>
@@ -850,8 +887,8 @@ export function Header() {
             {menuAberto && (
               <div className="absolute top-14 right-4 md:right-6 w-56 bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden p-2 flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 font-sans">
                 <div className="px-3 py-3 mb-1 border-b border-slate-100 bg-slate-50/50 rounded-xl">
-                  <p className="text-xs font-bold text-slate-900 truncate">{garcom.nome}</p>
-                  <p className="text-xs scale-90 origin-left font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                  <p className="text-xs font-bold text-slate-800 truncate">{garcom.nome}</p>
+                  <p className="text-xs scale-90 origin-left font-sans text-slate-400 uppercase tracking-widest mt-0.5">
                     {garcom.cargo === 'super_admin' ? 'Super Admin' : garcom.cargo === 'admin' ? 'Administrador' : 'Garçom'}
                   </p>
                 </div>
@@ -861,7 +898,7 @@ export function Header() {
                     <button
                       type="button"
                       onClick={() => { navigate('/master'); setMenuAberto(false); }}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors text-left"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-green-700 hover:bg-indigo-50 transition-colors text-left"
                     >
                       <LucideIcons.ShieldCheck size={16} /> Command Center
                     </button>
@@ -882,7 +919,7 @@ export function Header() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-yellow-700 hover:bg-rose-50 transition-colors text-left"
                   >
                     <LucideIcons.LogOut size={16} strokeWidth={2.5} /> Sair
                   </button>
@@ -893,10 +930,10 @@ export function Header() {
         </div>
       </header>
 
-      {/* Espaçador automático no fluxo da página quando o BannerDegustacao está visível (impede sobreposição dos cards) */}
+      {/* Espaçador automático da página quando o BannerDegustacao está visível */}
       {emPeriodoDeTeste && <div className="h-9 sm:h-10 w-full shrink-0" aria-hidden="true" />}
 
-      {/* Barra de Navegação Inferior Mobile (Interactive 3D Dock) */}
+      {/* Header Inferior Mobile  */}
       {showBottomNav && (
         <nav
           ref={dockNavRef}
@@ -924,27 +961,27 @@ export function Header() {
                 aria-label={item.label}
                 className={`relative flex-1 flex flex-col items-center justify-center py-1 transition-all duration-300 ease-out cursor-pointer select-none touch-none ${
                   isSelected
-                    ? '-translate-y-3.5 z-30 scale-125'
+                    ? '-translate-y-4 z-30 scale-115'
                     : isAdjacent
-                      ? '-translate-y-1.5 z-20 scale-110'
+                      ? '-translate-y-1.5 z-20 scale-105'
                       : 'translate-y-0 z-10 scale-100'
                 }`}
               >
-                {/* Capsule 3D do Ícone */}
+                {/* Ícone */}
                 <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 ease-out relative ${
+                  className={`w-10 h-10 rounded-4xl flex items-center justify-center transition-all duration-300 ease-out relative ${
                     isSelected
-                      ? 'bg-linear-to-b from-white to-fuchsia-50 text-fuchsia-600 border border-fuchsia-300 shadow-xl shadow-fuchsia-500/30 ring-2 ring-fuchsia-400/20'
+                      ? 'bg-linear-to-b from-white to-yellow-50 text-yellow-500 border border-yellow-200 shadow-xl shadow-yellow-500/30 ring-1 ring-yellow-400/20'
                       : isAdjacent
                         ? 'bg-white/95 text-slate-700 border border-slate-200/80 shadow-md shadow-slate-300/40'
                         : isCurrentActive
-                          ? 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-200/80 shadow-xs'
-                          : 'bg-transparent text-slate-400 hover:text-slate-700'
+                          ? 'bg-yellow-100 text-yellow-500 border border-yellow-200/50 shadow-xs'
+                          : 'bg-transparent text-slate-400 hover:text-slate-500'
                   }`}
                 >
                   <ItemIcon
                     size={isSelected ? 22 : 20}
-                    strokeWidth={isCurrentActive || isSelected ? 2.5 : 2}
+                    strokeWidth={2}
                     className={`transition-transform duration-300 ${isSelected ? 'scale-110 animate-pulse' : ''}`}
                   />
                   {item.to === '/cozinha' && temPedidoProntoNaoLido && (
@@ -954,23 +991,18 @@ export function Header() {
 
                 {/* Label */}
                 <span
-                  className={`text-[10px] tracking-tight leading-none truncate max-w-full px-1 mt-1 font-sans transition-all duration-300 ${
+                  className={`text-[10px] tracking-wide leading-none truncate max-w-full px-1 mt-1 font-sans transition-all duration-300 ${
                     isSelected
-                      ? 'font-bold text-fuchsia-700 scale-105'
+                      ? 'font-bold text-yellow-600 scale-105'
                       : isAdjacent
-                        ? 'font-medium text-slate-800'
+                        ? 'font-normal text-slate-800'
                         : isCurrentActive
-                          ? 'font-semibold text-fuchsia-600'
+                          ? 'font-normal tracking-wider text-slate-600'
                           : 'font-normal text-slate-400'
                   }`}
                 >
                   {item.label}
                 </span>
-
-                {/* Indicador de Rota Ativa (pill sutil embaixo) */}
-                {isCurrentActive && !isSelected && (
-                  <span className="w-1.5 h-1 rounded-full bg-fuchsia-600 mt-0.5 shadow-xs shadow-fuchsia-500/50" />
-                )}
               </button>
             );
           })}

@@ -114,12 +114,14 @@ export function Comanda() {
     }, 2500);
   };
   
-  const [etapaModal, setEtapaModal] = useState<0 | 1 | 2 | 3>(0);
+  const [etapaModal, setEtapaModal] = useState<0 | 1 | 2>(0);
   const [itemEditandoObs, setItemEditandoObs] = useState<ItemComanda | null>(null);
   const [textoObs, setTextoObs] = useState('');
   
   const [valorTaxa, setValorTaxa] = useState<number>(0);
   const [inputTaxa, setInputTaxa] = useState<string>('');
+  const [tipoDesconto, setTipoDesconto] = useState<'fixo' | 'porcentagem'>('fixo');
+  const [inputDesconto, setInputDesconto] = useState<string>('');
   
   const [pagamentosLancados, setPagamentosLancados] = useState<Pagamento[]>([]);
   const [valorDigitado, setValorDigitado] = useState('');
@@ -177,10 +179,40 @@ export function Comanda() {
   const valorTotalMenu = itensPedidos.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
   const quantidadeTotalItens = itensPedidos.reduce((total, item) => total + item.quantidade, 0);
   
-  const totalCobrarFinal = valorTotalMenu + valorTaxa;
-  const totalJaPago = pagamentosLancados.reduce((acc, pag) => acc + pag.valor, 0);
-  const faltaPagar = totalCobrarFinal - totalJaPago;
-  const troco = totalJaPago > totalCobrarFinal ? totalJaPago - totalCobrarFinal : 0;
+  const taxaDigitada = useMemo(() => {
+    const limpo = inputTaxa.replace(',', '.');
+    const num = parseFloat(limpo);
+    return isNaN(num) || num < 0 ? 0 : num;
+  }, [inputTaxa]);
+
+  const descontoCalculado = useMemo(() => {
+    const limpo = inputDesconto.replace(',', '.');
+    const num = parseFloat(limpo);
+    if (isNaN(num) || num <= 0) return 0;
+    if (tipoDesconto === 'porcentagem') {
+      const pct = Math.min(100, Math.max(0, num));
+      return (valorTotalMenu * pct) / 100;
+    }
+    return Math.min(valorTotalMenu + taxaDigitada, num);
+  }, [inputDesconto, tipoDesconto, valorTotalMenu, taxaDigitada]);
+
+  const totalCobrarFinal = useMemo(() => {
+    return Math.max(0, (valorTotalMenu + taxaDigitada) - descontoCalculado);
+  }, [valorTotalMenu, taxaDigitada, descontoCalculado]);
+
+  const totalJaPago = useMemo(() => {
+    return pagamentosLancados.reduce((acc, pag) => acc + pag.valor, 0);
+  }, [pagamentosLancados]);
+
+  const faltaPagar = useMemo(() => {
+    const diff = totalCobrarFinal - totalJaPago;
+    return diff > 0.009 ? diff : 0;
+  }, [totalCobrarFinal, totalJaPago]);
+
+  const troco = useMemo(() => {
+    const excesso = totalJaPago - totalCobrarFinal;
+    return excesso > 0.009 ? excesso : 0;
+  }, [totalJaPago, totalCobrarFinal]);
 
   const handleConfirmarPedido = async () => {
     if (idMesa) {
@@ -191,12 +223,19 @@ export function Comanda() {
     }
   };
 
+  const abrirModalFechamento = () => {
+    setInputTaxa(valorTaxa > 0 ? valorTaxa.toString() : '');
+    setInputDesconto('');
+    setPagamentosLancados([]);
+    setValorDigitado('');
+    setEtapaModal(1);
+  };
+
   const avancaParaPagamento = () => {
-    const taxaConvertida = parseFloat(inputTaxa.replace(',', '.')) || 0;
-    setValorTaxa(taxaConvertida);
+    setValorTaxa(taxaDigitada);
     setPagamentosLancados([]); 
     setValorDigitado('');
-    setEtapaModal(3);
+    setEtapaModal(2);
   };
 
   const handleAdicionarPagamento = (metodo: MetodoPagamento) => {
@@ -218,7 +257,7 @@ export function Comanda() {
 
   const concluirMesaFinal = async () => {
     if (faltaPagar > 0.01) { alert('Ainda faltam valores a receber!'); return; }
-    await contexto.finalizarMesa(Number(idMesa), valorTaxa, pagamentosLancados);
+    await contexto.finalizarMesa(Number(idMesa), taxaDigitada, pagamentosLancados, descontoCalculado);
     navigate('/');
   };
 
@@ -461,10 +500,20 @@ export function Comanda() {
       {/* BARRA FIXA INFERIOR */}
       <div className="fixed bottom-0 left-0 right-0 md:left-18 p-3 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-2xl pb-safe select-none">
         <div className="flex items-center gap-4 max-w-4xl mx-auto">
-          <button type="button" onClick={() => setEtapaModal(1)} className="flex-1 bg-rose text-red-500 border border-red-500 hover:bg-rose-50 hover:border-rose-200 h-10 rounded-4xl font-medium text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-sm">
+          <button
+            type="button"
+            onClick={abrirModalFechamento}
+            className="flex-1 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 h-11 rounded-2xl font-semibold text-[11px] uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-2"
+          >
+            <LucideIcons.Receipt size={16} strokeWidth={2} />
             <span>Fechar Conta</span>
           </button>
-          <button type="button" onClick={handleConfirmarPedido} className="flex-1 bg-teal-800 text-white h-10 rounded-4xl font-bold text-[12px] uppercase tracking-widest shadow-lg shadow-teal-600/20 px-4 py-2 items-center">
+          <button
+            type="button"
+            onClick={handleConfirmarPedido}
+            className="flex-1 bg-teal-800 hover:bg-teal-900 text-white h-11 rounded-2xl font-bold text-[12px] uppercase tracking-wider shadow-lg shadow-teal-700/20 px-4 py-2 flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <LucideIcons.Save size={16} strokeWidth={2} />
             <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
           </button>
         </div>
@@ -472,156 +521,444 @@ export function Comanda() {
 
       {/* MODAL: OBSERVAÇÃO */}
       {itemEditandoObs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200 select-none">
           <div className="absolute inset-0" onClick={() => setItemEditandoObs(null)}></div>
-          <div className="bg-white rounded-4xl p-6 w-full max-w-sm shadow-2xl flex flex-col relative z-50 animate-in zoom-in-95 duration-200">
-            <h3 className="text-[16px] font-black text-slate-900 mb-1 tracking-tight uppercase"><span>Nota p/ Cozinha</span></h3>
-            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-4 bg-blue-50 inline-block px-3 py-1 rounded-full truncate max-w-full"><span>{itemEditandoObs.produto.nome}</span></p>
-            <textarea autoFocus value={textoObs} onChange={(e) => setTextoObs(e.target.value)} placeholder="Ex: Sem cebola, gelo à parte..." className="w-full bg-slate-50 p-4 rounded-3xl border border-slate-200 outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 resize-none h-32 text-slate-800 font-medium text-[13px] mb-6 transition-all" />
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setItemEditandoObs(null)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold h-12 rounded-full text-[10px] uppercase tracking-widest transition-colors active:scale-95"><span>Cancelar</span></button>
-              <button type="button" onClick={salvarObservacao} className="flex-[1.5] bg-blue-600 text-white hover:bg-blue-700 font-bold uppercase tracking-widest h-12 rounded-full shadow-lg shadow-blue-600/30 text-[11px] active:scale-95 transition-all"><span>Salvar Nota</span></button>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 flex flex-col relative z-50 animate-in zoom-in-95 duration-200 font-sans">
+            <h3 className="text-[15px] font-semibold text-slate-800 mb-1 tracking-tight">Nota para a Cozinha</h3>
+            <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-4 bg-blue-50 border border-blue-100 inline-block px-3 py-1 rounded-full truncate max-w-full">
+              {itemEditandoObs.produto.nome}
+            </p>
+            <textarea
+              autoFocus
+              value={textoObs}
+              onChange={(e) => setTextoObs(e.target.value)}
+              placeholder="Ex: Sem cebola, gelo à parte..."
+              className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100 resize-none h-32 text-slate-800 font-medium text-[13px] mb-5 transition-all"
+            />
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setItemEditandoObs(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium h-11 rounded-xl text-xs active:scale-95 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={salvarObservacao}
+                className="flex-[1.4] bg-slate-900 hover:bg-black text-white font-semibold h-11 rounded-xl shadow-md text-xs active:scale-95 transition-all"
+              >
+                Salvar Nota
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAIS DE FECHAMENTO CONTA (1, 2, 3) */}
+      {/* MODAL DE FECHAMENTO DE CONTA & PAGAMENTO (DESIGN MODERNO LITHOS/LINEAR) */}
       {etapaModal > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200 select-none">
           <div className="absolute inset-0" onClick={() => setEtapaModal(0)}></div>
-          <div className="bg-white rounded-4xl p-6 md:p-8 w-full max-w-sm shadow-2xl relative z-50 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl sm:rounded-4xl p-5 sm:p-7 w-full max-w-md shadow-2xl shadow-slate-900/10 border border-slate-100 relative z-50 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 font-sans">
             
-            {/* ETAPA 1: CONFIRMAÇÃO */}
-            {etapaModal === 1 && (
-              <div className="w-full flex flex-col items-center">
-                <div className="w-15 h-15 bg-rose-50 rounded-full flex items-center justify-center mb-4 text-rose-500"><LucideIcons.AlertTriangle size={28} strokeWidth={2.5}/></div>
-                <h3 className="text-[17px] font-semibold text-slate-900 text-center mb-1 tracking-tight uppercase"><span>Deseja encerrar a conta?</span></h3>
-                <p className="text-center text-slate-500 font-sans mb-8 text-[11px] uppercase tracking-widest"><span>A mesa não receberá mais itens.</span></p>
-                <div className="flex gap-5 w-full">
-                  <button type="button" onClick={() => setEtapaModal(0)} className="flex-1 bg-slate-200 text-slate-700 font-medium h-10 rounded-full hover:bg-slate-300 text-[11px] uppercase tracking-widest transition-all active:scale-95"><span>Voltar</span></button>
-                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-rose-700 hover:bg-rose-700 text-white font-medium h-10 rounded-full shadow-lg shadow-rose-600/30 active:scale-95 transition-all text-[11px] uppercase tracking-widest"><span>Sim</span></button>
+            {/* CABEÇALHO PADRÃO CLEAN */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100 mb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0 shadow-2xs">
+                  {etapaModal === 1 ? (
+                    <LucideIcons.Receipt size={18} strokeWidth={1.8} />
+                  ) : (
+                    <LucideIcons.CreditCard size={18} strokeWidth={1.8} />
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* ETAPA 2: GUARDA SOL / TAXA */}
-            {etapaModal === 2 && (
-              <div className="w-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-fuchsia-50 rounded-full flex items-center justify-center text-fuchsia-700">
-                    <LucideIcons.Umbrella size={20} strokeWidth={2} />
-                  </div>
-                  <div>
-                    <h3 className="text-[14px] font-bold text-slate-900 tracking-tighter uppercase"><span>Guarda-Sol</span></h3>
-                    <p className="text-[10px] font-sans text-slate-400 uppercase tracking-widest">Adicionar Taxa</p>
-                  </div>
-                </div>
-                
-                <div className="w-full bg-slate-100 p-5 rounded-2xl mb-5 border border-slate-300">
-                  <div className="flex justify-between items-center text-[10px] font-medium uppercase tracking-widest text-slate-500 mb-5">
-                    <span><span>Consumo da Mesa</span></span>
-                    <span className="tabular-nums"><span>{formatarMoeda(valorTotalMenu)}</span></span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 mb-4">
-                    <label className="text-[11px] font-medium uppercase tracking-widest text-slate-600 pl-1">
-                      <span>Valor</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[15px] font-bold text-slate-500">
-                        <span>R$</span>
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={inputTaxa}
-                        onChange={(e) => setInputTaxa(e.target.value.replace(/[^0-9.,]/g, ''))}
-                        placeholder="0,00"
-                        className="w-full bg-white pl-12 pr-4 h-10 rounded-4xl border border-slate-300 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100 font-medium text-[16px] text-slate-800 transition-all tabular-nums shadow-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-900 text-[11px] uppercase tracking-widest"><span>Total Geral</span></span>
-                    <span className="text-2xl font-bold tracking-tight tabular-nums text-slate-900">
-                      <span>{formatarMoeda(valorTotalMenu + (parseFloat(inputTaxa.replace(',', '.')) || 0))}</span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold text-slate-800 tracking-tight">
+                      {etapaModal === 1 ? 'Fechar Comanda' : 'Baixa de Pagamento'}
+                    </h3>
+                    <span className="text-[10px] font-medium text-teal-700 bg-teal-50 border border-teal-100/80 px-2 py-0.5 rounded-md">
+                      Mesa {idMesa}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex flex-col gap-2 w-full">
-                  <button type="button" onClick={avancaParaPagamento} className="w-full bg-slate-700 hover:bg-slate-700 text-white font-medium h-10 rounded-full shadow-lg active:scale-[0.98] transition-all text-[11px] uppercase tracking-widest">
-                    <span>Ir para Pagamento</span>
-                  </button>
-                  <button type="button" onClick={() => setEtapaModal(1)} className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-3 hover:text-slate-600 transition-colors">
-                    <span>&larr; Voltar</span>
-                  </button>
+                  <p className="text-[11px] font-normal text-slate-400">
+                    {etapaModal === 1
+                      ? (nomeCliente ? `Cliente: ${nomeCliente}` : 'Taxa de guarda-sol e descontos')
+                      : `Total da conta: ${formatarMoeda(totalCobrarFinal)}`}
+                  </p>
                 </div>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setEtapaModal(0)}
+                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all active:scale-90"
+              >
+                <LucideIcons.X size={15} strokeWidth={2} />
+              </button>
+            </div>
 
-            {/* ETAPA 3: PAGAMENTO */}
-            {etapaModal === 3 && (
-              <div className="w-full flex flex-col">
-                <h3 className="text-[16px] font-bold text-slate-900 text-center mb-5 tracking-tight uppercase"><span>Pagamento</span></h3>
-                
-                <div className="flex justify-between items-center bg-slate-100 p-4 rounded-xl mb-4 border border-slate-200">
-                  <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]"><span>Total a Pagar</span></span>
-                  <span className="font-bold text-2xl text-slate-900 tracking-tight tabular-nums"><span>{formatarMoeda(totalCobrarFinal)}</span></span>
+            {/* ETAPA 1: AJUSTES DA COMANDA (TAXA + DESCONTO + RESUMO) */}
+            {etapaModal === 1 && (
+              <div className="flex flex-col space-y-3.5 overflow-y-auto pr-1">
+                {/* LINHA: CONSUMO DOS ITENS */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/60 flex items-center justify-center text-slate-400 shadow-2xs">
+                      <LucideIcons.ShoppingBag size={15} strokeWidth={1.8} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-700">Consumo da Mesa</p>
+                      <p className="text-[10px] text-slate-400">{quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'item lançado' : 'itens lançados'}</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                    {formatarMoeda(valorTotalMenu)}
+                  </span>
                 </div>
-                
-                {pagamentosLancados.length > 0 && (
-                  <div className="mb-4 space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-hide">
-                    {pagamentosLancados.map((pag, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                        <span className="font-bold uppercase tracking-widest text-[11px] flex items-center gap-2 text-slate-700">
-                          <span className="text-teal-500"><LucideIcons.CheckCircle2 size={16} /></span> {pag.metodo}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-[14px] tabular-nums text-slate-900"><span>{formatarMoeda(pag.valor)}</span></span>
-                          <button type="button" onClick={() => handleRemoverPagamento(idx)} className="w-7 h-7 flex items-center justify-center bg-slate-50 rounded-full text-rose-500 hover:bg-rose-50 transition-colors active:scale-90"><LucideIcons.X size={14} strokeWidth={2.5}/></button>
-                        </div>
+
+                {/* LINHA: TAXA DO GUARDA-SOL */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shadow-2xs">
+                        <LucideIcons.Umbrella size={15} strokeWidth={1.8} />
                       </div>
+                      <span className="text-xs font-medium text-slate-700">Taxa do Guarda-Sol</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                      Opcional
+                    </span>
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
+                      R$
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={inputTaxa}
+                      onChange={(e) => setInputTaxa(e.target.value.replace(/[^0-9.,]/g, ''))}
+                      placeholder="0,00"
+                      className="w-full bg-white pl-9 pr-3 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
+                    />
+                  </div>
+
+                  {/* Atalhos Rápidos de Taxa */}
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-medium">Sugestões:</span>
+                    {[0, 15, 20, 30].map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setInputTaxa(v === 0 ? '' : v.toString())}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all active:scale-95 ${taxaDigitada === v && (v !== 0 || inputTaxa === '') ? 'bg-sky-50 text-sky-700 border-sky-200 font-semibold' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                      >
+                        {v === 0 ? 'Sem taxa' : `R$ ${v}`}
+                      </button>
                     ))}
                   </div>
-                )}
-                
-                {faltaPagar > 0 ? (
-                  <div className="space-y-3 bg-white">
-                    <div className="flex justify-end items-center px-3 py-2 rounded-xl gap-2">
-                      <span className="text-[10px] font-medium text-rose-600 uppercase tracking-widest"><span>Restante</span></span>
-                      <span className="font-bold text-rose-560 text-[15px] tabular-nums"><span>{formatarMoeda(faltaPagar)}</span></span>
+                </div>
+
+                {/* LINHA: DESCONTO NA COMANDA */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-2xs">
+                        <LucideIcons.Tag size={15} strokeWidth={1.8} />
+                      </div>
+                      <span className="text-xs font-medium text-slate-700">Desconto</span>
                     </div>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400"><span>R$</span></span>
-                      <input type="text" inputMode="decimal" value={valorDigitado} onChange={(e) => setValorDigitado(e.target.value)} placeholder={faltaPagar.toFixed(2)} className="w-full bg-slate-50 pl-12 pr-4 h-12 rounded-full border border-slate-200 outline-none focus:border-blue-500 focus:bg-white font-bold text-[16px] text-slate-800 transition-all tabular-nums" />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mt-4">
-                      <button type="button" onClick={() => handleAdicionarPagamento('PIX')} className="bg-white hover:bg-slate-50 text-slate-700 font-bold h-11 rounded-full text-[10px] uppercase tracking-widest border border-slate-200 active:scale-95 transition-all shadow-sm"><span>PIX</span></button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Crédito')} className="bg-white hover:bg-slate-50 text-slate-700 font-bold h-11 rounded-full text-[10px] uppercase tracking-widest border border-slate-200 active:scale-95 transition-all shadow-sm"><span>Crédito</span></button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Débito')} className="bg-white hover:bg-slate-50 text-slate-700 font-bold h-11 rounded-full text-[10px] uppercase tracking-widest border border-slate-200 active:scale-95 transition-all shadow-sm"><span>Débito</span></button>
-                      <button type="button" onClick={() => handleAdicionarPagamento('Dinheiro')} className="bg-white hover:bg-slate-50 text-slate-700 font-bold h-11 rounded-full text-[10px] uppercase tracking-widest border border-slate-200 active:scale-95 transition-all shadow-sm"><span>Dinheiro</span></button>
+
+                    {/* Alternador R$ / % estilo switcher minimalista Lithos */}
+                    <div className="bg-slate-200/60 p-0.5 rounded-lg flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setTipoDesconto('fixo')}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${tipoDesconto === 'fixo' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        R$
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTipoDesconto('porcentagem')}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${tipoDesconto === 'porcentagem' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        %
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-4 bg-teal-50 border border-teal-200 text-teal-700 rounded-3xl animate-in zoom-in-95 duration-300">
-                    <span className="font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                      <LucideIcons.CheckCircle2 size={16} /> Conta Paga
+
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
+                      {tipoDesconto === 'fixo' ? 'R$' : '%'}
                     </span>
-                    {troco > 0 && (
-                      <span className="font-bold text-teal-800 mt-2 block bg-white mx-4 py-2.5 rounded-2xl border border-teal-100 text-[10px] shadow-sm uppercase tracking-widest">
-                        <span>Troco: </span><span className="font-bold tabular-nums text-[14px] ml-1"><span>{formatarMoeda(troco)}</span></span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={inputDesconto}
+                      onChange={(e) => setInputDesconto(e.target.value.replace(/[^0-9.,]/g, ''))}
+                      placeholder={tipoDesconto === 'fixo' ? '0,00' : '0%'}
+                      className="w-full bg-white pl-9 pr-24 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
+                    />
+                    {descontoCalculado > 0 && (
+                      <span className="absolute right-2.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md tabular-nums">
+                        -{formatarMoeda(descontoCalculado)}
                       </span>
                     )}
                   </div>
+                </div>
+
+                {/* RESUMO TOTAL DA CONTA */}
+                <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs space-y-1.5">
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>Subtotal consumo</span>
+                    <span className="tabular-nums font-medium">{formatarMoeda(valorTotalMenu)}</span>
+                  </div>
+                  {taxaDigitada > 0 && (
+                    <div className="flex justify-between items-center text-xs text-slate-500">
+                      <span>Taxa de guarda-sol</span>
+                      <span className="tabular-nums font-medium text-sky-700">+{formatarMoeda(taxaDigitada)}</span>
+                    </div>
+                  )}
+                  {descontoCalculado > 0 && (
+                    <div className="flex justify-between items-center text-xs text-emerald-600">
+                      <span>Desconto concedido</span>
+                      <span className="tabular-nums font-medium">-{formatarMoeda(descontoCalculado)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-slate-100 pt-2 flex items-baseline justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total a Cobrar</p>
+                      <p className="text-[10px] text-slate-400">Pronto para dar baixa</p>
+                    </div>
+                    <span className="text-2xl font-bold text-slate-800 tabular-nums">
+                      {formatarMoeda(totalCobrarFinal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* BOTÕES DE AÇÃO */}
+                <div className="flex gap-2.5 pt-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaModal(0)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium h-11 rounded-xl text-xs active:scale-95 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={avancaParaPagamento}
+                    className="flex-[1.4] bg-slate-900 hover:bg-black text-white font-semibold h-11 rounded-xl shadow-md text-xs active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Ir para Pagamento</span>
+                    <LucideIcons.ArrowRight size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ETAPA 2: BAIXA DE PAGAMENTO (MESMA TELA INTEGRADA) */}
+            {etapaModal === 2 && (
+              <div className="flex flex-col space-y-3.5 overflow-y-auto pr-1">
+                {/* CARD DO TOTAL A COBRAR */}
+                <div className="bg-slate-50/80 border border-slate-100/90 rounded-2xl p-3 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total a Pagar</span>
+                    <span className="text-xl font-bold text-slate-800 tabular-nums">{formatarMoeda(totalCobrarFinal)}</span>
+                  </div>
+                  {(taxaDigitada > 0 || descontoCalculado > 0) && (
+                    <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                      {taxaDigitada > 0 && (
+                        <span className="text-[10px] text-sky-700 bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-md font-medium">
+                          Taxa: +{formatarMoeda(taxaDigitada)}
+                        </span>
+                      )}
+                      {descontoCalculado > 0 && (
+                        <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md font-medium">
+                          Desconto: -{formatarMoeda(descontoCalculado)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* FORMULÁRIO DE PAGAMENTO (SE AINDA HÁ VALOR A RECEBER) */}
+                {faltaPagar > 0 ? (
+                  <div className="space-y-3">
+                    {/* INPUT DE VALOR COM ATALHO DE QUITAÇÃO */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="font-medium text-slate-600">Valor do Lançamento</span>
+                        <button
+                          type="button"
+                          onClick={() => setValorDigitado(faltaPagar.toFixed(2))}
+                          className="font-medium text-teal-600 hover:text-teal-700 hover:underline"
+                        >
+                          Quitar Restante ({formatarMoeda(faltaPagar)})
+                        </button>
+                      </div>
+
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
+                          R$
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={valorDigitado}
+                          onChange={(e) => setValorDigitado(e.target.value.replace(/[^0-9.,]/g, ''))}
+                          placeholder={faltaPagar.toFixed(2)}
+                          className="w-full bg-white pl-9 pr-3 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* MÉTODOS DE PAGAMENTO (ÍCONES DO LADO ESQUERDO ESTILO DROPDOWN) */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        Forma de Pagamento
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAdicionarPagamento('PIX')}
+                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0 group-hover:scale-105 transition-transform">
+                            <LucideIcons.QrCode size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">PIX</p>
+                            <p className="text-[10px] text-slate-400 leading-none">Instantâneo</p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAdicionarPagamento('Crédito')}
+                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
+                            <LucideIcons.CreditCard size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Crédito</p>
+                            <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAdicionarPagamento('Débito')}
+                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-105 transition-transform">
+                            <LucideIcons.CreditCard size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Débito</p>
+                            <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAdicionarPagamento('Dinheiro')}
+                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                            <LucideIcons.Banknote size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Dinheiro</p>
+                            <p className="text-[10px] text-slate-400 leading-none">Espécie</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* LISTA DE PAGAMENTOS JÁ REGISTRADOS */}
+                {pagamentosLancados.length > 0 && (
+                  <div className="space-y-1.5 bg-slate-50/60 p-2.5 rounded-2xl border border-slate-100 max-h-36 overflow-y-auto">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-1">
+                      Pagamentos Registrados ({pagamentosLancados.length})
+                    </span>
+                    <div className="space-y-1.5">
+                      {pagamentosLancados.map((pag, idx) => (
+                        <div key={idx} className="bg-white rounded-xl p-2 px-3 border border-slate-200/80 flex items-center justify-between shadow-2xs">
+                          <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                            <span className="text-teal-600"><LucideIcons.CheckCircle2 size={15} strokeWidth={2} /></span>
+                            <span>{pag.metodo}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-800 tabular-nums">{formatarMoeda(pag.valor)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverPagamento(idx)}
+                              className="w-6 h-6 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-colors active:scale-90"
+                              title="Remover pagamento"
+                            >
+                              <LucideIcons.Trash2 size={13} strokeWidth={2} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-                
-                <div className="flex gap-3 mt-6">
-                  <button type="button" onClick={() => setEtapaModal(2)} className="flex-1 bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold uppercase tracking-widest h-12 rounded-full transition-colors text-[10px] active:scale-95"><span>Voltar</span></button>
-                  <button type="button" disabled={faltaPagar > 0.01} onClick={concluirMesaFinal} className={`flex-1 text-white font-bold h-12 rounded-full transition-all text-[11px] uppercase tracking-widest ${faltaPagar <= 0.01 ? 'bg-slate-900 shadow-lg active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}><span>Encerrar Mesa</span></button>
+
+                {/* STATUS: RESTANTE OU CONCLUÍDO */}
+                {faltaPagar > 0 ? (
+                  <div className="bg-amber-50/70 border border-amber-200/70 rounded-xl p-2.5 px-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-700 text-xs font-medium">
+                      <LucideIcons.Clock size={15} strokeWidth={2} />
+                      <span>Falta Receber</span>
+                    </div>
+                    <span className="text-amber-800 font-bold text-sm tabular-nums">
+                      {formatarMoeda(faltaPagar)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 space-y-1.5">
+                    <div className="flex items-center gap-2 text-emerald-700 text-xs font-semibold">
+                      <LucideIcons.CheckCircle2 size={16} strokeWidth={2.2} />
+                      <span>Comanda 100% Paga!</span>
+                    </div>
+                    {troco > 0 && (
+                      <div className="bg-white p-2 px-3 rounded-lg border border-emerald-100 flex items-center justify-between text-xs">
+                        <span className="font-medium text-slate-600">Troco do Cliente:</span>
+                        <span className="text-emerald-800 font-bold text-sm tabular-nums">{formatarMoeda(troco)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* BOTÕES DE AÇÃO */}
+                <div className="flex gap-2.5 pt-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaModal(1)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium h-11 rounded-xl text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <LucideIcons.ArrowLeft size={14} strokeWidth={2} />
+                    <span>Ajustes</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={faltaPagar > 0.01}
+                    onClick={concluirMesaFinal}
+                    className={`flex-[1.4] font-semibold h-11 rounded-xl transition-all text-xs flex items-center justify-center gap-2 ${
+                      faltaPagar <= 0.01
+                        ? 'bg-slate-900 hover:bg-black text-white shadow-md active:scale-95 cursor-pointer'
+                        : 'bg-slate-100 text-slate-400 border border-slate-200/80 cursor-not-allowed'
+                    }`}
+                  >
+                    <LucideIcons.CheckCircle2 size={15} strokeWidth={2} />
+                    <span>Encerrar Mesa</span>
+                  </button>
                 </div>
               </div>
             )}

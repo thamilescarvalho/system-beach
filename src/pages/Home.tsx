@@ -1,146 +1,456 @@
 // src/pages/Home.tsx
-import { useContext } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../context/AppContext';
-import { Header } from '../components/Header'; 
-import * as LucideIcons from 'lucide-react'; // Importação do Lucide adicionada para o rodapé
+import * as LucideIcons from 'lucide-react';
+import { Header } from '../components/Header';
+import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
+
+interface PedidoProntoResumo {
+  numeroMesa: number;
+  nomeCliente: string;
+  quantidadeItensProntos: number;
+  descricaoCurta: string;
+}
 
 export function Home() {
   const navigate = useNavigate();
-  const contexto = useContext(AppContext);
-  const usuario = contexto?.garcomLogado;
-  
-  const isAdmin = usuario?.cargo === 'admin' || usuario?.cargo === 'super_admin';
+  const { garcomLogado, dadosEmpresa, mesas, historicoVendas } = useAppContext();
+
+  const primeiroNome = garcomLogado?.nome
+    ? garcomLogado.nome.trim().split(/\s+/)[0]
+    : 'Colaborador';
+
+  const saudacaoHorario = useMemo(() => {
+    const hora = new Date().getHours();
+    if (hora >= 5 && hora < 12) return 'Bom dia';
+    if (hora >= 12 && hora < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }, []);
+
+  // Métricas reais de Mesas (Guarda-sóis)
+  const mesasOcupadas = useMemo(
+    () => mesas.filter((m) => m.status === 'ocupada'),
+    [mesas]
+  );
+
+  const mesasLivres = useMemo(
+    () => mesas.filter((m) => m.status === 'livre'),
+    [mesas]
+  );
+
+  // Métricas reais de Pedidos em Preparo e Pedidos Prontos no Bar/Cozinha
+  const {
+    totalPedidosEmPreparo,
+    mesasComPreparo,
+    totalPedidosProntos,
+    listaMesasComPedidosProntos
+  } = useMemo(() => {
+    let emPreparo = 0;
+    let prontos = 0;
+    const numerosPreparo: number[] = [];
+    const resumoProntos: PedidoProntoResumo[] = [];
+
+    mesasOcupadas.forEach((mesa) => {
+      if (!Array.isArray(mesa.itens)) return;
+
+      const itensPendentes = mesa.itens.filter((i) => i.statusCozinha === 'pendente');
+      const itensProntos = mesa.itens.filter((i) => i.statusCozinha === 'pronto');
+
+      if (itensPendentes.length > 0) {
+        emPreparo += itensPendentes.reduce((acc, item) => acc + item.quantidade, 0);
+        numerosPreparo.push(mesa.numero);
+      }
+
+      if (itensProntos.length > 0) {
+        const qtdProntaMesa = itensProntos.reduce((acc, item) => acc + item.quantidade, 0);
+        prontos += qtdProntaMesa;
+        const primeiroItem = itensProntos[0];
+        resumoProntos.push({
+          numeroMesa: mesa.numero,
+          nomeCliente: mesa.nomeCliente || '',
+          quantidadeItensProntos: qtdProntaMesa,
+          descricaoCurta: `${primeiroItem.quantidade}x ${primeiroItem.produto.nome}${
+            itensProntos.length > 1 ? ` e +${itensProntos.length - 1}` : ''
+          }`
+        });
+      }
+    });
+
+    return {
+      totalPedidosEmPreparo: emPreparo,
+      mesasComPreparo: numerosPreparo,
+      totalPedidosProntos: prontos,
+      listaMesasComPedidosProntos: resumoProntos
+    };
+  }, [mesasOcupadas]);
+
+  // Vendas concluídas hoje (Caixa)
+  const resumoCaixaHoje = useMemo(() => {
+    const hojeIso = new Date().toISOString().split('T')[0];
+    const vendasHoje = historicoVendas.filter(
+      (v) => v.status !== 'cancelada' && v.dataFechamento.startsWith(hojeIso)
+    );
+    const totalFaturado = vendasHoje.reduce((acc, v) => acc + v.total, 0);
+    return {
+      quantidade: vendasHoje.length,
+      total: totalFaturado
+    };
+  }, [historicoVendas]);
+
+  const formatarMoeda = (valor: number) =>
+    valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const handleClickPedidosProntos = () => {
+    if (listaMesasComPedidosProntos.length === 1) {
+      navigate(`/comanda/${listaMesasComPedidosProntos[0].numeroMesa}`);
+      return;
+    }
+    navigate('/cozinha');
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col justify-between relative overflow-x-hidden">
-      
+    <div className="min-h-screen bg-white font-sans flex flex-col justify-between relative antialiased text-slate-800">
       {/* HEADER GLOBAL */}
       <Header />
 
-      {/* FUNDO */}
-      <div className="fixed top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-fuchsia-400/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-amber-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
-
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center px-4 pt-24 sm:pt-26 md:pt-20 pb-4 md:pb-6 md:pl-24 relative z-10 my-auto">
-        
-        {/* TAMANHO DOS BOTÕES */}
-        <div className={`w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto ${isAdmin ? 'max-w-68 sm:max-w-78 md:max-w-187.5' : 'max-w-68 sm:max-w-75 md:max-w-130'}`}>
-          
-          <div className={`grid grid-cols-2 gap-3.5 sm:gap-4 md:gap-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-    
-            {/* MESAS */}
-            <button 
-              onClick={() => navigate('/mesas')} 
-              className="group relative w-full aspect-square rounded-3xl bg-linear-to-br from-fuchsia-500 to-fuchsia-700 border border-fuchsia-400/50 
-                         shadow-xl shadow-fuchsia-500/30 
-                         hover:-translate-y-1 hover:shadow-2xl hover:shadow-fuchsia-500/50
-                         active:scale-95 active:translate-y-0
-                         transition-all duration-300 ease-out flex flex-col items-center justify-center gap-3 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl md:rounded-3xl bg-white/20 backdrop-blur-md shadow-inner border border-white/40 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300 relative z-10">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M12.5 11.134 18.196 21"/><path d="M20.425 5.299a10 10 0 0 0-16.941 9.78c.183.563.843.774 1.355.478L20.16 6.711c.512-.296.66-.973.264-1.413"/><path d="M21 21H3"/></svg>
+      <main className="flex-1 w-full max-w-xl mx-auto px-4 sm:px-6 pt-22 pb-8 md:pt-24 md:pl-24">
+        {/* CARD SUPERIOR: OLÁ, [NOME DO USUÁRIO]! */}
+        <section className="bg-slate-100/80 border border-slate-200/70 rounded-3xl p-4 sm:p-5 mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center text-2xl shrink-0">
+                {garcomLogado?.avatar || '👋'}
               </div>
-              <span className="font-bold text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10">Mesas</span>
-            </button>
-
-            {/* BAR / COZINHA */}
-            <button 
-              onClick={() => navigate('/cozinha')} 
-              className="group relative w-full aspect-square rounded-3xl bg-linear-to-br from-amber-400 to-amber-600 border border-amber-300/50 
-                         shadow-xl shadow-amber-500/30 
-                         hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/50
-                         active:scale-95 active:translate-y-0
-                         transition-all duration-300 ease-out flex flex-col items-center justify-center gap-3 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl md:rounded-3xl bg-white/30 backdrop-blur-md shadow-inner border border-white/50 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300 relative z-10">
-               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M10 3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a6 6 0 0 0 1.2 3.6l.6.8A6 6 0 0 1 17 13v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-8a6 6 0 0 1 1.2-3.6l.6-.8A6 6 0 0 0 10 5z"/><path d="M17 13h-4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h4"/></svg>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-normal text-slate-400">
+                    {saudacaoHorario}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 border border-yellow-200/80 text-[10px] font-medium text-yellow-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                    Ao vivo
+                  </span>
+                </div>
+                <h1 className="text-lg sm:text-xl font-medium text-slate-900 tracking-tight truncate mt-0.5">
+                  Olá, {primeiroNome}!
+                </h1>
+                <p className="text-xs text-slate-400 truncate">
+                  {dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA}
+                </p>
               </div>
-              <span className="font-bold text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10">Bar</span>
-            </button>
+            </div>
 
-            {/* CAIXA */}
-            <button 
-              onClick={() => navigate('/painel')} 
-              className={`group relative w-full rounded-3xl bg-linear-to-br from-teal-700 to-teal-600 border border-teal-600 
-                         shadow-xl shadow-teal-500/30 
-                         hover:-translate-y-1 hover:shadow-2xl hover:shadow-teal-500/50
-                         active:scale-95 active:translate-y-0
-                         transition-all duration-300 ease-out overflow-hidden
-                         ${!isAdmin ? 'col-span-2 md:col-span-1 flex-row md:flex-col h-16 md:h-auto md:aspect-square px-5 md:px-0 justify-start md:justify-center items-center gap-4' 
-                                    : 'aspect-square flex-col justify-center items-center gap-3'} flex`}
+            <button
+              type="button"
+              onClick={() => navigate('/mesas')}
+              className="h-9 px-3.5 rounded-xl bg-white hover:bg-yellow-50 border border-slate-200/80 hover:border-yellow-200 text-xs font-medium text-slate-700 hover:text-yellow-700 shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
-               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-               
-               <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-3xl bg-white/20 backdrop-blur-md shadow-inner border border-white/40 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300 relative z-10 shrink-0">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
-               </div>
-
-               {/* condição */}
-               {!isAdmin ? (
-                  <>
-                     <div className="text-left flex-1 relative z-10 md:text-center md:flex-none">
-                       <span className="block font-medium text-white text-[13px] md:text-[12px] uppercase tracking-widest md:leading-tight">
-                         <span className="hidden md:inline">Caixa</span>
-                         <span className="md:hidden">Caixa</span>
-                       </span>
-                     </div>
-                     <div className="w-7 h-7 md:hidden rounded-full bg-white/20 flex items-center justify-center text-white relative z-10 group-hover:translate-x-1 transition-all duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                     </div>
-                  </>
-               ) : (
-                  <span className="font-medium text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10 text-center leading-tight">Caixa</span>
-               )}
+              <LucideIcons.Umbrella size={14} strokeWidth={2} className="text-yellow-600" />
+              <span>Abrir Mesas</span>
             </button>
-
-            {/* GESTÃO (Admins) */}
-            {isAdmin && (
-              <button  
-                onClick={() => navigate('/admin')} 
-                className="group relative w-full aspect-square rounded-3xl bg-linear-to-br from-gray-800 to-gray-900 border border-gray-700/50 
-                           shadow-xl shadow-slate-900/30 
-                           hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/50
-                           active:scale-95 active:translate-y-0
-                           transition-all duration-300 ease-out flex flex-col items-center justify-center gap-3 overflow-hidden"
-              >
-                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                 
-                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-md shadow-inner border border-white/30 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300 relative z-10">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-                 </div>
-                 <span className="font-bold text-white text-[11px] md:text-[12px] tracking-widest uppercase relative z-10 text-center leading-tight">Admin</span>
-              </button>
-            )}
-
           </div>
+        </section>
+
+        {/* TÍTULO DE SEÇÃO: RESUMO EM TEMPO REAL */}
+        <div className="flex items-center justify-between px-1 mb-2.5">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-400">
+            Resumo da operação agora
+          </h2>
+          <span className="text-[11px] text-slate-400">
+            Toque para acessar
+          </span>
         </div>
+
+        {/* CARDS HORIZONTAIS DE RESUMO (CLICÁVEIS) */}
+        <section className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-1">
+          {/* 1. Mesas Ocupadas */}
+          <button
+            type="button"
+            onClick={() => navigate('/mesas')}
+            className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/60 hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-yellow-50 border border-yellow-200/70 text-yellow-600 flex items-center justify-center shrink-0">
+                <LucideIcons.Umbrella size={18} strokeWidth={1.9} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {mesasOcupadas.length === 1
+                    ? '1 mesa ocupada'
+                    : `${mesasOcupadas.length} mesas ocupadas`}
+                </p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  {mesasOcupadas.length > 0
+                    ? `Em atendimento: ${mesasOcupadas.map((m) => `Mesa ${m.numero}`).slice(0, 4).join(', ')}${
+                        mesasOcupadas.length > 4 ? ` +${mesasOcupadas.length - 4}` : ''
+                      }`
+                    : 'Nenhuma mesa aberta no momento'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pl-2">
+              <span className="text-xs font-medium text-slate-500 tabular-nums hidden sm:inline">
+                Ver mapa
+              </span>
+              <LucideIcons.ChevronRight
+                size={16}
+                strokeWidth={1.8}
+                className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+              />
+            </div>
+          </button>
+
+          {/* 2. Mesas Livres */}
+          <button
+            type="button"
+            onClick={() => navigate('/mesas')}
+            className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/60 hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-600 flex items-center justify-center shrink-0">
+                <LucideIcons.CheckCircle2 size={18} strokeWidth={1.9} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {mesasLivres.length === 1
+                    ? '1 mesa livre'
+                    : `${mesasLivres.length} mesas livres`}
+                </p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  {mesasLivres.length > 0
+                    ? `Disponíveis: ${mesasLivres.map((m) => m.numero).slice(0, 6).join(', ')}${
+                        mesasLivres.length > 6 ? '...' : ''
+                      }`
+                    : 'Todas as mesas estão ocupadas'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pl-2">
+              <span className="text-xs text-slate-400 hidden sm:inline">Guarda-sóis</span>
+              <LucideIcons.ChevronRight
+                size={16}
+                strokeWidth={1.8}
+                className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+              />
+            </div>
+          </button>
+
+          {/* 3. Pedidos em Preparo */}
+          <button
+            type="button"
+            onClick={() => navigate('/cozinha')}
+            className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/60 hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/70 text-amber-600 flex items-center justify-center shrink-0">
+                <LucideIcons.UtensilsCrossed size={18} strokeWidth={1.9} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {totalPedidosEmPreparo === 1
+                    ? '1 pedido em preparo'
+                    : `${totalPedidosEmPreparo} pedidos em preparo`}
+                </p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  {mesasComPreparo.length > 0
+                    ? `Bar/Cozinha preparando: Mesa ${mesasComPreparo.join(', Mesa ')}`
+                    : 'Nenhum pedido aguardando preparo no bar'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pl-2">
+              <span className="text-xs text-slate-400 hidden sm:inline">Bar e Cozinha</span>
+              <LucideIcons.ChevronRight
+                size={16}
+                strokeWidth={1.8}
+                className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+              />
+            </div>
+          </button>
+
+          {/* 4. Pedidos Prontos */}
+          <button
+            type="button"
+            onClick={handleClickPedidosProntos}
+            className={`group w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all duration-150 text-left cursor-pointer active:scale-[0.99] ${
+              totalPedidosProntos > 0
+                ? 'bg-emerald-50/90 hover:bg-emerald-50 border border-emerald-200/80 shadow-2xs'
+                : 'bg-white/60 hover:bg-white hover:shadow-2xs'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  totalPedidosProntos > 0
+                    ? 'bg-emerald-500 text-white shadow-xs'
+                    : 'bg-slate-100 border border-slate-200/80 text-slate-500'
+                }`}
+              >
+                <LucideIcons.BellRing
+                  size={18}
+                  strokeWidth={1.9}
+                  className={totalPedidosProntos > 0 ? 'animate-bounce' : ''}
+                />
+              </div>
+              <div className="min-w-0">
+                <p
+                  className={`text-sm font-medium truncate ${
+                    totalPedidosProntos > 0 ? 'text-emerald-950' : 'text-slate-800'
+                  }`}
+                >
+                  {totalPedidosProntos === 1
+                    ? '1 pedido pronto'
+                    : `${totalPedidosProntos} pedidos prontos`}
+                </p>
+                <p
+                  className={`text-xs truncate mt-0.5 ${
+                    totalPedidosProntos > 0 ? 'text-emerald-700' : 'text-slate-400'
+                  }`}
+                >
+                  {listaMesasComPedidosProntos.length > 0
+                    ? `Retirar no bar: ${listaMesasComPedidosProntos
+                        .map((p) => `Mesa ${p.numeroMesa}`)
+                        .join(', ')}`
+                    : 'Nenhum pedido aguardando retirada'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pl-2">
+              {totalPedidosProntos > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-medium">
+                  Servir agora
+                </span>
+              )}
+              <LucideIcons.ChevronRight
+                size={16}
+                strokeWidth={1.8}
+                className={
+                  totalPedidosProntos > 0
+                    ? 'text-emerald-700 group-hover:translate-x-0.5 transition-all'
+                    : 'text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all'
+                }
+              />
+            </div>
+          </button>
+
+          {/* 5. Resumo do Caixa do Dia */}
+          <button
+            type="button"
+            onClick={() => navigate('/painel')}
+            className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-white/60 hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0">
+                <LucideIcons.Wallet size={18} strokeWidth={1.9} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {resumoCaixaHoje.quantidade === 1
+                    ? '1 conta fechada hoje'
+                    : `${resumoCaixaHoje.quantidade} contas fechadas hoje`}
+                </p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  Total recebido hoje: {formatarMoeda(resumoCaixaHoje.total)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pl-2">
+              <span className="text-xs text-slate-400 hidden sm:inline">Caixa</span>
+              <LucideIcons.ChevronRight
+                size={16}
+                strokeWidth={1.8}
+                className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+              />
+            </div>
+          </button>
+        </section>
+
+        {/* ATALHO DIRETO PARA MESAS COM PEDIDOS PRONTOS OU OCUPADAS */}
+        {mesasOcupadas.length > 0 && (
+          <section className="mt-5">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                Acesso rápido às comandas abertas
+              </h3>
+              <button
+                type="button"
+                onClick={() => navigate('/mesas')}
+                className="text-xs text-yellow-700 hover:underline cursor-pointer"
+              >
+                Ver todas
+              </button>
+            </div>
+
+            <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-1">
+              {mesasOcupadas.slice(0, 5).map((mesa) => {
+                const totalParcial = (mesa.itens || []).reduce(
+                  (acc, item) => acc + item.produto.preco * item.quantidade,
+                  0
+                );
+                const qtdProntos = (mesa.itens || []).filter(
+                  (i) => i.statusCozinha === 'pronto'
+                ).length;
+
+                return (
+                  <button
+                    key={mesa.id}
+                    type="button"
+                    onClick={() => navigate(`/comanda/${mesa.numero}`)}
+                    className="group w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/70 hover:bg-white hover:shadow-2xs transition-all text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-lg bg-slate-900 text-white text-xs font-medium flex items-center justify-center shrink-0 tabular-nums">
+                        {String(mesa.numero).padStart(2, '0')}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-800 truncate">
+                          Mesa {mesa.numero}
+                          {mesa.nomeCliente ? ` • ${mesa.nomeCliente}` : ''}
+                        </p>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {mesa.garcomNome ? `Atendente: ${mesa.garcomNome}` : 'Comanda aberta'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {qtdProntos > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium">
+                          Pronto
+                        </span>
+                      )}
+                      <span className="text-xs font-medium text-slate-700 tabular-nums">
+                        {formatarMoeda(totalParcial)}
+                      </span>
+                      <LucideIcons.ChevronRight
+                        size={15}
+                        strokeWidth={1.8}
+                        className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* RODAPÉ */}
-      <footer className="w-full pb-22 md:pb-6 pt-2 md:pl-24 flex flex-col items-center justify-center relative z-10 shrink-0">
-        <div className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
-          
-          {/* Selo de Segurança */}
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-            <LucideIcons.ShieldCheck size={14} className="text-emerald-500" strokeWidth={2.5} />
+      <footer className="w-full pb-24 md:pb-6 pt-2 md:pl-24 flex flex-col items-center justify-center relative z-10 shrink-0">
+        <div className="flex flex-col items-center gap-1.5 opacity-55 hover:opacity-100 transition-opacity duration-300">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-slate-600">
+            <LucideIcons.ShieldCheck size={13} className="text-emerald-500" strokeWidth={2.2} />
             <span>Ambiente Seguro</span>
           </div>
-
-          {/* Assinatura da Empresa / Dev */}
-          <div className="flex flex-col items-center text-[9px] font-medium uppercase tracking-widest text-slate-400 text-center gap-0.5">
+          <div className="flex flex-col items-center text-[9px] font-normal uppercase tracking-widest text-slate-400 text-center gap-0.5">
             <span className="flex items-center gap-1">
-              <LucideIcons.Code size={10} strokeWidth={3} />
-              Desenvolvido pela Empresa <strong className="font-bold text-slate-500">Âncora Dev.</strong>
+              <LucideIcons.Code size={10} strokeWidth={2.5} />
+              Desenvolvido pela Empresa <strong className="font-medium text-slate-500">Âncora Dev.</strong>
             </span>
             <span>Eng. de Software Thamiles</span>
           </div>
-          
         </div>
       </footer>
     </div>

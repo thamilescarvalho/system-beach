@@ -250,7 +250,11 @@ serve(async (req: Request) => {
       }
     }
 
-    const originUrl = (body.origin || 'http://localhost:5173').replace(/\/$/, '')
+    const rawOrigin = (body.origin || 'https://www.t-systembeach.com.br').trim().replace(/\/$/, '')
+    const originUrl =
+      rawOrigin.startsWith('https://') && !rawOrigin.includes('localhost') && !rawOrigin.includes('127.0.0.1')
+        ? rawOrigin
+        : 'https://www.t-systembeach.com.br'
     const externalReference = `${empresa.id}|${cicloPadrao.id}`
     const webhookUrl = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mercadopago-webhook`
 

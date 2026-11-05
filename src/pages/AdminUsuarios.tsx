@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import type { Garcom } from '../types';
 import * as LucideIcons from 'lucide-react';
 import { ModalConfirmacao } from '../components/ModalConfirmacao';
+import { obterUrlBaseSistema } from '../utils/configuracoesSaaS';
 
 interface SeletorAvatarProps {
   avatarAtual: string;
@@ -264,7 +265,9 @@ export function AdminUsuarios() {
     if (!email) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${obterUrlBaseSistema()}/login`
+      });
       if (error) throw error;
       mostrarToast('E-mail de redefinição de senha enviado com sucesso!', 'sucesso');
     } catch (error) {

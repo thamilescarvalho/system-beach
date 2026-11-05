@@ -1,10 +1,17 @@
 // src/pages/Admin.tsx
-import { useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
-import { Header } from '../components/Header'; 
+import { Header } from '../components/Header';
+import { ModalConfirmacao } from '../components/ModalConfirmacao';
 import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
+import {
+  carregarConfiguracaoGlobalSaaS,
+  obterConfiguracaoGlobalLocal
+} from '../utils/configuracoesSaaS';
+import { obterConfiguracaoImpressora } from '../utils/impressoraTermica';
 import {
   formatarCpfCnpj,
   formatarTelefoneBR,
@@ -14,22 +21,179 @@ import {
   validarEmail
 } from '../utils/validadores';
 
-interface OpcaoMenuAdmin {
-  title: string;
-  icon: ReactNode;
-  bg: string;
-  shadow: string;
-  onClick: () => void;
-}
-
 const LIMITE_NOME_EXIBICAO = 40;
 
 export function Admin() {
   const navigate = useNavigate();
-  const { dadosEmpresa, atualizarDadosMinhaEmpresa, garcomLogado } = useAppContext();
+  const { dadosEmpresa, atualizarDadosMinhaEmpresa, garcomLogado, setGarcomLogado } = useAppContext();
 
   // Controle de permissão de acesso: somente Admin do estabelecimento ou Super Admin
   const isAdmin = garcomLogado?.cargo === 'admin' || garcomLogado?.cargo === 'super_admin';
+
+  // Configuração global SaaS (WhatsApp de Suporte definido pelo Super Admin)
+  const [whatsappSuporte, setWhatsappSuporte] = useState<string>(
+    () => obterConfiguracaoGlobalLocal().whatsappSuporte
+  );
+
+  useEffect(() => {
+    let ativo = true;
+    carregarConfiguracaoGlobalSaaS()
+      .then((cfg) => {
+        if (ativo && cfg.whatsappSuporte) {
+          setWhatsappSuporte(cfg.whatsappSuporte);
+        }
+      })
+      .catch(() => {
+        // Mantém fallback local
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  // Estado da Impressora Térmica
+  const [configImpressora] = useState(() => obterConfiguracaoImpressora());
+
+  // Estado de Notificações (Sincronizado com Header)
+  const [modalNotificacoes, setModalNotificacoes] = useState<boolean>(false);
+  const [alertaSonoroAtivo, setAlertaSonoroAtivo] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const salvo = localStorage.getItem('tsystem_alerta_som');
+      return salvo !== null ? salvo === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+  const [notificacoesNavegadorAtivo, setNotificacoesNavegadorAtivo] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const salvo = localStorage.getItem('tsystem_notificacoes_navegador');
+      if (salvo !== null) return salvo === 'true';
+      return typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
+    } catch {
+      return false;
+    }
+  });
+  const [permissaoNavegador, setPermissaoNavegador] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const som = localStorage.getItem('tsystem_alerta_som');
+        if (som !== null) setAlertaSonoroAtivo(som === 'true');
+        const nav = localStorage.getItem('tsystem_notificacoes_navegador');
+        if (nav !== null) setNotificacoesNavegadorAtivo(nav === 'true');
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          setPermissaoNavegador(Notification.permission);
+        }
+      } catch {
+        // Ignora
+      }
+    };
+    window.addEventListener('tsystem:notificacoes-sync', sync);
+    return () => window.removeEventListener('tsystem:notificacoes-sync', sync);
+  }, []);
+
+  const tocarSomTeste = () => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const agora = ctx.currentTime;
+
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, agora);
+      gain1.gain.setValueAtTime(0, agora);
+      gain1.gain.linearRampToValueAtTime(0.18, agora + 0.02);
+      gain1.gain.exponentialRampToValueAtTime(0.001, agora + 0.25);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(agora);
+      osc1.stop(agora + 0.27);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, agora + 0.1);
+      gain2.gain.setValueAtTime(0, agora + 0.1);
+      gain2.gain.linearRampToValueAtTime(0.22, agora + 0.13);
+      gain2.gain.exponentialRampToValueAtTime(0.001, agora + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(agora + 0.1);
+      osc2.stop(agora + 0.52);
+    } catch {
+      // Ignora
+    }
+  };
+
+  const handleToggleSom = () => {
+    const novo = !alertaSonoroAtivo;
+    setAlertaSonoroAtivo(novo);
+    try {
+      localStorage.setItem('tsystem_alerta_som', novo ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
+    } catch {
+      // Ignora
+    }
+    if (novo) tocarSomTeste();
+  };
+
+  const handleToggleNotificacaoNavegador = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Seu navegador não oferece suporte a notificações nativas.');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      alert(
+        'As notificações estão bloqueadas nas configurações do navegador. Clique no cadeado ao lado do endereço do site para permitir.'
+      );
+      return;
+    }
+
+    if (Notification.permission === 'default') {
+      try {
+        const res = await Notification.requestPermission();
+        setPermissaoNavegador(res);
+        const habilitado = res === 'granted';
+        setNotificacoesNavegadorAtivo(habilitado);
+        localStorage.setItem('tsystem_notificacoes_navegador', habilitado ? 'true' : 'false');
+        window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
+        if (habilitado) {
+          new Notification('Notificações Ativadas 🔔', {
+            body: 'Você receberá alertas em tempo real de pedidos prontos e avisos operacionais.',
+            icon: '/favicon.ico'
+          });
+        }
+      } catch {
+        // Ignora
+      }
+      return;
+    }
+
+    const novo = !notificacoesNavegadorAtivo;
+    setNotificacoesNavegadorAtivo(novo);
+    try {
+      localStorage.setItem('tsystem_notificacoes_navegador', novo ? 'true' : 'false');
+      window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
+    } catch {
+      // Ignora
+    }
+  };
 
   // Modal: Gestão Completa da Minha Empresa (Identidade + Dados Cadastrais)
   const [modalEmpresa, setModalEmpresa] = useState<boolean>(false);
@@ -41,6 +205,10 @@ export function Admin() {
   const [salvando, setSalvando] = useState<boolean>(false);
   const [erro, setErro] = useState<string>('');
   const [sucesso, setSucesso] = useState<boolean>(false);
+
+  // Modal: Excluir Conta
+  const [modalExcluirConta, setModalExcluirConta] = useState<boolean>(false);
+  const [excluindoConta, setExcluindoConta] = useState<boolean>(false);
 
   const abrirModalEmpresa = () => {
     if (dadosEmpresa) {
@@ -63,7 +231,6 @@ export function Admin() {
     const telLimpo = extrairDigitos(telefone);
     const emailLimpo = emailContato.trim().toLowerCase();
 
-    // Validações de integridade
     if (nomeLimpo.length < 3) {
       setErro('O nome do estabelecimento deve ter no mínimo 3 caracteres.');
       return;
@@ -101,7 +268,7 @@ export function Admin() {
       setSucesso(true);
       setTimeout(() => {
         setModalEmpresa(false);
-      }, 1000);
+      }, 900);
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar os dados. Tente novamente.');
     } finally {
@@ -109,98 +276,393 @@ export function Admin() {
     }
   };
 
+  const handleObterSuporte = () => {
+    const nomeEstab = dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA;
+    const msg = `Olá! Preciso de suporte no sistema para o estabelecimento *${nomeEstab}*.`;
+    const digitos = whatsappSuporte.replace(/\D/g, '');
+    const numeroFinal = digitos.startsWith('55') ? digitos : `55${digitos}`;
+    const url = `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleLogout = () => {
+    setGarcomLogado(null);
+    navigate('/login');
+  };
+
+  const handleConfirmarExclusaoConta = async () => {
+    if (!dadosEmpresa?.id) return;
+    setExcluindoConta(true);
+    try {
+      const { error } = await supabase
+        .from('empresas')
+        .update({ status_assinatura: 'suspensa' })
+        .eq('id', dadosEmpresa.id);
+
+      if (error) throw error;
+
+      setModalExcluirConta(false);
+      setGarcomLogado(null);
+      navigate('/login');
+    } catch {
+      alert('Não foi possível processar o encerramento agora. Entre em contato com o suporte.');
+    } finally {
+      setExcluindoConta(false);
+    }
+  };
+
   const nomePreview = nomeExibicao.trim() || nomeFantasia.trim() || NOME_PADRAO_SISTEMA;
   const previewPersonalizado = nomeExibicao.trim().length > 0;
 
-  const menuOptions: OpcaoMenuAdmin[] = [
-    { 
-      title: 'Financeiro', 
-      icon: <LucideIcons.Wallet size={18} strokeWidth={2} className="text-white" />, 
-      bg: 'from-green-600 to-green-950 border-green-600/50',
-      shadow: 'shadow-green-100/30 hover:shadow-green-100/50',
-      onClick: () => navigate('/admin/financeiro')
-    },
-    { 
-      title: 'Estoque',  
-      icon: <LucideIcons.Box size={18} strokeWidth={2} className="text-white" />, 
-      bg: 'from-cyan-600 to-cyan-950 border-cyan-600/50',
-      shadow: 'shadow-cyan-100/30 hover:shadow-cyan-100/50',
-      onClick: () => navigate('/admin/estoque')
-    },
-    { 
-      title: 'Equipe', 
-      icon: <LucideIcons.Users size={18} strokeWidth={2} className="text-white" />, 
-      bg: 'from-slate-600 to-slate-950 border-slate-700/60',
-      shadow: 'shadow-slate-100/30 hover:shadow-slate-100/50',
-      onClick: () => navigate('/admin/equipe')
-    },
-    {
-      title: 'Minha Empresa',
-      icon: <LucideIcons.Store size={18} strokeWidth={2} className="text-white" />,
-      bg: 'from-fuchsia-600 to-fuchsia-950 border-fuchsia-600/50',
-      shadow: 'shadow-fuchsia-100/30 hover:shadow-fuchsia-100/50',
-      onClick: abrirModalEmpresa
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col relative overflow-hidden">
-      
+    <div className="min-h-screen bg-white font-sans flex flex-col relative antialiased text-slate-800">
       {/* HEADER GLOBAL */}
       <Header />
 
-      {/* FUNDO AMBIENTE */}
-      <div className="fixed top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-cyan-400/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] max-w-lg max-h-lg bg-blue-400/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
-
-      {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 w-full flex flex-col items-center justify-center px-4 pt-20 pb-20 md:pt-20 md:pb-6 md:pl-24 relative z-10">
-        
-        {/* Título de Seção */}
-        <div className="mb-4 md:mb-10 flex flex-col items-center gap-1.5 animate-in fade-in zoom-in-95 duration-500">
-          <div className="flex items-center gap-2 text-slate-500">
-            <LucideIcons.ShieldCheck size={16} strokeWidth={2} className="text-slate-400" />
-            <h1 className="text-[12px] md:text-xl font-sans tracking-widest uppercase text-center font-medium">
-              Gestão Integrada
-            </h1>
-          </div>
+      {/* CONTEÚDO PRINCIPAL — ESTILO SETTINGS MINIMALISTA */}
+      <main className="flex-1 w-full max-w-xl mx-auto px-4 sm:px-6 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">
+        {/* Cabeçalho da Página */}
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-medium text-slate-900 tracking-tight">
+            Configurações
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA}
+          </p>
         </div>
 
-        {/* BOTÕES QUICK ACTIONS 3D */}
-        <div className="w-full relative z-10 animate-in zoom-in-95 duration-500 mx-auto max-w-70 md:max-w-150">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-5">
-            {menuOptions.map((opt) => (
-              <button
-                key={opt.title}
-                type="button"
-                onClick={opt.onClick}
-                className={`
-                  group relative w-full aspect-square rounded-2xl md:rounded-3xl
-                  bg-linear-to-br ${opt.bg} border
-                  shadow-xl ${opt.shadow}
-                  hover:-translate-y-1 hover:shadow-2xl 
-                  active:scale-95 active:translate-y-0
-                  transition-all duration-300 ease-out flex flex-col items-center justify-center gap-2 overflow-hidden cursor-pointer
-                `}
-              >
-                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                {/* CAIXA DO ÍCONE COM EFEITO 3D */}
-                <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-xl bg-white/20 backdrop-blur-md shadow-inner border border-white/40 flex items-center justify-center group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300 relative z-10">
-                  {opt.icon}
-                </div>
-                
-                {/* TEXTOS */}
-                <div className="text-center flex flex-col items-center w-full relative z-10 px-2">
-                  <span className="font-sans text-white text-[8px] md:text-[10px] tracking-widest uppercase mb-0.5 font-medium">
-                    {opt.title}
-                  </span>
-                </div>
-              </button>
-            ))}
+        <div className="space-y-4">
+          {/* GRUPO 1: GESTÃO & ESTABELECIMENTO */}
+          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/financeiro')}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Wallet size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Financeiro</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400 hidden sm:inline">Caixa, metas e relatórios</span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/estoque')}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Package size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Estoque</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400 hidden sm:inline">Produtos e cardápio</span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/equipe')}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Users size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Usuários</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400 hidden sm:inline">Garçons e acessos</span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={abrirModalEmpresa}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Store size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Minha Empresa</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400 truncate max-w-36 sm:max-w-48">
+                  {dadosEmpresa?.nome_exibicao || dadosEmpresa?.nome_fantasia || 'Editar dados'}
+                </span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/assinatura')}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.CreditCard size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Assinatura</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400">
+                  {dadosEmpresa?.status_assinatura === 'ativa'
+                    ? 'Plano ativo'
+                    : dadosEmpresa?.status_assinatura === 'degustacao'
+                      ? 'Período de teste'
+                      : 'Ver fatura e plano'}
+                </span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+          </div>
+
+          {/* GRUPO 2: NOTIFICAÇÕES & IMPRESSORA */}
+          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
+            <button
+              type="button"
+              onClick={() => setModalNotificacoes(true)}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Bell size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Notificações</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400">
+                  {alertaSonoroAtivo ? 'Som ativo' : 'Silenciado'}
+                </span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/impressora')}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Printer size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Impressora</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400">
+                  {configImpressora.dispositivoPareadoNome || `Bobina ${configImpressora.larguraPapel}`}
+                </span>
+                <LucideIcons.ChevronRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                />
+              </div>
+            </button>
+          </div>
+
+          {/* GRUPO 3: SUPORTE */}
+          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
+            <button
+              type="button"
+              onClick={handleObterSuporte}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.LifeBuoy size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Obtenha suporte</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-400 hidden sm:inline">WhatsApp</span>
+                <LucideIcons.ArrowUpRight
+                  size={15}
+                  strokeWidth={1.8}
+                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
+                />
+              </div>
+            </button>
+          </div>
+
+          {/* GRUPO 4: SESSÃO & ENCERRAMENTO */}
+          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.LogOut size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                <span className="text-sm font-normal text-slate-800 truncate">Fazer logout</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModalExcluirConta(true)}
+              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-rose-50/70 transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <LucideIcons.Trash2
+                  size={18}
+                  strokeWidth={1.8}
+                  className="text-slate-700 group-hover:text-rose-600 transition-colors shrink-0"
+                />
+                <span className="text-sm font-normal text-slate-800 group-hover:text-rose-600 transition-colors truncate">
+                  Excluir conta
+                </span>
+              </div>
+            </button>
           </div>
         </div>
       </main>
+
+      {/* MODAL: PREFERÊNCIAS DE NOTIFICAÇÕES */}
+      {modalNotificacoes && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setModalNotificacoes(false)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 p-6 pb-8 sm:pb-6 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-4 sm:hidden" />
+
+            <div className="flex items-start justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-200/80 flex items-center justify-center shrink-0">
+                  <LucideIcons.Bell size={20} strokeWidth={1.9} />
+                </div>
+                <div>
+                  <h2 className="text-base font-medium text-slate-900 tracking-tight">
+                    Notificações e Alertas
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure avisos sonoros e notificações em tempo real.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNotificacoes(false)}
+                aria-label="Fechar"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              >
+                <LucideIcons.X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Alerta Sonoro */}
+              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                    {alertaSonoroAtivo ? (
+                      <LucideIcons.Volume2 size={16} className="text-yellow-600" />
+                    ) : (
+                      <LucideIcons.VolumeX size={16} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-800">Alerta Sonoro</p>
+                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                      Toca um aviso sonoro quando pedidos ficam prontos no bar ou cozinha.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={alertaSonoroAtivo}
+                  onClick={handleToggleSom}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    alertaSonoroAtivo ? 'bg-yellow-500' : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                      alertaSonoroAtivo ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Notificações Nativas do Navegador */}
+              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <LucideIcons.BellRing
+                      size={16}
+                      className={
+                        notificacoesNavegadorAtivo && permissaoNavegador === 'granted'
+                          ? 'text-emerald-600'
+                          : 'text-slate-400'
+                      }
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-800">Notificações do Dispositivo</p>
+                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                      Exibe alertas na tela do celular ou computador mesmo em segundo plano.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notificacoesNavegadorAtivo && permissaoNavegador === 'granted'}
+                  onClick={handleToggleNotificacaoNavegador}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    notificacoesNavegadorAtivo && permissaoNavegador === 'granted'
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                      notificacoesNavegadorAtivo && permissaoNavegador === 'granted'
+                        ? 'translate-x-5'
+                        : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Botão de Teste de Som */}
+              <button
+                type="button"
+                onClick={tocarSomTeste}
+                className="w-full h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+              >
+                <LucideIcons.Play size={14} className="text-yellow-600" />
+                <span>Testar som de alerta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL: GESTÃO DA MINHA EMPRESA (DADOS CADASTRAIS + IDENTIDADE) */}
       {modalEmpresa && isAdmin && (
@@ -217,7 +679,7 @@ export function Admin() {
             {/* Cabeçalho */}
             <div className="flex items-start justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
               <div className="flex items-start gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-200/80 flex items-center justify-center shrink-0">
                   <LucideIcons.Store size={20} strokeWidth={2} />
                 </div>
                 <div className="min-w-0">
@@ -241,16 +703,20 @@ export function Admin() {
 
             {/* PRÉ-VISUALIZAÇÃO AO VIVO DO HEADER */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 mb-5">
-              <span className="text-xs font-medium text-slate-400 block mb-2 pl-0.5">Pré-visualização do Header</span>
+              <span className="text-xs font-medium text-slate-400 block mb-2 pl-0.5">
+                Pré-visualização do Header
+              </span>
               <div className="h-12 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between px-3.5">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <LucideIcons.Umbrella size={18} strokeWidth={2.2} className="text-fuchsia-600 shrink-0" />
+                  <LucideIcons.Umbrella size={18} strokeWidth={2.2} className="text-yellow-600 shrink-0" />
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-sm font-medium text-slate-800 tracking-tight leading-none truncate">
+                    <span className="text-xs font-normal uppercase text-slate-600 tracking-wide leading-none truncate">
                       {nomePreview}
                     </span>
                     {previewPersonalizado && (
-                      <span className="text-[10px] text-slate-400 leading-none">{NOME_PADRAO_SISTEMA}</span>
+                      <span className="text-[9px] uppercase text-yellow-800 leading-none">
+                        {NOME_PADRAO_SISTEMA}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -366,7 +832,7 @@ export function Admin() {
                 </div>
               </div>
 
-              {/* Informações da Licença Atual (Informativo protegido) */}
+              {/* Informações da Licença Atual */}
               {dadosEmpresa?.status_assinatura && (
                 <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between text-slate-600">
@@ -374,7 +840,7 @@ export function Admin() {
                       <LucideIcons.ShieldCheck size={14} className="text-emerald-500" />
                       Status do Plano:
                     </span>
-                    <span className="font-semibold capitalize text-slate-900">
+                    <span className="font-medium capitalize text-slate-900">
                       {dadosEmpresa.status_assinatura === 'ativa'
                         ? 'Plano Ativo'
                         : dadosEmpresa.status_assinatura === 'degustacao'
@@ -421,7 +887,7 @@ export function Admin() {
                 <button
                   type="submit"
                   disabled={salvando}
-                  className="h-10 px-5 rounded-xl bg-slate-900 hover:bg-fuchsia-800 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-slate-900/20 hover:shadow-md cursor-pointer"
+                  className="h-10 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-slate-900/20 cursor-pointer"
                 >
                   {salvando ? (
                     <>
@@ -431,7 +897,7 @@ export function Admin() {
                   ) : (
                     <>
                       <LucideIcons.Check size={15} />
-                      <span>Salvar Minha Empresa</span>
+                      <span>Salvar alterações</span>
                     </>
                   )}
                 </button>
@@ -440,6 +906,19 @@ export function Admin() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE CONFIRMAÇÃO: EXCLUIR CONTA */}
+      <ModalConfirmacao
+        aberto={modalExcluirConta}
+        titulo="Encerrar conta do estabelecimento?"
+        descricao="Ao confirmar, o acesso do estabelecimento será suspenso imediatamente e sua sessão será desconectada. Para reativar no futuro, será necessário contatar o suporte."
+        textoConfirmar="Sim, encerrar conta"
+        textoCancelar="Cancelar"
+        tipo="perigo"
+        carregando={excluindoConta}
+        onConfirmar={handleConfirmarExclusaoConta}
+        onCancelar={() => setModalExcluirConta(false)}
+      />
     </div>
   );
 }

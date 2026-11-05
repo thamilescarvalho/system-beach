@@ -59,13 +59,34 @@ serve(async (req: Request) => {
   }
 
   try {
-    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
-    if (!mpAccessToken || !supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return new Response(
-        JSON.stringify({ error: 'Variáveis MP_ACCESS_TOKEN ou SUPABASE_SERVICE_ROLE_KEY não configuradas.' }),
+        JSON.stringify({ error: 'Variáveis SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas.' }),
+        { status: 500 }
+      )
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+
+    let mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
+    if (!mpAccessToken) {
+      const { data: configRow } = await supabaseAdmin
+        .from('configuracoes_saas')
+        .select('dados')
+        .eq('id', 'global')
+        .maybeSingle()
+      const dados = (configRow?.dados || {}) as Record<string, unknown>
+      if (typeof dados.mpAccessToken === 'string') {
+        mpAccessToken = dados.mpAccessToken.trim()
+      }
+    }
+
+    if (!mpAccessToken) {
+      return new Response(
+        JSON.stringify({ error: 'MP_ACCESS_TOKEN não configurado.' }),
         { status: 500 }
       )
     }
@@ -96,11 +117,9 @@ serve(async (req: Request) => {
     const [empresaId, cicloRef] = rawRef.split(/[|_]/)
 
     if (payment.status === 'approved' && empresaId) {
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
       const { data: empresaAtual } = await supabaseAdmin
         .from('empresas')
-        .select('id, data_vencimento, mp_ultimo_pagamento_id')
+        .select('id, data_vencimento, mp_ultimo_pagamento_id, valor_mensalidade')
         .eq('id', empresaId)
         .single()
 
@@ -111,6 +130,9 @@ serve(async (req: Request) => {
         const vencimentoAtual = empresaAtual.data_vencimento ? new Date(empresaAtual.data_vencimento) : agora
         const baseCalculo = vencimentoAtual > agora ? vencimentoAtual : agora
         baseCalculo.setDate(baseCalculo.getDate() + cicloInfo.dias)
+        const novoVencimentoIso = baseCalculo.toISOString()
+
+        const valorPagoReal = Number(payment.transaction_amount || cicloInfo.valorMensal)
 
         await supabaseAdmin
           .from('empresas')
@@ -118,11 +140,40 @@ serve(async (req: Request) => {
             status_assinatura: 'ativa',
             plano_nome: 'Assinatura Premium',
             ciclo_cobranca: cicloInfo.id,
-            valor_mensalidade: cicloInfo.valorMensal,
-            data_vencimento: baseCalculo.toISOString(),
+            valor_mensalidade: valorPagoReal,
+            data_vencimento: novoVencimentoIso,
             mp_ultimo_pagamento_id: String(payment.id)
           })
           .eq('id', empresaId)
+
+        // Registra a fatura paga na tabela faturas_assinatura
+        const mesesNomes = [
+          'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ]
+        const mesAno = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`
+        const competencia = `${mesesNomes[agora.getMonth()]}/${agora.getFullYear()}`
+        const idFatura = `FAT-${mesAno.replace('-', '')}-${empresaId.substring(0, 6).toUpperCase()}`
+
+        await supabaseAdmin
+          .from('faturas_assinatura')
+          .upsert([
+            {
+              id: idFatura,
+              empresa_id: empresaId,
+              competencia,
+              mes_ano_referencia: mesAno,
+              valor: valorPagoReal,
+              data_emissao: agora.toISOString(),
+              data_vencimento: novoVencimentoIso,
+              data_pagamento: agora.toISOString(),
+              status: 'paga',
+              forma_pagamento: 'PIX / Mercado Pago',
+              payment_id_mp: String(payment.id),
+              plano_nome: 'Assinatura Premium',
+              ciclo_nome: cicloInfo.id.charAt(0).toUpperCase() + cicloInfo.id.slice(1)
+            }
+          ], { onConflict: 'id' })
       }
     }
 
