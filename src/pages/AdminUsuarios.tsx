@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Header } from '../components/Header';
+import { AvatarUsuario } from '../components/AvatarUsuario';
 import { supabase } from '../lib/supabase';
 import type { Garcom } from '../types';
 import * as LucideIcons from 'lucide-react';
@@ -464,7 +465,7 @@ export function AdminUsuarios() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-4 bg-slate-800 hover:bg-slate-900 shadow-lg shadow-slate-900/20 text-white font-bold h-11 rounded-2xl uppercase tracking-widest transition-all active:scale-95 text-[11px] flex items-center justify-center gap-2"
+                className="w-full mt-4 bg-slate-800 hover:bg-slate-900 shadow-lg shadow-slate-900/20 text-white font-bold h-11 rounded-4xl uppercase tracking-widest transition-all active:scale-95 text-[11px] flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? <LucideIcons.Loader2 size={18} className="animate-spin" /> : <><LucideIcons.Check size={18} strokeWidth={2.5} /> Confirmar Cadastro</>}
               </button>
@@ -498,11 +499,14 @@ export function AdminUsuarios() {
                       {isBloqueado && (
                         <div className="absolute -top-1 -left-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white z-10" title="Usuário Bloqueado" />
                       )}
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-2xl border group-hover:scale-110 transition-transform duration-300 shrink-0 ${
-                        isBloqueado ? 'bg-rose-50 border-rose-100 grayscale' : 'bg-slate-50 border-slate-100'
-                      }`}>
-                        {u.avatar}
-                      </div>
+                      <AvatarUsuario
+                        avatar={u.avatar}
+                        nome={u.nome}
+                        className={`w-11 h-11 rounded-full border group-hover:scale-110 transition-transform duration-300 ${
+                          isBloqueado ? 'bg-rose-50 border-rose-100 grayscale' : 'bg-slate-50 border-slate-100'
+                        }`}
+                        emojiClassName="text-2xl"
+                      />
                       <div className="flex flex-col min-w-0 pr-2">
                         <p className={`font-semibold text-[13px] uppercase tracking-tight truncate ${
                           isBloqueado ? 'text-rose-900 line-through decoration-rose-300/50' : 'text-slate-800'
@@ -516,7 +520,7 @@ export function AdminUsuarios() {
                         </span>
                       </div>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                    <div className="w-9 h-9 rounded-4xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
                       <LucideIcons.Pencil size={16} strokeWidth={2.5} />
                     </div>
                   </button>
@@ -540,7 +544,7 @@ export function AdminUsuarios() {
               <button
                 type="button"
                 onClick={() => setUsuarioEditando(null)}
-                className="w-9 h-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors active:scale-95"
+                className="w-9 h-9 bg-slate-100 border border-slate-200 rounded-4xl flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors active:scale-95"
               >
                 <LucideIcons.X size={17} strokeWidth={2} />
               </button>

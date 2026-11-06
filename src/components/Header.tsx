@@ -4,6 +4,7 @@ import type { ElementType } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { BannerDegustacao } from './BannerDegustacao';
+import { AvatarUsuario } from './AvatarUsuario';
 import * as LucideIcons from 'lucide-react';
 
 interface NavItemConfig {
@@ -141,7 +142,7 @@ export function Header() {
             rotaDestino: `/comanda/${mesa.numero}`,
             prioridadeAlta: true
           });
-        } else if (item.statusCozinha === 'pendente') {
+        } else if (item.statusCozinha === 'pendente' || item.statusCozinha === 'preparo') {
           lista.push({
             id: `bar_pendente_${mesa.numero}_${item.id}`,
             categoria: 'bar',
@@ -563,6 +564,10 @@ export function Header() {
   };
 
   const handleVoltar = () => {
+    if (path === '/admin/assinatura/renovar') {
+      navigate('/admin/assinatura');
+      return;
+    }
     if (path.startsWith('/admin/') && path !== '/admin') {
       navigate('/admin');
       return;
@@ -588,14 +593,42 @@ export function Header() {
     if (path === '/admin/financeiro') return 'Financeiro';
     if (path === '/admin/equipe') return 'Usuários';
     if (path === '/admin/impressora') return 'Impressora';
+    if (path === '/admin/assinatura/renovar') return 'Renovar Assinatura';
     if (path === '/admin/assinatura') return 'Assinatura';
+    if (path === '/perfil' || path === '/admin/perfil') return 'Meu Perfil';
     if (path === '/admin') return 'Administrativo';
     return nomeMarca;
   };
 
+  // Paleta de cores do botão voltar alinhada à identidade visual de cada página
+  const estiloBotaoVoltar = useMemo(() => {
+    if (path === '/mesas') {
+      return 'text-yellow-600 bg-yellow-50/80 border-yellow-200/80 hover:bg-yellow-100/90 hover:text-yellow-700 hover:border-yellow-300 hover:shadow-yellow-500/20';
+    }
+    if (isComanda) {
+      return 'text-teal-700 bg-teal-50/80 border-teal-200/80 hover:bg-teal-100/90 hover:text-teal-800 hover:border-teal-300 hover:shadow-teal-500/20';
+    }
+    if (path === '/cozinha') {
+      return 'text-green-600 bg-green-50/80 border-green-200/80 hover:bg-green-100/90 hover:text-green-700 hover:border-green-300 hover:shadow-green-500/20';
+    }
+    if (path === '/painel' || path === '/admin/financeiro') {
+      return 'text-emerald-700 bg-emerald-50/80 border-emerald-200/80 hover:bg-emerald-100/90 hover:text-emerald-800 hover:border-emerald-300 hover:shadow-emerald-500/20';
+    }
+    if (path === '/admin/estoque' || path === '/admin/equipe') {
+      return 'text-indigo-600 bg-indigo-50/80 border-indigo-200/80 hover:bg-indigo-100/90 hover:text-indigo-700 hover:border-indigo-300 hover:shadow-indigo-500/20';
+    }
+    if (path.startsWith('/admin/assinatura') || path === '/admin/impressora') {
+      return 'text-yellow-700 bg-yellow-50/80 border-yellow-200/80 hover:bg-yellow-100/90 hover:text-yellow-800 hover:border-yellow-300 hover:shadow-yellow-500/20';
+    }
+    return 'text-slate-600 bg-slate-100/80 border-slate-200/80 hover:bg-slate-200/70 hover:text-slate-900 hover:border-slate-300 hover:shadow-slate-500/15';
+  }, [path, isComanda]);
+
   if (!garcom) return null;
 
-  const primeiroNome = garcom.nome.split(' ')[0];
+  const primeiroNomeRaw = garcom.nome.trim().split(/\s+/)[0] || '';
+  const primeiroNome = primeiroNomeRaw
+    ? primeiroNomeRaw.charAt(0).toUpperCase() + primeiroNomeRaw.slice(1).toLowerCase()
+    : 'Colaborador';
 
   return (
     <Fragment>
@@ -648,7 +681,7 @@ export function Header() {
                 onClick={handleVoltar}
                 title="Voltar"
                 aria-label="Voltar"
-                className="group w-9 h-9 rounded-full flex items-center justify-center text-slate-400 bg-white/90 border border-slate-200/80 shadow-xs hover:bg-yellow-50 hover:text-yellow-500 hover:border-yellow-200 hover:scale-110 hover:-translate-y-0.5 hover:shadow-md hover:shadow-yellow-500/20 active:scale-95 active:translate-y-0 transition-all duration-300 ease-out cursor-pointer shrink-0"
+                className={`group w-9 h-9 rounded-4xl flex items-center justify-center border shadow-xs hover:scale-110 hover:-translate-y-0.5 hover:shadow-md active:scale-95 active:translate-y-0 transition-all duration-300 ease-out cursor-pointer shrink-0 ${estiloBotaoVoltar}`}
               >
                 <LucideIcons.ArrowLeft size={18} strokeWidth={2} className="transition-transform duration-300 group-hover:-translate-x-0.5" />
               </button>
@@ -706,11 +739,14 @@ export function Header() {
                 setMenuAberto((prev) => !prev);
                 setAlertasAberto(false);
               }}
-              className="group flex items-center gap-2 hover:bg-slate-50 p-1 md:pr-3 rounded-full md:rounded-2xl border border-transparent hover:border-slate-200 transition-all text-left cursor-pointer"
+              className="group flex items-center gap-2 hover:bg-slate-50 p-1 md:pr-3 rounded-4xl border border-transparent hover:border-slate-200 transition-all text-left cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full md:rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-lg shadow-inner shrink-0">
-                {garcom.avatar}
-              </div>
+              <AvatarUsuario
+                avatar={garcom.avatar}
+                nome={garcom.nome}
+                className="w-9 h-9 rounded-4xl bg-slate-100 border border-slate-200 shadow-inner"
+                emojiClassName="text-lg"
+              />
 
               <div className="hidden md:flex items-center gap-1.5">
                 <h2 className="text-sm font-medium text-slate-700 leading-none truncate max-w-28">{primeiroNome}</h2>
@@ -894,6 +930,14 @@ export function Header() {
                 </div>
 
                 <div className="flex flex-col gap-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { navigate('/perfil'); setMenuAberto(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <LucideIcons.UserRound size={16} /> Meu Perfil
+                  </button>
+
                   {garcom.cargo === 'super_admin' && (
                     <button
                       type="button"

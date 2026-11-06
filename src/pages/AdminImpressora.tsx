@@ -233,7 +233,7 @@ export function AdminImpressora() {
               type="button"
               onClick={handleImprimirTeste}
               disabled={imprimindoTeste}
-              className="flex-1 sm:flex-initial h-10 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-medium shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial h-10 px-4 rounded-4xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 text-xs font-medium shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <LucideIcons.Receipt size={15} className="text-yellow-600" />
               <span>{imprimindoTeste ? 'Enviando...' : 'Testar Cupom'}</span>
@@ -247,7 +247,7 @@ export function AdminImpressora() {
                 salvarConfiguracaoImpressora(nova);
                 dispararToast(nova.ativa ? 'Impressora ativada!' : 'Impressora pausada.');
               }}
-              className={`h-10 px-4 rounded-2xl text-xs font-medium transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+              className={`h-10 px-4 rounded-4xl text-xs font-medium transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
                 config.ativa
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -338,7 +338,7 @@ export function AdminImpressora() {
                     type="button"
                     onClick={handleConectarBluetooth}
                     disabled={pareando}
-                    className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="h-9 px-4 rounded-4xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <LucideIcons.Search size={13} />
                     <span>{pareando ? 'Buscando...' : 'Parear Bluetooth'}</span>
@@ -363,7 +363,7 @@ export function AdminImpressora() {
                     type="button"
                     onClick={handleConectarUSB}
                     disabled={pareando}
-                    className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="h-9 px-4 rounded-4xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <LucideIcons.PlugZap size={13} />
                     <span>{pareando ? 'Detectando...' : 'Localizar USB'}</span>
@@ -554,7 +554,7 @@ export function AdminImpressora() {
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto h-11 px-6 rounded-4xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <LucideIcons.Check size={15} className="text-yellow-400" />
                   <span>Salvar Preferências de Impressão</span>
@@ -623,7 +623,7 @@ export function AdminImpressora() {
                     <span>R$ 101,00</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Taxa Guarda-Sol:</span>
+                    <span>Valor Guarda-Sol:</span>
                     <span>+R$ 20,00</span>
                   </div>
                   <div className="flex justify-between text-emerald-700">

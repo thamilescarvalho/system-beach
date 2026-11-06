@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Header } from '../components/Header';
+import { AvatarUsuario } from '../components/AvatarUsuario';
 import { ModalConfirmacao } from '../components/ModalConfirmacao';
 import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -320,7 +321,7 @@ export function Admin() {
       <Header />
 
       {/* CONTEÚDO PRINCIPAL — ESTILO SETTINGS MINIMALISTA */}
-      <main className="flex-1 w-full max-w-xl mx-auto px-4 sm:px-6 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">
         {/* Cabeçalho da Página */}
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-medium text-slate-900 tracking-tight">
@@ -331,209 +332,264 @@ export function Admin() {
           </p>
         </div>
 
-        <div className="space-y-4">
-          {/* GRUPO 1: GESTÃO & ESTABELECIMENTO */}
-          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/financeiro')}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Wallet size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Financeiro</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400 hidden sm:inline">Caixa, metas e relatórios</span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+          {/* COLUNA PRINCIPAL: MEU PERFIL + GESTÃO & ESTABELECIMENTO */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* GRUPO 1: MEU PERFIL, GESTÃO & ESTABELECIMENTO */}
+            <div className="bg-slate-100/75 border border-slate-200/60 rounded-4xl p-1.5 space-y-0.5">
+              <button
+                type="button"
+                onClick={() => navigate('/perfil')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.UserRound size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Meu Perfil</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 hidden sm:inline">Dados, acesso e foto</span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => navigate('/admin/estoque')}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Package size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Estoque</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400 hidden sm:inline">Produtos e cardápio</span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/financeiro')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Wallet size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Financeiro</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 hidden sm:inline">Caixa, metas e relatórios</span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => navigate('/admin/equipe')}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Users size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Usuários</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400 hidden sm:inline">Garçons e acessos</span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/estoque')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Package size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Estoque</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 hidden sm:inline">Produtos e cardápio</span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={abrirModalEmpresa}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Store size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Minha Empresa</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400 truncate max-w-36 sm:max-w-48">
-                  {dadosEmpresa?.nome_exibicao || dadosEmpresa?.nome_fantasia || 'Editar dados'}
-                </span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/equipe')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Users size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Usuários</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 hidden sm:inline">Garçons e acessos</span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => navigate('/admin/assinatura')}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.CreditCard size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Assinatura</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400">
-                  {dadosEmpresa?.status_assinatura === 'ativa'
-                    ? 'Plano ativo'
-                    : dadosEmpresa?.status_assinatura === 'degustacao'
-                      ? 'Período de teste'
-                      : 'Ver fatura e plano'}
-                </span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={abrirModalEmpresa}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Store size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Minha Empresa</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 truncate max-w-36 sm:max-w-48">
+                    {dadosEmpresa?.nome_exibicao || dadosEmpresa?.nome_fantasia || 'Editar dados'}
+                  </span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/admin/assinatura')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.CreditCard size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Assinatura</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400">
+                    {dadosEmpresa?.status_assinatura === 'ativa'
+                      ? 'Plano ativo'
+                      : dadosEmpresa?.status_assinatura === 'degustacao'
+                        ? 'Período de teste'
+                        : 'Ver fatura e plano'}
+                  </span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
+            </div>
           </div>
 
-          {/* GRUPO 2: NOTIFICAÇÕES & IMPRESSORA */}
-          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
-            <button
-              type="button"
-              onClick={() => setModalNotificacoes(true)}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Bell size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Notificações</span>
+          {/* COLUNA SECUNDÁRIA: IDENTIDADE (DESKTOP), NOTIFICAÇÕES, IMPRESSORA, SUPORTE & SESSÃO */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* RESUMO RÁPIDO DO PERFIL LOGADO (DESKTOP) */}
+            {garcomLogado && (
+              <div className="hidden lg:block bg-slate-100/75 border border-slate-200/60 rounded-4xl p-1.5">
+                <button
+                  type="button"
+                  onClick={() => navigate('/perfil')}
+                  className="group w-full bg-white hover:bg-slate-50/60 rounded-[1.65rem] border border-slate-200/50 p-4 flex items-center justify-between gap-3 transition-all text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <AvatarUsuario
+                      avatar={garcomLogado.avatar}
+                      nome={garcomLogado.nome}
+                      className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200/90 shadow-inner"
+                      emojiClassName="text-2xl"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{garcomLogado.nome}</p>
+                      <p className="text-xs text-slate-400 truncate">
+                        {garcomLogado.email || (garcomLogado.cargo === 'super_admin' ? 'Super Admin' : 'Administrador')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="h-8 px-3 rounded-full bg-slate-100 group-hover:bg-slate-900 group-hover:text-white text-xs font-medium text-slate-700 flex items-center gap-1 transition-colors shrink-0">
+                    <span>Editar</span>
+                    <LucideIcons.ChevronRight size={14} strokeWidth={1.8} />
+                  </span>
+                </button>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400">
-                  {alertaSonoroAtivo ? 'Som ativo' : 'Silenciado'}
-                </span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => navigate('/admin/impressora')}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Printer size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Impressora</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400">
-                  {configImpressora.dispositivoPareadoNome || `Bobina ${configImpressora.larguraPapel}`}
-                </span>
-                <LucideIcons.ChevronRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                />
-              </div>
-            </button>
-          </div>
+            {/* GRUPO 2: NOTIFICAÇÕES & IMPRESSORA */}
+            <div className="bg-slate-100/75 border border-slate-200/60 rounded-4xl p-1.5 space-y-0.5">
+              <button
+                type="button"
+                onClick={() => setModalNotificacoes(true)}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Bell size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Notificações</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400">
+                    {alertaSonoroAtivo ? 'Som ativo' : 'Silenciado'}
+                  </span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
 
-          {/* GRUPO 3: SUPORTE */}
-          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
-            <button
-              type="button"
-              onClick={handleObterSuporte}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.LifeBuoy size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Obtenha suporte</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-400 hidden sm:inline">WhatsApp</span>
-                <LucideIcons.ArrowUpRight
-                  size={15}
-                  strokeWidth={1.8}
-                  className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
-                />
-              </div>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/impressora')}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Printer size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Impressora</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400">
+                    {configImpressora.dispositivoPareadoNome || `Bobina ${configImpressora.larguraPapel}`}
+                  </span>
+                  <LucideIcons.ChevronRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                  />
+                </div>
+              </button>
+            </div>
 
-          {/* GRUPO 4: SESSÃO & ENCERRAMENTO */}
-          <div className="bg-slate-100/75 border border-slate-200/60 rounded-2xl p-1.5 space-y-0.5">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.LogOut size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
-                <span className="text-sm font-normal text-slate-800 truncate">Fazer logout</span>
-              </div>
-            </button>
+            {/* GRUPO 3: SUPORTE */}
+            <div className="bg-slate-100/75 border border-slate-200/60 rounded-4xl p-1.5 space-y-0.5">
+              <button
+                type="button"
+                onClick={handleObterSuporte}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.LifeBuoy size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Obtenha suporte</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 hidden sm:inline">WhatsApp</span>
+                  <LucideIcons.ArrowUpRight
+                    size={15}
+                    strokeWidth={1.8}
+                    className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
+                  />
+                </div>
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setModalExcluirConta(true)}
-              className="group w-full flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-rose-50/70 transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <LucideIcons.Trash2
-                  size={18}
-                  strokeWidth={1.8}
-                  className="text-slate-700 group-hover:text-rose-600 transition-colors shrink-0"
-                />
-                <span className="text-sm font-normal text-slate-800 group-hover:text-rose-600 transition-colors truncate">
-                  Excluir conta
-                </span>
-              </div>
-            </button>
+            {/* GRUPO 4: SESSÃO & ENCERRAMENTO */}
+            <div className="bg-slate-100/75 border border-slate-200/60 rounded-4xl p-1.5 space-y-0.5">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-white hover:shadow-2xs transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.LogOut size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
+                  <span className="text-sm font-normal text-slate-800 truncate">Fazer logout</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModalExcluirConta(true)}
+                className="group w-full flex items-center justify-between px-4 py-3 rounded-4xl hover:bg-rose-50/70 transition-all duration-150 text-left cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <LucideIcons.Trash2
+                    size={18}
+                    strokeWidth={1.8}
+                    className="text-slate-700 group-hover:text-rose-600 transition-colors shrink-0"
+                  />
+                  <span className="text-sm font-normal text-slate-800 group-hover:text-rose-600 transition-colors truncate">
+                    Excluir conta
+                  </span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -654,7 +710,7 @@ export function Admin() {
               <button
                 type="button"
                 onClick={tocarSomTeste}
-                className="w-full h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                className="w-full h-10 rounded-4xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
               >
                 <LucideIcons.Play size={14} className="text-yellow-600" />
                 <span>Testar som de alerta</span>
@@ -880,14 +936,14 @@ export function Admin() {
                   type="button"
                   disabled={salvando}
                   onClick={() => setModalEmpresa(false)}
-                  className="h-10 px-4 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
+                  className="h-10 px-4 rounded-4xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={salvando}
-                  className="h-10 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-slate-900/20 cursor-pointer"
+                  className="h-10 px-5 rounded-4xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-slate-900/20 cursor-pointer"
                 >
                   {salvando ? (
                     <>

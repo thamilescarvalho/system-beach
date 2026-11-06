@@ -504,7 +504,7 @@ export function AssinaturaPendente() {
               type="button"
               onClick={handleSair}
               title="Encerrar sessão"
-              className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 text-xs font-medium uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="h-9 px-3.5 rounded-4xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 text-xs font-medium uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <LucideIcons.LogOut size={14} strokeWidth={2.2} />
               <span className="hidden sm:inline">Sair</span>
@@ -727,7 +727,7 @@ export function AssinaturaPendente() {
                     <button
                       type="button"
                       onClick={handleCopiarCodigoPix}
-                      className={`h-11 px-5 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 ${
+                      className={`h-11 px-5 rounded-4xl text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 ${
                         copiadoPix
                           ? 'bg-emerald-600 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 text-white'
@@ -758,7 +758,7 @@ export function AssinaturaPendente() {
                 type="button"
                 onClick={handleGerarPixDireto}
                 disabled={gerandoPix}
-                className="w-full h-13 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 px-4 cursor-pointer"
+                className="w-full h-13 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs uppercase tracking-wider rounded-4xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 px-4 cursor-pointer"
               >
                 {gerandoPix ? (
                   <>
@@ -768,9 +768,7 @@ export function AssinaturaPendente() {
                 ) : (
                   <>
                     <LucideIcons.QrCode size={18} className="text-yellow-400 shrink-0" />
-                    <span>
-                      Gerar QR Code PIX • R$ {formatarMoeda(cicloAtual.valorTotalCiclo)}
-                    </span>
+                    <span>Gerar QR Code PIX</span>
                   </>
                 )}
               </button>
@@ -779,7 +777,7 @@ export function AssinaturaPendente() {
                 type="button"
                 onClick={handleIrParaCheckoutMercadoPago}
                 disabled={gerandoCheckout}
-                className="w-full h-13 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/90 font-medium text-xs uppercase tracking-wider rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 px-4 cursor-pointer"
+                className="w-full h-13 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/90 font-medium text-xs uppercase tracking-wider rounded-4xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2.5 px-4 cursor-pointer"
               >
                 {gerandoCheckout ? (
                   <>
@@ -802,7 +800,7 @@ export function AssinaturaPendente() {
                 href={linkSolicitarTesteGratis}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto flex-1 h-11 px-4 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200/80 text-emerald-800 text-xs font-medium tracking-tight flex items-center justify-center gap-2 transition-all active:scale-95"
+                className="w-full sm:w-auto flex-1 h-11 px-4 rounded-4xl bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200/80 text-emerald-800 text-xs font-medium tracking-tight flex items-center justify-center gap-2 transition-all active:scale-95"
               >
                 <LucideIcons.MessageCircle size={16} strokeWidth={2.2} className="text-emerald-600 shrink-0" />
                 <span>{configSaaS.textoBotaoTesteGratis}</span>
@@ -812,7 +810,7 @@ export function AssinaturaPendente() {
                 type="button"
                 onClick={() => void handleVerificarLiberacao(false)}
                 disabled={sincronizandoAcesso}
-                className="w-full sm:w-auto h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+                className="w-full sm:w-auto h-11 px-4 rounded-4xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
               >
                 {sincronizandoAcesso ? (
                   <LucideIcons.Loader2 size={15} className="animate-spin" />

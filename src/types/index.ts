@@ -25,7 +25,7 @@ export interface ItemComanda {
   produto: Produto;
   quantidade: number;
   observacao?: string;
-  statusCozinha?: 'pendente' | 'pronto' | 'entregue';
+  statusCozinha?: 'pendente' | 'preparo' | 'pronto' | 'entregue';
   horaPedido?: string;
 }
 

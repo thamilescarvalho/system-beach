@@ -840,6 +840,189 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ==========================================
+  // MEU PERFIL (DADOS CADASTRAIS, FOTO, EMOJI E ACESSO)
+  // ==========================================
+  const comprimirERecortarFotoPerfil = async (file: File): Promise<{ blob: Blob; dataUrl: string; ext: string; mime: string }> => {
+    const bitmap = await createImageBitmap(file);
+    const lado = Math.min(bitmap.width, bitmap.height);
+    const sx = (bitmap.width - lado) / 2;
+    const sy = (bitmap.height - lado) / 2;
+    const tamanhoFinal = Math.min(320, lado);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = tamanhoFinal;
+    canvas.height = tamanhoFinal;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      bitmap.close();
+      throw new Error('Não foi possível processar a imagem.');
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, sx, sy, lado, lado, 0, 0, tamanhoFinal, tamanhoFinal);
+    bitmap.close();
+
+    const dataUrlWebp = canvas.toDataURL('image/webp', 0.85);
+    const usaWebp = dataUrlWebp.startsWith('data:image/webp');
+    const dataUrl = usaWebp ? dataUrlWebp : canvas.toDataURL('image/jpeg', 0.88);
+    const mime = usaWebp ? 'image/webp' : 'image/jpeg';
+    const ext = usaWebp ? 'webp' : 'jpg';
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), mime, 0.86)
+    );
+    if (!blob) throw new Error('Falha ao comprimir a imagem de perfil.');
+    return { blob, dataUrl, ext, mime };
+  };
+
+  const uploadFotoPerfil = async (file: File): Promise<string> => {
+    const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!tiposPermitidos.includes(file.type)) {
+      throw new Error('Formato não suportado. Use PNG, JPG ou WEBP.');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('A imagem deve ter no máximo 5MB.');
+    }
+
+    const { blob, dataUrl, ext, mime } = await comprimirERecortarFotoPerfil(file);
+
+    try {
+      const pastaTenant = obterEmpresaId() || 'geral';
+      const userId = garcomLogado?.id || 'user';
+      const filePath = `${pastaTenant}/avatares/${userId}_${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage.from('produtos').upload(filePath, blob, {
+        contentType: mime,
+        upsert: true
+      });
+      if (!uploadError) {
+        const { data } = supabase.storage.from('produtos').getPublicUrl(filePath);
+        if (data?.publicUrl) return data.publicUrl;
+      }
+    } catch {
+      // Fallback seguro para Data URL otimizada caso o bucket bloqueie escrita
+    }
+
+    return dataUrl;
+  };
+
+  const atualizarMeuPerfil = async (dados: { nome: string; avatar: string; emojiPreferido?: string; telefone?: string }) => {
+    if (!garcomLogado) {
+      throw new Error('Nenhum usuário autenticado.');
+    }
+
+    const nomeLimpo = dados.nome.trim();
+    if (nomeLimpo.length < 2) {
+      throw new Error('Informe um nome válido com pelo menos 2 caracteres.');
+    }
+
+    const avatarFinal = dados.avatar.trim() || '👤';
+
+    const { error: dbError } = await supabase
+      .from('usuarios')
+      .update({
+        nome: nomeLimpo,
+        avatar: avatarFinal
+      })
+      .eq('id', garcomLogado.id);
+
+    if (dbError) {
+      throw new Error('Não foi possível atualizar os dados do perfil.');
+    }
+
+    if (dados.emojiPreferido) {
+      try {
+        localStorage.setItem(`tsystem_emoji_${garcomLogado.id}`, dados.emojiPreferido);
+      } catch {
+        // Ignora erro de storage local
+      }
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user && session.user.id === garcomLogado.id) {
+      await supabase.auth.updateUser({
+        data: {
+          nome_usuario: nomeLimpo,
+          avatar_emoji: dados.emojiPreferido || undefined,
+          telefone: dados.telefone !== undefined ? dados.telefone : undefined
+        }
+      }).catch(() => null);
+    }
+
+    setGarcomLogadoState(prev => prev ? { ...prev, nome: nomeLimpo, avatar: avatarFinal } : prev);
+    setUsuarios(prev => prev.map(u => u.id === garcomLogado.id ? { ...u, nome: nomeLimpo, avatar: avatarFinal } : u));
+    await registrarAuditoria('EDICAO', 'PERFIL', `Usuário '${nomeLimpo}' atualizou seu próprio perfil.`);
+  };
+
+  const alterarMeuEmail = async (novoEmail: string, senhaAtual: string) => {
+    if (!garcomLogado) throw new Error('Nenhum usuário autenticado.');
+    const emailLimpo = novoEmail.trim().toLowerCase();
+    if (!emailLimpo || !emailLimpo.includes('@')) {
+      throw new Error('Informe um endereço de e-mail válido.');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user || session.user.id !== garcomLogado.id || !session.user.email) {
+      throw new Error('Para alterar dados de acesso, acesse diretamente com sua conta.');
+    }
+
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: senhaAtual
+    });
+    if (reauthError) {
+      throw new Error('A senha atual informada está incorreta.');
+    }
+
+    const { error: authUpdateErr } = await supabase.auth.updateUser({ email: emailLimpo });
+    if (authUpdateErr) {
+      throw new Error(
+        authUpdateErr.message.toLowerCase().includes('already')
+          ? 'Este e-mail já está em uso por outra conta.'
+          : 'Não foi possível atualizar o e-mail de acesso.'
+      );
+    }
+
+    await supabase.from('usuarios').update({ email: emailLimpo }).eq('id', garcomLogado.id);
+    await supabase.functions.invoke('admin-auth', {
+      body: { userId: garcomLogado.id, newEmail: emailLimpo }
+    }).catch(() => null);
+
+    localStorage.setItem('tsystem_saved_email', emailLimpo);
+    setGarcomLogadoState(prev => prev ? { ...prev, email: emailLimpo } : prev);
+    setUsuarios(prev => prev.map(u => u.id === garcomLogado.id ? { ...u, email: emailLimpo } : u));
+  };
+
+  const alterarMinhaSenha = async (senhaAtual: string, novaSenha: string) => {
+    if (!garcomLogado) throw new Error('Nenhum usuário autenticado.');
+    if (novaSenha.length < 6) {
+      throw new Error('A nova senha deve ter no mínimo 6 caracteres.');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user || session.user.id !== garcomLogado.id || !session.user.email) {
+      throw new Error('Para alterar sua senha, acesse diretamente com sua conta.');
+    }
+
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: senhaAtual
+    });
+    if (reauthError) {
+      throw new Error('A senha atual informada está incorreta.');
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    if (error) {
+      throw new Error(
+        error.message.toLowerCase().includes('different')
+          ? 'A nova senha deve ser diferente da senha atual.'
+          : 'Não foi possível atualizar a senha. Tente novamente.'
+      );
+    }
+  };
+
   const adicionarCategoria = async (nome: string, icone: string) => {
     const eid = obterEmpresaId();
     const novaOrdem = categorias.length;
@@ -1016,7 +1199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await carregarDados(true);
   };
 
-  const atualizarStatusCozinha = async (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => {
+  const atualizarStatusCozinha = async (numeroMesa: number, idItem: string, status: 'pendente' | 'preparo' | 'pronto' | 'entregue') => {
     const eid = obterEmpresaId();
     const mesa = mesas.find(m => m.numero === numeroMesa);
     if (!mesa || !eid) return;
@@ -1024,14 +1207,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const novosItens = mesa.itens.map(i => i.id === idItem ? { ...i, statusCozinha: status } : i);
     setMesas(prev => prev.map(m => m.numero === numeroMesa ? { ...m, itens: novosItens } : m));
 
-    const { error: rpcErr } = await supabase.rpc('atualizar_status_item_cozinha', {
-      p_numero_mesa: numeroMesa,
-      p_item_id: idItem,
-      p_novo_status: status
-    });
-
-    if (rpcErr) {
+    if (status === 'preparo') {
       await supabase.from('mesas').update({ itens: novosItens }).eq('numero', numeroMesa).eq('empresa_id', eid);
+    } else {
+      const { error: rpcErr } = await supabase.rpc('atualizar_status_item_cozinha', {
+        p_numero_mesa: numeroMesa,
+        p_item_id: idItem,
+        p_novo_status: status
+      });
+
+      if (rpcErr) {
+        await supabase.from('mesas').update({ itens: novosItens }).eq('numero', numeroMesa).eq('empresa_id', eid);
+      }
     }
     await carregarDados(true);
   };
@@ -1178,7 +1365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         totalDaMesa += valorTaxa;
         itensFinais.push({
           id: `taxa-${Date.now()}`,
-          produto: { id: 999, nome: 'Guarda-sol / Taxa', preco: valorTaxa, categoria: 'Outros', ativo: true, precoCusto: 0 },
+          produto: { id: 999, nome: 'Valor Guarda-Sol', preco: valorTaxa, categoria: 'Outros', ativo: true, precoCusto: 0 },
           quantidade: 1,
           statusCozinha: 'entregue'
         });
@@ -1372,7 +1559,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       editarProduto,
       registrarValeFuncionario,
       excluirPagamentoGarcom,
-      atualizarStatusPagamentoGarcom
+      atualizarStatusPagamentoGarcom,
+      uploadFotoPerfil,
+      atualizarMeuPerfil,
+      alterarMeuEmail,
+      alterarMinhaSenha
     }}>
       {children}
     </AppContext.Provider>

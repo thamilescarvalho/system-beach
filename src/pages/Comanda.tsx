@@ -40,11 +40,13 @@ const agruparItensParaInterface = (itens: ItemComanda[]): ItemComanda[] => {
     if (mapa.has(prodId)) {
       const existente = mapa.get(prodId)!;
 
-      let novoStatus: 'pronto' | 'pendente' | 'entregue';
+      let novoStatus: 'pronto' | 'pendente' | 'preparo' | 'entregue';
       if (existente.statusCozinha === 'pronto' || item.statusCozinha === 'pronto') {
         novoStatus = 'pronto';
       } else if (existente.statusCozinha === 'pendente' || item.statusCozinha === 'pendente') {
         novoStatus = 'pendente';
+      } else if (existente.statusCozinha === 'preparo' || item.statusCozinha === 'preparo') {
+        novoStatus = 'preparo';
       } else {
         novoStatus = 'entregue';
       }
@@ -125,6 +127,13 @@ export function Comanda() {
   
   const [pagamentosLancados, setPagamentosLancados] = useState<Pagamento[]>([]);
   const [valorDigitado, setValorDigitado] = useState('');
+  const [consumoAberto, setConsumoAberto] = useState(false);
+  const [alertaValor, setAlertaValor] = useState<{
+    tipo: 'menor' | 'maior';
+    lancado: number;
+    total: number;
+    diferenca: number;
+  } | null>(null);
 
   const manipularProduto = (produto: Produto, acao: 'mais' | 'menos') => {
     setItensPedidos(prev => {
@@ -228,6 +237,8 @@ export function Comanda() {
     setInputDesconto('');
     setPagamentosLancados([]);
     setValorDigitado('');
+    setConsumoAberto(false);
+    setAlertaValor(null);
     setEtapaModal(1);
   };
 
@@ -235,6 +246,7 @@ export function Comanda() {
     setValorTaxa(taxaDigitada);
     setPagamentosLancados([]); 
     setValorDigitado('');
+    setAlertaValor(null);
     setEtapaModal(2);
   };
 
@@ -256,7 +268,37 @@ export function Comanda() {
   };
 
   const concluirMesaFinal = async () => {
-    if (faltaPagar > 0.01) { alert('Ainda faltam valores a receber!'); return; }
+    const digitadoSemMetodo = parseFloat(valorDigitado.replace(',', '.'));
+    const valorLancadoEfetivo =
+      pagamentosLancados.length > 0
+        ? totalJaPago
+        : !isNaN(digitadoSemMetodo) && digitadoSemMetodo > totalCobrarFinal
+        ? digitadoSemMetodo
+        : totalJaPago;
+
+    const centavosPago = Math.round(valorLancadoEfetivo * 100);
+    const centavosTotal = Math.round(totalCobrarFinal * 100);
+
+    if (centavosPago < centavosTotal) {
+      setAlertaValor({
+        tipo: 'menor',
+        lancado: valorLancadoEfetivo,
+        total: totalCobrarFinal,
+        diferenca: (centavosTotal - centavosPago) / 100,
+      });
+      return;
+    }
+
+    if (centavosPago > centavosTotal) {
+      setAlertaValor({
+        tipo: 'maior',
+        lancado: valorLancadoEfetivo,
+        total: totalCobrarFinal,
+        diferenca: (centavosPago - centavosTotal) / 100,
+      });
+      return;
+    }
+
     await contexto.finalizarMesa(Number(idMesa), taxaDigitada, pagamentosLancados, descontoCalculado);
     navigate('/');
   };
@@ -555,14 +597,14 @@ export function Comanda() {
         </div>
       )}
 
-      {/* MODAL DE FECHAMENTO DE CONTA & PAGAMENTO (DESIGN MODERNO LITHOS/LINEAR) */}
+      {/* MODAL DE FECHAMENTO DE CONTA & PAGAMENTO (DESIGN MINIMALISTA) */}
       {etapaModal > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200 select-none">
           <div className="absolute inset-0" onClick={() => setEtapaModal(0)}></div>
-          <div className="bg-white rounded-3xl sm:rounded-4xl p-5 sm:p-7 w-full max-w-md shadow-2xl shadow-slate-900/10 border border-slate-100 relative z-50 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 font-sans">
+          <div className="bg-white rounded-3xl sm:rounded-4xl p-5 sm:p-6 w-full max-w-md shadow-2xl shadow-slate-900/10 border border-slate-100 relative z-50 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 font-sans">
             
             {/* CABEÇALHO PADRÃO CLEAN */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-100 mb-4 shrink-0">
+            <div className="flex items-start justify-between pb-3.5 border-b border-slate-100 mb-3.5 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0 shadow-2xs">
                   {etapaModal === 1 ? (
@@ -582,8 +624,8 @@ export function Comanda() {
                   </div>
                   <p className="text-[11px] font-normal text-slate-400">
                     {etapaModal === 1
-                      ? (nomeCliente ? `Cliente: ${nomeCliente}` : 'Taxa de guarda-sol e descontos')
-                      : `Total da conta: ${formatarMoeda(totalCobrarFinal)}`}
+                      ? (nomeCliente ? `Cliente: ${nomeCliente}` : 'Valor Guarda-Sol e descontos')
+                      : `Total a pagar: ${formatarMoeda(totalCobrarFinal)}`}
                   </p>
                 </div>
               </div>
@@ -596,41 +638,89 @@ export function Comanda() {
               </button>
             </div>
 
-            {/* ETAPA 1: AJUSTES DA COMANDA (TAXA + DESCONTO + RESUMO) */}
+            {/* ETAPA 1: AJUSTES DA COMANDA (CONSUMO EXPANSÍVEL + VALOR GUARDA-SOL + DESCONTO + RESUMO) */}
             {etapaModal === 1 && (
-              <div className="flex flex-col space-y-3.5 overflow-y-auto pr-1">
-                {/* LINHA: CONSUMO DOS ITENS */}
-                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/60 flex items-center justify-center text-slate-400 shadow-2xs">
-                      <LucideIcons.ShoppingBag size={15} strokeWidth={1.8} />
+              <div className="flex flex-col space-y-2.5 overflow-y-auto pr-0.5">
+                {/* BLOCO: CONSUMO DA MESA (CLICÁVEL COM EFEITO SLIDE UP/DOWN) */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl overflow-hidden transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setConsumoAberto(prev => !prev)}
+                    className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/60 flex items-center justify-center text-slate-500 shadow-2xs shrink-0">
+                        <LucideIcons.ShoppingBag size={15} strokeWidth={1.8} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-700 leading-tight">Consumo da Mesa</p>
+                        <p className="text-[10px] text-slate-400">
+                          {quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'item lançado' : 'itens lançados'} • Toque para {consumoAberto ? 'recolher' : 'ver itens'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-700">Consumo da Mesa</p>
-                      <p className="text-[10px] text-slate-400">{quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'item lançado' : 'itens lançados'}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                        {formatarMoeda(valorTotalMenu)}
+                      </span>
+                      <div
+                        className={`w-6 h-6 rounded-full bg-white border border-slate-200/70 flex items-center justify-center text-slate-400 transition-transform duration-300 ${
+                          consumoAberto ? 'rotate-180 text-slate-700' : ''
+                        }`}
+                      >
+                        <LucideIcons.ChevronDown size={13} strokeWidth={2.2} />
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* LISTA EXPANSÍVEL COM EFEITO SUAVE DE DESLIZAR (ABRIR / SUBIR SUMINDO) */}
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      consumoAberto ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-3 pb-3 pt-1 border-t border-slate-200/60 space-y-1.5 max-h-44 overflow-y-auto">
+                        {itensPedidos.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 text-center py-2">
+                            Nenhum item lançado nesta mesa.
+                          </p>
+                        ) : (
+                          itensPedidos.map((item) => (
+                            <div
+                              key={item.id}
+                              className="bg-white rounded-xl px-2.5 py-2 border border-slate-100 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] flex items-center justify-center shrink-0 tabular-nums">
+                                  {item.quantidade}x
+                                </span>
+                                <span className="font-medium text-slate-700 truncate text-[11px]">
+                                  {item.produto.nome}
+                                </span>
+                              </div>
+                              <span className="font-semibold text-slate-700 tabular-nums text-[11px] shrink-0">
+                                {formatarMoeda(item.produto.preco * item.quantidade)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700 tabular-nums">
-                    {formatarMoeda(valorTotalMenu)}
-                  </span>
                 </div>
 
-                {/* LINHA: TAXA DO GUARDA-SOL */}
-                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shadow-2xs">
-                        <LucideIcons.Umbrella size={15} strokeWidth={1.8} />
-                      </div>
-                      <span className="text-xs font-medium text-slate-700">Taxa do Guarda-Sol</span>
+                {/* LINHA COMPACTA: VALOR GUARDA-SOL */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shadow-2xs shrink-0">
+                      <LucideIcons.Umbrella size={15} strokeWidth={1.8} />
                     </div>
-                    <span className="text-[10px] font-medium text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
-                      Opcional
-                    </span>
+                    <span className="text-xs font-medium text-slate-700 truncate">Valor Guarda-Sol</span>
                   </div>
 
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
+                  <div className="relative flex items-center w-28 shrink-0">
+                    <span className="absolute left-2.5 text-[11px] font-semibold text-slate-400 pointer-events-none select-none">
                       R$
                     </span>
                     <input
@@ -639,72 +729,66 @@ export function Comanda() {
                       value={inputTaxa}
                       onChange={(e) => setInputTaxa(e.target.value.replace(/[^0-9.,]/g, ''))}
                       placeholder="0,00"
-                      className="w-full bg-white pl-9 pr-3 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
+                      className="w-full bg-white pl-7 pr-2.5 h-9 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-xs font-semibold text-slate-700 text-right transition-all tabular-nums outline-none shadow-2xs"
                     />
-                  </div>
-
-                  {/* Atalhos Rápidos de Taxa */}
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="text-[10px] text-slate-400 font-medium">Sugestões:</span>
-                    {[0, 15, 20, 30].map(v => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setInputTaxa(v === 0 ? '' : v.toString())}
-                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all active:scale-95 ${taxaDigitada === v && (v !== 0 || inputTaxa === '') ? 'bg-sky-50 text-sky-700 border-sky-200 font-semibold' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
-                      >
-                        {v === 0 ? 'Sem taxa' : `R$ ${v}`}
-                      </button>
-                    ))}
                   </div>
                 </div>
 
-                {/* LINHA: DESCONTO NA COMANDA */}
-                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-2xs">
-                        <LucideIcons.Tag size={15} strokeWidth={1.8} />
-                      </div>
-                      <span className="text-xs font-medium text-slate-700">Desconto</span>
+                {/* LINHA COMPACTA: DESCONTO NA COMANDA */}
+                <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-2xs shrink-0">
+                      <LucideIcons.Tag size={15} strokeWidth={1.8} />
                     </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium text-slate-700 block leading-tight">Desconto</span>
+                      {descontoCalculado > 0 && (
+                        <span className="text-[10px] font-semibold text-emerald-600 tabular-nums">
+                          -{formatarMoeda(descontoCalculado)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                    {/* Alternador R$ / % estilo switcher minimalista Lithos */}
-                    <div className="bg-slate-200/60 p-0.5 rounded-lg flex items-center gap-0.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="bg-slate-200/70 p-0.5 rounded-lg flex items-center">
                       <button
                         type="button"
                         onClick={() => setTipoDesconto('fixo')}
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${tipoDesconto === 'fixo' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                          tipoDesconto === 'fixo'
+                            ? 'bg-white text-slate-800 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
                       >
                         R$
                       </button>
                       <button
                         type="button"
                         onClick={() => setTipoDesconto('porcentagem')}
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${tipoDesconto === 'porcentagem' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                          tipoDesconto === 'porcentagem'
+                            ? 'bg-white text-slate-800 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
                       >
                         %
                       </button>
                     </div>
-                  </div>
 
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
-                      {tipoDesconto === 'fixo' ? 'R$' : '%'}
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={inputDesconto}
-                      onChange={(e) => setInputDesconto(e.target.value.replace(/[^0-9.,]/g, ''))}
-                      placeholder={tipoDesconto === 'fixo' ? '0,00' : '0%'}
-                      className="w-full bg-white pl-9 pr-24 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
-                    />
-                    {descontoCalculado > 0 && (
-                      <span className="absolute right-2.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md tabular-nums">
-                        -{formatarMoeda(descontoCalculado)}
+                    <div className="relative flex items-center w-24">
+                      <span className="absolute left-2.5 text-[11px] font-semibold text-slate-400 pointer-events-none select-none">
+                        {tipoDesconto === 'fixo' ? 'R$' : '%'}
                       </span>
-                    )}
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={inputDesconto}
+                        onChange={(e) => setInputDesconto(e.target.value.replace(/[^0-9.,]/g, ''))}
+                        placeholder={tipoDesconto === 'fixo' ? '0,00' : '0'}
+                        className="w-full bg-white pl-7 pr-2.5 h-9 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-xs font-semibold text-slate-700 text-right transition-all tabular-nums outline-none shadow-2xs"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -716,7 +800,7 @@ export function Comanda() {
                   </div>
                   {taxaDigitada > 0 && (
                     <div className="flex justify-between items-center text-xs text-slate-500">
-                      <span>Taxa de guarda-sol</span>
+                      <span>Valor Guarda-Sol</span>
                       <span className="tabular-nums font-medium text-sky-700">+{formatarMoeda(taxaDigitada)}</span>
                     </div>
                   )}
@@ -758,10 +842,10 @@ export function Comanda() {
               </div>
             )}
 
-            {/* ETAPA 2: BAIXA DE PAGAMENTO (MESMA TELA INTEGRADA) */}
+            {/* ETAPA 2: BAIXA DE PAGAMENTO */}
             {etapaModal === 2 && (
-              <div className="flex flex-col space-y-3.5 overflow-y-auto pr-1">
-                {/* CARD DO TOTAL A COBRAR */}
+              <div className="flex flex-col space-y-3 overflow-y-auto pr-0.5">
+                {/* CARD DO TOTAL A PAGAR */}
                 <div className="bg-slate-50/80 border border-slate-100/90 rounded-2xl p-3 space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total a Pagar</span>
@@ -771,7 +855,7 @@ export function Comanda() {
                     <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
                       {taxaDigitada > 0 && (
                         <span className="text-[10px] text-sky-700 bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-md font-medium">
-                          Taxa: +{formatarMoeda(taxaDigitada)}
+                          Valor Guarda-Sol: +{formatarMoeda(taxaDigitada)}
                         </span>
                       )}
                       {descontoCalculado > 0 && (
@@ -783,108 +867,104 @@ export function Comanda() {
                   )}
                 </div>
 
-                {/* FORMULÁRIO DE PAGAMENTO (SE AINDA HÁ VALOR A RECEBER) */}
-                {faltaPagar > 0 ? (
-                  <div className="space-y-3">
-                    {/* INPUT DE VALOR COM ATALHO DE QUITAÇÃO */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="font-medium text-slate-600">Valor do Lançamento</span>
+                {/* FORMULÁRIO DE LANÇAMENTO DE PAGAMENTO */}
+                <div className="space-y-2.5">
+                  <div className="bg-slate-50/70 border border-slate-100/90 rounded-2xl p-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium text-slate-700 block leading-tight">Valor do Lançamento</span>
+                      {faltaPagar > 0 ? (
                         <button
                           type="button"
                           onClick={() => setValorDigitado(faltaPagar.toFixed(2))}
-                          className="font-medium text-teal-600 hover:text-teal-700 hover:underline"
+                          className="text-[10px] font-medium text-teal-600 hover:text-teal-700 hover:underline"
                         >
-                          Quitar Restante ({formatarMoeda(faltaPagar)})
+                          Usar restante ({formatarMoeda(faltaPagar)})
                         </button>
-                      </div>
-
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3 text-xs font-semibold text-slate-400 pointer-events-none select-none">
-                          R$
-                        </span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={valorDigitado}
-                          onChange={(e) => setValorDigitado(e.target.value.replace(/[^0-9.,]/g, ''))}
-                          placeholder={faltaPagar.toFixed(2)}
-                          className="w-full bg-white pl-9 pr-3 h-10 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-sm font-medium text-slate-700 transition-all tabular-nums outline-none shadow-2xs"
-                        />
-                      </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">Escolha a forma abaixo</span>
+                      )}
                     </div>
 
-                    {/* MÉTODOS DE PAGAMENTO (ÍCONES DO LADO ESQUERDO ESTILO DROPDOWN) */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                        Forma de Pagamento
+                    <div className="relative flex items-center w-32 shrink-0">
+                      <span className="absolute left-2.5 text-[11px] font-semibold text-slate-400 pointer-events-none select-none">
+                        R$
                       </span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleAdicionarPagamento('PIX')}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0 group-hover:scale-105 transition-transform">
-                            <LucideIcons.QrCode size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">PIX</p>
-                            <p className="text-[10px] text-slate-400 leading-none">Instantâneo</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAdicionarPagamento('Crédito')}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
-                            <LucideIcons.CreditCard size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Crédito</p>
-                            <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAdicionarPagamento('Débito')}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-105 transition-transform">
-                            <LucideIcons.CreditCard size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Débito</p>
-                            <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAdicionarPagamento('Dinheiro')}
-                          className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
-                            <LucideIcons.Banknote size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Dinheiro</p>
-                            <p className="text-[10px] text-slate-400 leading-none">Espécie</p>
-                          </div>
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={valorDigitado}
+                        onChange={(e) => setValorDigitado(e.target.value.replace(/[^0-9.,]/g, ''))}
+                        placeholder={faltaPagar > 0 ? faltaPagar.toFixed(2) : '0,00'}
+                        className="w-full bg-white pl-7 pr-2.5 h-9 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 text-xs font-semibold text-slate-700 text-right transition-all tabular-nums outline-none shadow-2xs"
+                      />
                     </div>
                   </div>
-                ) : null}
+
+                  {/* MÉTODOS DE PAGAMENTO */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAdicionarPagamento('PIX')}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <LucideIcons.QrCode size={16} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">PIX</p>
+                        <p className="text-[10px] text-slate-400 leading-none">Instantâneo</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAdicionarPagamento('Crédito')}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <LucideIcons.CreditCard size={16} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Crédito</p>
+                        <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAdicionarPagamento('Débito')}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <LucideIcons.CreditCard size={16} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Débito</p>
+                        <p className="text-[10px] text-slate-400 leading-none">Cartão</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAdicionarPagamento('Dinheiro')}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl p-2.5 flex items-center gap-2.5 transition-all active:scale-[0.98] shadow-2xs text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <LucideIcons.Banknote size={16} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-700 leading-none mb-0.5">Dinheiro</p>
+                        <p className="text-[10px] text-slate-400 leading-none">Espécie</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
 
                 {/* LISTA DE PAGAMENTOS JÁ REGISTRADOS */}
                 {pagamentosLancados.length > 0 && (
-                  <div className="space-y-1.5 bg-slate-50/60 p-2.5 rounded-2xl border border-slate-100 max-h-36 overflow-y-auto">
+                  <div className="space-y-1.5 bg-slate-50/60 p-2.5 rounded-2xl border border-slate-100 max-h-32 overflow-y-auto">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-1">
-                      Pagamentos Registrados ({pagamentosLancados.length})
+                      Pagamentos Lançados ({pagamentosLancados.length})
                     </span>
                     <div className="space-y-1.5">
                       {pagamentosLancados.map((pag, idx) => (
@@ -910,7 +990,7 @@ export function Comanda() {
                   </div>
                 )}
 
-                {/* STATUS: RESTANTE OU CONCLUÍDO */}
+                {/* STATUS DO LANÇAMENTO */}
                 {faltaPagar > 0 ? (
                   <div className="bg-amber-50/70 border border-amber-200/70 rounded-xl p-2.5 px-3 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-700 text-xs font-medium">
@@ -921,18 +1001,25 @@ export function Comanda() {
                       {formatarMoeda(faltaPagar)}
                     </span>
                   </div>
+                ) : troco > 0 ? (
+                  <div className="bg-rose-50/80 border border-rose-200 rounded-xl p-2.5 px-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-rose-700 text-xs font-medium">
+                      <LucideIcons.AlertCircle size={15} strokeWidth={2} />
+                      <span>Valor Acima do Total</span>
+                    </div>
+                    <span className="text-rose-700 font-bold text-sm tabular-nums">
+                      +{formatarMoeda(troco)}
+                    </span>
+                  </div>
                 ) : (
-                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 space-y-1.5">
+                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 px-3 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-emerald-700 text-xs font-semibold">
                       <LucideIcons.CheckCircle2 size={16} strokeWidth={2.2} />
-                      <span>Comanda 100% Paga!</span>
+                      <span>Valor Exato Lançado</span>
                     </div>
-                    {troco > 0 && (
-                      <div className="bg-white p-2 px-3 rounded-lg border border-emerald-100 flex items-center justify-between text-xs">
-                        <span className="font-medium text-slate-600">Troco do Cliente:</span>
-                        <span className="text-emerald-800 font-bold text-sm tabular-nums">{formatarMoeda(troco)}</span>
-                      </div>
-                    )}
+                    <span className="text-emerald-800 font-bold text-sm tabular-nums">
+                      {formatarMoeda(totalJaPago)}
+                    </span>
                   </div>
                 )}
 
@@ -948,16 +1035,63 @@ export function Comanda() {
                   </button>
                   <button
                     type="button"
-                    disabled={faltaPagar > 0.01}
                     onClick={concluirMesaFinal}
-                    className={`flex-[1.4] font-semibold h-11 rounded-xl transition-all text-xs flex items-center justify-center gap-2 ${
-                      faltaPagar <= 0.01
-                        ? 'bg-slate-900 hover:bg-black text-white shadow-md active:scale-95 cursor-pointer'
-                        : 'bg-slate-100 text-slate-400 border border-slate-200/80 cursor-not-allowed'
-                    }`}
+                    className="flex-[1.4] bg-slate-900 hover:bg-black text-white font-semibold h-11 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                   >
                     <LucideIcons.CheckCircle2 size={15} strokeWidth={2} />
                     <span>Encerrar Mesa</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* POPUP DE ALERTA DE DIVERGÊNCIA DE VALOR (MENOR OU MAIOR QUE O TOTAL A PAGAR) */}
+            {alertaValor && (
+              <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-3xl p-5 w-full max-w-xs border border-slate-100 shadow-2xl text-center space-y-3.5 animate-in zoom-in-95 duration-150">
+                  <div
+                    className={`w-12 h-12 rounded-2xl mx-auto flex items-center justify-center border ${
+                      alertaValor.tipo === 'menor'
+                        ? 'bg-amber-50 border-amber-200 text-amber-600'
+                        : 'bg-rose-50 border-rose-200 text-rose-600'
+                    }`}
+                  >
+                    <LucideIcons.AlertTriangle size={22} strokeWidth={2} />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-800 tracking-tight">
+                      {alertaValor.tipo === 'menor'
+                        ? 'Valor menor que o total'
+                        : 'Valor maior que o total'}
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      O valor lançado (
+                      <strong className="text-slate-700 tabular-nums">
+                        {formatarMoeda(alertaValor.lancado)}
+                      </strong>
+                      ) é{' '}
+                      <strong
+                        className={
+                          alertaValor.tipo === 'menor' ? 'text-amber-700' : 'text-rose-600'
+                        }
+                      >
+                        {alertaValor.tipo === 'menor' ? 'menor' : 'maior'}
+                      </strong>{' '}
+                      que o valor total a pagar (
+                      <strong className="text-slate-800 tabular-nums">
+                        {formatarMoeda(alertaValor.total)}
+                      </strong>
+                      ). Ajuste os pagamentos antes de encerrar a mesa.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setAlertaValor(null)}
+                    className="w-full h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold transition-all active:scale-95"
+                  >
+                    Entendi, ajustar valor
                   </button>
                 </div>
               </div>

@@ -504,10 +504,12 @@ export async function ativarOuRenovarAssinaturaAposPagamento(params: {
     })
     .eq('id', params.empresaId);
 
-  // Registra formalmente a fatura correspondente como Paga no histórico
+  // Registra formalmente a(s) fatura(s) correspondente(s) como Paga(s) no histórico
   await registrarFaturaPaga({
     empresaId: params.empresaId,
     valor: params.ciclo.valorTotalCiclo,
+    valorMensalEquivalente: params.ciclo.valorMensalEquivalente,
+    mesesCiclo: params.ciclo.meses,
     planoNome: params.planoNome,
     cicloNome: params.ciclo.nome,
     paymentIdMp: params.paymentId,

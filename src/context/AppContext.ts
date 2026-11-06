@@ -66,13 +66,17 @@ export interface AppContextType {
   adicionarMesa: (numero: number) => Promise<void>;
   editarMesa: (id: number | string, atualizacao: { numero: number }) => Promise<void>;
   removerMesa: (numero: number) => Promise<void>;
-  atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'pronto' | 'entregue') => Promise<void>;
+  atualizarStatusCozinha: (numeroMesa: number, idItem: string, status: 'pendente' | 'preparo' | 'pronto' | 'entregue') => Promise<void>;
   salvarComanda: (numeroMesa: number, itens: ItemComanda[], nomeCliente: string) => Promise<void>;
   finalizarMesa: (numeroMesa: number, valorTaxa: number, pagamentosRealizados: Pagamento[], valorDesconto?: number) => Promise<void>;
   cancelarVenda: (idVenda: string, motivo: string, adminNome: string) => Promise<void>;
   registrarValeFuncionario: (dados: NovoPagamentoGarcom) => Promise<void>;
   excluirPagamentoGarcom: (id: string) => Promise<void>;
   atualizarStatusPagamentoGarcom: (id: string, novoStatus: StatusPagamentoGarcom) => Promise<void>;
+  uploadFotoPerfil: (file: File) => Promise<string>;
+  atualizarMeuPerfil: (dados: { nome: string; avatar: string; emojiPreferido?: string; telefone?: string }) => Promise<void>;
+  alterarMeuEmail: (novoEmail: string, senhaAtual: string) => Promise<void>;
+  alterarMinhaSenha: (senhaAtual: string, novaSenha: string) => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

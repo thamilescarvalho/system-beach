@@ -187,7 +187,7 @@ export function Login() {
             <button
               type="button"
               onClick={fecharAvisoConfirmacao}
-              className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md shadow-slate-900/10 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-4xl shadow-md shadow-slate-900/10 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Continuar para o Login</span>
               <LucideIcons.ArrowRight size={15} strokeWidth={2.5} />
@@ -339,7 +339,7 @@ export function Login() {
               <button
                 type="submit"
                 disabled={loading || bloqueioSegundos > 0}
-                className="w-full h-12 mt-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full h-12 mt-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-4xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
                   <>

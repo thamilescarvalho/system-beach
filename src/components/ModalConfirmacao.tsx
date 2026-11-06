@@ -73,7 +73,7 @@ export function ModalConfirmacao({
         )}
 
         {/* Ícone */}
-        <div className={`w-12 h-12 rounded-3xl flex items-center justify-center mb-4 shadow-xs ${configCores.iconeBadge}`}>
+        <div className={`w-12 h-12 rounded-4xl flex items-center justify-center mb-4 shadow-xs ${configCores.iconeBadge}`}>
           {iconePersonalizado || configCores.iconePadrao}
         </div>
 
@@ -93,7 +93,7 @@ export function ModalConfirmacao({
             type="button"
             disabled={carregando}
             onClick={onCancelar}
-            className="flex-1 h-11 rounded-3xl border border-slate-200/90 hover:bg-slate-50 text-slate-600 font-medium text-xs sm:text-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex-1 h-11 rounded-4xl border border-slate-200/90 hover:bg-slate-50 text-slate-600 font-medium text-xs sm:text-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {textoCancelar}
           </button>
@@ -102,7 +102,7 @@ export function ModalConfirmacao({
             type="button"
             disabled={carregando}
             onClick={onConfirmar}
-            className={`flex-1 h-11 rounded-3xl font-medium text-xs sm:text-sm transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer ${configCores.btnConfirmar}`}
+            className={`flex-1 h-11 rounded-4xl font-medium text-xs sm:text-sm transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer ${configCores.btnConfirmar}`}
           >
             {carregando ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

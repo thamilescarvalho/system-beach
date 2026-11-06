@@ -20,9 +20,11 @@ import { AdminUsuarios } from './pages/AdminUsuarios';
 import { AdminFinanceiro } from './pages/AdminFinanceiro';
 import { AdminImpressora } from './pages/AdminImpressora';
 import { AdminAssinatura } from './pages/AdminAssinatura';
+import { AdminAssinaturaRenovar } from './pages/AdminAssinaturaRenovar';
 import { Estoque } from './pages/Estoque';
 import { Cozinha } from './pages/Cozinha';
 import { AssinaturaPendente } from './pages/AssinaturaPendente';
+import { MeuPerfil } from './pages/MeuPerfil';
 
 function AdminRoute({ children }: { children: ReactNode }) {
   const contexto = useAppContext();
@@ -89,6 +91,8 @@ export function App() {
           <Route path="/comanda/:idMesa" element={<ProtectedRoute><Comanda /></ProtectedRoute>} />
           <Route path="/painel" element={<ProtectedRoute><Painel /></ProtectedRoute>} />
           <Route path="/cozinha" element={<ProtectedRoute><Cozinha /></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><MeuPerfil /></ProtectedRoute>} />
+          <Route path="/admin/perfil" element={<ProtectedRoute><MeuPerfil /></ProtectedRoute>} />
 
           {/* ROTA MASTER (Blindada exclusivamente para Super Admin no roteador) */}
           <Route path="/master" element={
@@ -115,6 +119,9 @@ export function App() {
           } />
           <Route path="/admin/assinatura" element={
             <ProtectedRoute><AdminRoute><AdminAssinatura /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/admin/assinatura/renovar" element={
+            <ProtectedRoute><AdminRoute><AdminAssinaturaRenovar /></AdminRoute></ProtectedRoute>
           } />
 
           {/* FALLBACK */}

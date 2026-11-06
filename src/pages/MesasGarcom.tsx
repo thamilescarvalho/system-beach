@@ -140,7 +140,7 @@ export function MesasGarcom() {
             <button
               type="button"
               onClick={() => setAlerta(null)}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold tracking-widest uppercase py-3.5 rounded-xl text-xs transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold tracking-widest uppercase py-3.5 rounded-4xl text-xs transition-all active:scale-95 shadow-lg shadow-slate-900/20"
             >
               Entendi
             </button>
@@ -183,7 +183,7 @@ export function MesasGarcom() {
                 <button
                   type="button"
                   onClick={excluirMesa}
-                  className="w-12 h-11 bg-white border border-rose-200 text-rose-500 rounded-3xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-colors active:scale-95 shrink-0"
+                  className="w-12 h-11 bg-white border border-rose-200 text-rose-500 rounded-4xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-colors active:scale-95 shrink-0"
                   title="Excluir"
                 >
                   <LucideIcons.Trash2 size={18} strokeWidth={2.5} />
@@ -192,7 +192,7 @@ export function MesasGarcom() {
               <button
                 type="button"
                 onClick={salvarMesa}
-                className="flex-1 h-11 bg-linear-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-lg shadow-slate-500/20 text-white font-bold rounded-3xl text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="flex-1 h-11 bg-linear-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-lg shadow-slate-500/20 text-white font-bold rounded-4xl text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <LucideIcons.Check size={16} strokeWidth={3} /> Salvar
               </button>
@@ -217,9 +217,9 @@ export function MesasGarcom() {
               let corTextoStatus = 'text-slate-400';
 
               if (temAlerta) {
-                corBtn = 'bg-linear-to-br from-fuchsia-600 to-fuchsia-900 border-fuchsia-600 shadow-md shadow-fuchsia-600/30 hover:shadow-xl hover:shadow-fuchsia-600/40 animate-pulse';
+                corBtn = 'bg-linear-to-br from-yellow-400 to-amber-500 border-yellow-500 shadow-md shadow-yellow-500/30 hover:shadow-xl hover:shadow-yellow-500/40 animate-pulse';
                 corTextoNum = 'text-white';
-                corTextoStatus = 'text-fuchsia-100';
+                corTextoStatus = 'text-yellow-50';
               } else if (isBloqueada) {
                 corBtn = 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed hover:translate-y-0 active:scale-100';
                 corTextoNum = 'text-slate-400';

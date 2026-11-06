@@ -263,7 +263,7 @@ export function Cadastro() {
                       sessionStorage.setItem('tsystem_email_confirmado_aviso', 'true');
                       navigate('/login?confirmado=sucesso');
                     }}
-                    className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-slate-900/15 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-4xl shadow-lg shadow-slate-900/15 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>Já confirmei meu e-mail</span>
                     <LucideIcons.ArrowRight size={16} strokeWidth={2.5} />
@@ -273,7 +273,7 @@ export function Cadastro() {
                     type="button"
                     disabled={reenviandoEmail || cooldownReenvio > 0}
                     onClick={handleReenviarEmailConfirmacao}
-                    className="w-full h-11 bg-slate-100 hover:bg-slate-200/70 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full h-11 bg-slate-100 hover:bg-slate-200/70 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-4xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {reenviandoEmail ? (
                       <LucideIcons.Loader2 size={15} className="animate-spin" />
@@ -530,7 +530,7 @@ export function Cadastro() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-widest rounded-4xl shadow-lg shadow-slate-900/15 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:translate-y-0 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? (
                       <>
