@@ -3,7 +3,8 @@ import { useState, useMemo, useEffect } from 'react';
 import type { ElementType } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
+import { imprimirCupomTermico } from '../utils/impressoraTermica';
 import type { Produto, ItemComanda, Pagamento, MetodoPagamento, Categoria } from '../types';
 import * as LucideIcons from 'lucide-react';
 
@@ -248,6 +249,28 @@ export function Comanda() {
     setValorDigitado('');
     setAlertaValor(null);
     setEtapaModal(2);
+  };
+
+  const handleImprimirComanda = async () => {
+    await imprimirCupomTermico({
+      nomeEstabelecimento:
+        contexto.dadosEmpresa?.nome_exibicao ||
+        contexto.dadosEmpresa?.nome_fantasia ||
+        NOME_PADRAO_SISTEMA,
+      documentoEstabelecimento: contexto.dadosEmpresa?.documento || undefined,
+      telefoneEstabelecimento: contexto.dadosEmpresa?.telefone || undefined,
+      numeroMesa: Number(idMesa),
+      nomeCliente: nomeCliente.trim() || 'Consumidor',
+      garcomNome: contexto.garcomLogado?.nome || 'Equipe',
+      itens: itensPedidos,
+      subtotal: valorTotalMenu,
+      taxaGuardaSol: taxaDigitada,
+      desconto: descontoCalculado,
+      totalFinal: totalCobrarFinal,
+      pagamentos: pagamentosLancados,
+      troco,
+      isPreConta: pagamentosLancados.length === 0
+    });
   };
 
   const handleAdicionarPagamento = (metodo: MetodoPagamento) => {
@@ -629,13 +652,24 @@ export function Comanda() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setEtapaModal(0)}
-                className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all active:scale-90"
-              >
-                <LucideIcons.X size={15} strokeWidth={2} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleImprimirComanda}
+                  className="h-8 px-2.5 rounded-full bg-teal-50 hover:bg-teal-100 border border-teal-200/80 text-teal-800 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Imprimir Conta de Consumo"
+                >
+                  <LucideIcons.Printer size={14} strokeWidth={1.9} />
+                  <span>Imprimir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEtapaModal(0)}
+                  className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all active:scale-90"
+                >
+                  <LucideIcons.X size={15} strokeWidth={2} />
+                </button>
+              </div>
             </div>
 
             {/* ETAPA 1: AJUSTES DA COMANDA (CONSUMO EXPANSÍVEL + VALOR GUARDA-SOL + DESCONTO + RESUMO) */}

@@ -172,8 +172,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const documento = typeof metadata.documento === 'string' ? metadata.documento : null;
       const telefone = typeof metadata.telefone === 'string' ? metadata.telefone : null;
       const emailLimpo = (emailUsuario || '').trim().toLowerCase();
+      const isSuperAdminEmail = emailLimpo === 'ancorazero85@gmail.com';
 
-      if (nomeEmpresa && nomeUsuario) {
+      if (nomeEmpresa && nomeUsuario && !isSuperAdminEmail) {
         const { error: rpcError } = await supabase.rpc('criar_workspace_onboarding', {
           p_nome_empresa: nomeEmpresa,
           p_nome_usuario: nomeUsuario,
@@ -182,44 +183,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
           p_telefone: telefone
         });
 
+        // Se a RPC falhou, verifica se o perfil já foi criado por trigger antes de tentar fallback manual
         if (rpcError) {
-          const { data: novaEmpresa } = await supabase
-            .from('empresas')
-            .insert([{
-              nome_fantasia: nomeEmpresa,
-              documento,
-              telefone,
-              status_assinatura: 'pendente',
-              data_vencimento: null
-            }])
-            .select('id')
-            .single();
+          const { data: perfilExistente } = await supabase
+            .from('usuarios')
+            .select('id, nome, avatar, cargo, empresa_id, email, status')
+            .or(`id.eq.${userId},email.eq.${emailLimpo}`)
+            .maybeSingle();
 
-          if (novaEmpresa) {
-            await supabase.from('usuarios').insert([{
-              id: userId,
-              nome: nomeUsuario,
-              email: emailLimpo,
-              telefone,
-              cargo: 'admin',
-              status: 'ativo',
-              avatar: '👑',
-              empresa_id: novaEmpresa.id
-            }]);
+          if (perfilExistente) {
+            perfil = perfilExistente;
+          } else {
+            const { data: novaEmpresa } = await supabase
+              .from('empresas')
+              .insert([{
+                nome_fantasia: nomeEmpresa,
+                documento,
+                telefone,
+                status_assinatura: 'pendente',
+                data_vencimento: null
+              }])
+              .select('id')
+              .single();
+
+            if (novaEmpresa) {
+              const { error: errInsertUser } = await supabase.from('usuarios').insert([{
+                id: userId,
+                nome: nomeUsuario,
+                email: emailLimpo,
+                telefone,
+                cargo: 'admin',
+                status: 'ativo',
+                avatar: '👑',
+                empresa_id: novaEmpresa.id
+              }]);
+
+              // Rollback atômico: nunca deixa um estabelecimento órfão sem usuário
+              if (errInsertUser) {
+                await supabase.from('empresas').delete().eq('id', novaEmpresa.id);
+              }
+            }
           }
         }
 
-        const resNovoPerfil = await supabase
-          .from('usuarios')
-          .select('id, nome, avatar, cargo, empresa_id, email, status')
-          .eq('id', userId)
-          .maybeSingle();
-        perfil = resNovoPerfil.data;
+        if (!perfil) {
+          const resNovoPerfil = await supabase
+            .from('usuarios')
+            .select('id, nome, avatar, cargo, empresa_id, email, status')
+            .eq('id', userId)
+            .maybeSingle();
+          perfil = resNovoPerfil.data;
+        }
       }
     }
 
     // Se o perfil acabou de ser provisionado via auto-atendimento (/cadastro), garante que a empresa inicie como 'pendente'
-    if (perfil?.empresa_id && metadata?.requer_plano_inicial === true) {
+    if (
+      perfil?.empresa_id &&
+      perfil.cargo !== 'super_admin' &&
+      metadata?.requer_plano_inicial === true
+    ) {
       await supabase
         .from('empresas')
         .update({

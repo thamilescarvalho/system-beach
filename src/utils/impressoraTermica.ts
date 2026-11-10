@@ -37,6 +37,10 @@ export interface DadosCupomVenda {
   pagamentos: Pagamento[];
   troco?: number;
   dataHora?: string;
+  codigoVenda?: string;
+  statusCancelada?: boolean;
+  motivoCancelamento?: string;
+  isPreConta?: boolean;
 }
 
 const STORAGE_IMPRESSORA_KEY = 'tsystem_printer_config_v1';
@@ -232,6 +236,14 @@ function gerarPayloadEscPos(dados: DadosCupomVenda, config: ConfiguracaoImpresso
     bytes.forEach((b) => partes.push(b));
   };
 
+  const qtdTotalItens = dados.itens.reduce((acc, item) => acc + item.quantidade, 0);
+  const mesaFormatada = String(dados.numeroMesa).padStart(2, '0');
+  const tituloCupom = dados.statusCancelada
+    ? 'VENDA CANCELADA / ESTORNADA'
+    : dados.isPreConta
+      ? 'EXTRATO DE CONFERENCIA DE CONTA'
+      : config.cabecalhoPersonalizado.trim() || 'COMPROVANTE DE CONSUMO';
+
   // ESC @ (Inicializar impressora)
   pushBytes(0x1b, 0x40);
   // Centralizar (ESC a 1)
@@ -243,34 +255,44 @@ function gerarPayloadEscPos(dados: DadosCupomVenda, config: ConfiguracaoImpresso
   pushBytes(0x1b, 0x45, 0x00);
 
   if (dados.documentoEstabelecimento) {
-    pushTexto(`DOC: ${dados.documentoEstabelecimento}\n`);
+    pushTexto(`CNPJ/CPF: ${dados.documentoEstabelecimento}\n`);
   }
-  if (config.cabecalhoPersonalizado.trim()) {
-    pushTexto(`${config.cabecalhoPersonalizado.trim()}\n`);
+  if (dados.telefoneEstabelecimento) {
+    pushTexto(`TEL: ${dados.telefoneEstabelecimento}\n`);
   }
+  pushTexto(`${tituloCupom.toUpperCase()}\n`);
 
   pushTexto(separador);
   // Alinhar à esquerda (ESC a 0)
   pushBytes(0x1b, 0x61, 0x00);
 
-  pushTexto(`MESA / GUARDA-SOL: #${dados.numeroMesa}\n`);
-  if (dados.nomeCliente) {
-    pushTexto(`CLIENTE: ${dados.nomeCliente}\n`);
+  pushTexto(`MESA / GUARDA-SOL: #${mesaFormatada}\n`);
+  pushTexto(`CLIENTE: ${(dados.nomeCliente || 'CONSUMIDOR').toUpperCase()}\n`);
+  pushTexto(`ATENDENTE: ${(dados.garcomNome || 'EQUIPE').toUpperCase()}\n`);
+  pushTexto(`DATA/HORA: ${dados.dataHora || new Date().toLocaleString('pt-BR')}\n`);
+  if (dados.codigoVenda) {
+    pushTexto(`CONTROLE: #${dados.codigoVenda.slice(0, 8).toUpperCase()}\n`);
   }
-  pushTexto(`ATENDENTE: ${dados.garcomNome}\n`);
-  pushTexto(`DATA: ${dados.dataHora || new Date().toLocaleString('pt-BR')}\n`);
+  pushTexto(separador);
+  pushBytes(0x1b, 0x45, 0x01);
+  pushTexto(`ITEM / DESCRICAO${' '.repeat(Math.max(1, colunas - 22))}TOTAL\n`);
+  pushBytes(0x1b, 0x45, 0x00);
   pushTexto(separador);
 
-  dados.itens.forEach((item) => {
+  dados.itens.forEach((item, idx) => {
     const subtotalItem = item.produto.preco * item.quantidade;
-    const linhaEsq = `${item.quantidade}x ${item.produto.nome.slice(0, colunas - 12)}`;
-    const linhaDir = formatarMoedaCupom(subtotalItem);
-    const espacos = Math.max(1, colunas - linhaEsq.length - linhaDir.length);
-    pushTexto(`${linhaEsq}${' '.repeat(espacos)}${linhaDir}\n`);
+    const numItem = String(idx + 1).padStart(2, '0');
+    const nomeLimpo = item.produto.nome.toUpperCase().slice(0, colunas - 5);
+    pushTexto(`${numItem}. ${nomeLimpo}\n`);
+    const detalheEsq = `   ${item.quantidade}x ${formatarMoedaCupom(item.produto.preco)}`;
+    const detalheDir = formatarMoedaCupom(subtotalItem);
+    const espacos = Math.max(1, colunas - detalheEsq.length - detalheDir.length);
+    pushTexto(`${detalheEsq}${' '.repeat(espacos)}${detalheDir}\n`);
   });
 
   pushTexto(separador);
-  pushTexto(`SUBTOTAL: ${formatarMoedaCupom(dados.subtotal)}\n`);
+  pushTexto(`QTD. TOTAL DE ITENS: ${qtdTotalItens}\n`);
+  pushTexto(`SUBTOTAL CONSUMO: ${formatarMoedaCupom(dados.subtotal)}\n`);
   if (dados.taxaGuardaSol > 0) {
     pushTexto(`TAXA GUARDA-SOL: +${formatarMoedaCupom(dados.taxaGuardaSol)}\n`);
   }
@@ -279,13 +301,18 @@ function gerarPayloadEscPos(dados: DadosCupomVenda, config: ConfiguracaoImpresso
   }
 
   pushBytes(0x1b, 0x45, 0x01);
-  pushTexto(`TOTAL FINAL: ${formatarMoedaCupom(dados.totalFinal)}\n`);
+  pushTexto(
+    `${dados.isPreConta ? 'TOTAL A PAGAR' : 'VALOR TOTAL'}: ${formatarMoedaCupom(dados.totalFinal)}\n`
+  );
   pushBytes(0x1b, 0x45, 0x00);
 
   if (dados.pagamentos.length > 0) {
     pushTexto(separador);
+    pushBytes(0x1b, 0x45, 0x01);
+    pushTexto('PAGAMENTOS RECEBIDOS:\n');
+    pushBytes(0x1b, 0x45, 0x00);
     dados.pagamentos.forEach((p) => {
-      pushTexto(`${p.metodo}: ${formatarMoedaCupom(p.valor)}\n`);
+      pushTexto(`${p.metodo.toUpperCase()}: ${formatarMoedaCupom(p.valor)}\n`);
     });
     if (dados.troco && dados.troco > 0) {
       pushTexto(`TROCO: ${formatarMoedaCupom(dados.troco)}\n`);
@@ -298,7 +325,7 @@ function gerarPayloadEscPos(dados: DadosCupomVenda, config: ConfiguracaoImpresso
   if (config.rodapePersonalizado.trim()) {
     pushTexto(`${config.rodapePersonalizado.trim()}\n`);
   }
-  pushTexto('T-System Beach POS\n\n\n');
+  pushTexto('Sem valor fiscal - T-System Beach POS\n\n\n');
 
   if (config.cortarPapelAutomatico) {
     // GS V A 16 (Corte parcial de guilhotina)
@@ -364,17 +391,32 @@ export async function imprimirCupomTermico(
   const larguraMm = config.larguraPapel === '80mm' ? '76mm' : '54mm';
   const fontPx = config.tamanhoFonte === 'grande' ? '13px' : '11px';
   const dataFormatada = dados.dataHora || new Date().toLocaleString('pt-BR');
+  const mesaFormatada = String(dados.numeroMesa).padStart(2, '0');
+  const qtdTotalItens = dados.itens.reduce((acc, item) => acc + item.quantidade, 0);
+  const tituloCupom = dados.statusCancelada
+    ? 'COMPROVANTE DE ESTORNO'
+    : dados.isPreConta
+      ? 'CONFERÊNCIA DE CONTA'
+      : config.cabecalhoPersonalizado || 'COMPROVANTE DE CONSUMO';
 
   const linhasItensHtml = dados.itens
-    .map((item) => {
+    .map((item, idx) => {
+      const numItem = String(idx + 1).padStart(2, '0');
+      const unitario = item.produto.preco.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
       const sub = (item.produto.preco * item.quantidade).toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
       return `
-        <tr>
-          <td style="padding: 2px 0; text-align: left;">${item.quantidade}x ${item.produto.nome}</td>
-          <td style="padding: 2px 0; text-align: right; white-space: nowrap;">R$ ${sub}</td>
+        <tr style="border-bottom: 1px dotted #ccc;">
+          <td style="padding: 3px 0; text-align: left;">
+            <div style="font-weight: bold;">${numItem}. ${item.produto.nome.toUpperCase()}</div>
+            <div style="font-size: 10px; color: #333;">${item.quantidade} UN x R$ ${unitario}</div>
+          </td>
+          <td style="padding: 3px 0; text-align: right; vertical-align: bottom; font-weight: bold; white-space: nowrap;">R$ ${sub}</td>
         </tr>
       `;
     })
@@ -384,8 +426,8 @@ export async function imprimirCupomTermico(
     .map(
       (p) => `
         <div style="display: flex; justify-content: space-between; margin: 2px 0;">
-          <span>${p.metodo}</span>
-          <span>${formatarMoedaCupom(p.valor)}</span>
+          <span>${p.metodo.toUpperCase()}</span>
+          <span style="font-weight: bold;">${formatarMoedaCupom(p.valor)}</span>
         </div>
       `
     )
@@ -396,7 +438,7 @@ export async function imprimirCupomTermico(
     <html lang="pt-BR">
       <head>
         <meta charset="utf-8" />
-        <title>Cupom Mesa #${dados.numeroMesa}</title>
+        <title>Cupom Mesa #${mesaFormatada}</title>
         <style>
           @page {
             size: ${config.larguraPapel} auto;
@@ -417,6 +459,10 @@ export async function imprimirCupomTermico(
             border-top: 1px dashed #000;
             margin: 6px 0;
           }
+          .double-divider {
+            border-top: 2px solid #000;
+            margin: 6px 0;
+          }
           table {
             width: 100%;
             border-collapse: collapse;
@@ -430,24 +476,36 @@ export async function imprimirCupomTermico(
         </style>
       </head>
       <body>
-        <div class="center bold" style="font-size: 14px;">${dados.nomeEstabelecimento}</div>
-        ${dados.documentoEstabelecimento ? `<div class="center">CPF/CNPJ: ${dados.documentoEstabelecimento}</div>` : ''}
-        ${dados.telefoneEstabelecimento ? `<div class="center">Tel: ${dados.telefoneEstabelecimento}</div>` : ''}
-        ${config.cabecalhoPersonalizado ? `<div class="center" style="margin-top: 2px;">${config.cabecalhoPersonalizado}</div>` : ''}
+        <div class="center bold" style="font-size: 14px; letter-spacing: 0.5px;">${dados.nomeEstabelecimento.toUpperCase()}</div>
+        ${dados.documentoEstabelecimento ? `<div class="center" style="font-size: 10px;">CNPJ/CPF: ${dados.documentoEstabelecimento}</div>` : ''}
+        ${dados.telefoneEstabelecimento ? `<div class="center" style="font-size: 10px;">TEL: ${dados.telefoneEstabelecimento}</div>` : ''}
         <div class="divider"></div>
-        <div><strong>MESA / GUARDA-SOL:</strong> #${dados.numeroMesa}</div>
-        ${dados.nomeCliente ? `<div><strong>CLIENTE:</strong> ${dados.nomeCliente}</div>` : ''}
-        <div><strong>ATENDENTE:</strong> ${dados.garcomNome}</div>
-        <div><strong>DATA:</strong> ${dataFormatada}</div>
+        <div class="center bold" style="font-size: 11px;">${tituloCupom.toUpperCase()}</div>
+        <div class="divider"></div>
+        <div class="row"><span><strong>MESA / GUARDA-SOL:</strong></span><span><strong>#${mesaFormatada}</strong></span></div>
+        <div class="row"><span>CLIENTE:</span><span>${(dados.nomeCliente || 'Consumidor').toUpperCase()}</span></div>
+        <div class="row"><span>ATENDENTE:</span><span>${(dados.garcomNome || 'Equipe').toUpperCase()}</span></div>
+        <div class="row"><span>DATA/HORA:</span><span>${dataFormatada}</span></div>
+        ${dados.codigoVenda ? `<div class="row"><span>CONTROLE:</span><span>#${dados.codigoVenda.slice(0, 8).toUpperCase()}</span></div>` : ''}
         <div class="divider"></div>
         <table>
+          <thead>
+            <tr style="border-bottom: 1px dashed #000;">
+              <th style="text-align: left; padding-bottom: 3px;">ITEM / QTD x UNIT.</th>
+              <th style="text-align: right; padding-bottom: 3px;">TOTAL</th>
+            </tr>
+          </thead>
           <tbody>
             ${linhasItensHtml}
           </tbody>
         </table>
         <div class="divider"></div>
+        <div class="row" style="font-size: 10px;">
+          <span>Qtd. Total de Itens:</span>
+          <span>${qtdTotalItens} ${qtdTotalItens === 1 ? 'item' : 'itens'}</span>
+        </div>
         <div class="row">
-          <span>Subtotal:</span>
+          <span>Subtotal Consumo:</span>
           <span>${formatarMoedaCupom(dados.subtotal)}</span>
         </div>
         ${
@@ -457,17 +515,20 @@ export async function imprimirCupomTermico(
         }
         ${
           dados.desconto > 0
-            ? `<div class="row"><span>Desconto:</span><span>-${formatarMoedaCupom(dados.desconto)}</span></div>`
+            ? `<div class="row"><span>Desconto Concedido:</span><span>-${formatarMoedaCupom(dados.desconto)}</span></div>`
             : ''
         }
-        <div class="row bold" style="font-size: 13px; margin-top: 4px;">
-          <span>TOTAL A PAGAR:</span>
+        <div class="double-divider"></div>
+        <div class="row bold" style="font-size: 14px; margin: 4px 0;">
+          <span>${dados.isPreConta ? 'TOTAL A PAGAR:' : 'TOTAL PAGO:'}</span>
           <span>${formatarMoedaCupom(dados.totalFinal)}</span>
         </div>
         ${
           dados.pagamentos.length > 0
-            ? `<div class="divider"></div><div class="bold" style="margin-bottom:2px;">PAGAMENTOS:</div>${linhasPagamentosHtml}`
-            : ''
+            ? `<div class="divider"></div><div class="bold" style="margin-bottom:3px; font-size: 10px;">FORMAS DE PAGAMENTO:</div>${linhasPagamentosHtml}`
+            : dados.isPreConta
+              ? `<div class="divider"></div><div class="center" style="font-size: 10px;">CONFERÊNCIA DE CONTA - AGUARDANDO PAGAMENTO</div>`
+              : ''
         }
         ${
           dados.troco && dados.troco > 0
@@ -476,7 +537,7 @@ export async function imprimirCupomTermico(
         }
         <div class="divider"></div>
         ${config.rodapePersonalizado ? `<div class="center" style="margin-top: 4px;">${config.rodapePersonalizado}</div>` : ''}
-        <div class="center" style="font-size: 9px; margin-top: 4px;">T-System Beach POS</div>
+        <div class="center" style="font-size: 9px; margin-top: 4px;">Sem valor fiscal • T-System Beach POS</div>
       </body>
     </html>
   `;

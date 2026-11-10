@@ -142,7 +142,7 @@ serve(async (req: Request) => {
 
     // AÇÃO 2: EXCLUIR WORKSPACE COMPLETO (EXCLUSIVO SUPER ADMIN - LIMPA AUTH.USERS E EMPRESA)
     if (action === 'deleteWorkspace') {
-      if (perfil.cargo !== 'super_admin' || !empresaId) {
+      if (!isSuperAdmin || !empresaId) {
         return new Response(
           JSON.stringify({ error: 'Apenas o Super Admin pode excluir um Workspace completo.' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
@@ -151,8 +151,19 @@ serve(async (req: Request) => {
 
       const { data: usuariosEmpresa } = await supabaseAdmin
         .from('usuarios')
-        .select('id, cargo')
+        .select('id, email, cargo')
         .eq('empresa_id', empresaId)
+
+      const possuiSuperAdmin = (usuariosEmpresa || []).some(
+        (u) => u.cargo === 'super_admin' || (u.email || '').trim().toLowerCase() === 'ancorazero85@gmail.com'
+      )
+
+      if (possuiSuperAdmin) {
+        return new Response(
+          JSON.stringify({ error: 'Proteção ativa: Não é permitido excluir o estabelecimento que contém a conta Super Admin.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        )
+      }
 
       if (usuariosEmpresa) {
         for (const u of usuariosEmpresa) {
@@ -161,6 +172,17 @@ serve(async (req: Request) => {
           }
         }
       }
+
+      await Promise.allSettled([
+        supabaseAdmin.from('mesas').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('produtos').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('categorias').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('historico_estoque').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('pagamentos_garcons').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('metas_financeiras').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('faturas_assinatura').delete().eq('empresa_id', empresaId),
+        supabaseAdmin.from('vendas').delete().eq('empresa_id', empresaId),
+      ])
 
       await supabaseAdmin.from('usuarios').delete().eq('empresa_id', empresaId)
       const { error: delEmpErr } = await supabaseAdmin.from('empresas').delete().eq('id', empresaId)

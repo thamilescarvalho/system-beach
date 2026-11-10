@@ -8,6 +8,7 @@ import { useAppContext } from './context/AppContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Páginas
+import { LandingPage } from './pages/LandingPage';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { Cadastro } from './pages/Cadastro';
 import { Home } from './pages/Home';
@@ -69,12 +70,49 @@ function AuthRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function RootRoute() {
+  const contexto = useAppContext();
+
+  // Preserva confirmação de e-mail do Supabase
+  const hashAtual = typeof window !== 'undefined' ? window.location.hash : '';
+  const searchAtual = typeof window !== 'undefined' ? window.location.search : '';
+  const veioDeConfirmacaoEmail =
+    hashAtual.includes('type=signup') ||
+    hashAtual.includes('access_token=') ||
+    searchAtual.includes('confirmado=sucesso') ||
+    searchAtual.includes('token_hash=');
+
+  if (veioDeConfirmacaoEmail) {
+    return <Navigate to={`/login?confirmado=sucesso${hashAtual}`} replace />;
+  }
+
+  if (contexto.carregandoContexto) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="w-10 h-10 border-4 border-slate-800 border-t-teal-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Visitantes não autenticados veem a Landing Page comercial
+  if (!contexto.garcomLogado) {
+    return <LandingPage />;
+  }
+
+  return (
+    <ProtectedRoute>
+      <Home />
+    </ProtectedRoute>
+  );
+}
+
 export function App() {
   return (
     <AppProvider>
       <BrowserRouter>
         <Routes>
           {/* ROTAS PÚBLICAS */}
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
 
@@ -86,7 +124,7 @@ export function App() {
           } />
 
           {/* ROTAS DE OPERAÇÃO (Requer login E licença ativa) */}
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/mesas" element={<ProtectedRoute><MesasGarcom /></ProtectedRoute>} />
           <Route path="/comanda/:idMesa" element={<ProtectedRoute><Comanda /></ProtectedRoute>} />
           <Route path="/painel" element={<ProtectedRoute><Painel /></ProtectedRoute>} />

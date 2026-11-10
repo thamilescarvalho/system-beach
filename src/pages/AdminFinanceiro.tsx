@@ -1,7 +1,8 @@
 // src/pages/AdminFinanceiro.tsx
 import { useState, useRef, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { Header } from '../components/Header';
+import { imprimirCupomTermico } from '../utils/impressoraTermica';
 import * as LucideIcons from 'lucide-react';
 import type { VendaFechada, StatusPagamentoGarcom } from '../types';
 
@@ -979,8 +980,37 @@ export function AdminFinanceiro() {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => window.print()} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-4 rounded-2xl uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20 active:scale-95">
-                  <LucideIcons.Printer size={18} strokeWidth={2} /> Imprimir
+                <button
+                  onClick={() => {
+                    const subtotal = vendaSelecionada.itens.reduce(
+                      (acc, i) => acc + i.produto.preco * i.quantidade,
+                      0
+                    );
+                    imprimirCupomTermico({
+                      nomeEstabelecimento:
+                        contexto?.dadosEmpresa?.nome_exibicao ||
+                        contexto?.dadosEmpresa?.nome_fantasia ||
+                        NOME_PADRAO_SISTEMA,
+                      documentoEstabelecimento: contexto?.dadosEmpresa?.documento || undefined,
+                      telefoneEstabelecimento: contexto?.dadosEmpresa?.telefone || undefined,
+                      numeroMesa: vendaSelecionada.numeroMesa,
+                      nomeCliente: vendaSelecionada.nomeCliente || 'Consumidor',
+                      garcomNome: vendaSelecionada.garcomNome || 'Equipe',
+                      itens: vendaSelecionada.itens,
+                      subtotal,
+                      taxaGuardaSol: 0,
+                      desconto: subtotal > vendaSelecionada.total ? subtotal - vendaSelecionada.total : 0,
+                      totalFinal: vendaSelecionada.total,
+                      pagamentos: vendaSelecionada.pagamentos || [],
+                      dataHora: `${formatarData(vendaSelecionada.dataFechamento)} às ${formatarHora(vendaSelecionada.dataFechamento)}`,
+                      codigoVenda: vendaSelecionada.id,
+                      statusCancelada: vendaSelecionada.status === 'cancelada',
+                      motivoCancelamento: vendaSelecionada.motivoCancelamento
+                    });
+                  }}
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-4 rounded-2xl uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 transition-colors shadow-lg shadow-slate-900/20 active:scale-95"
+                >
+                  <LucideIcons.Printer size={18} strokeWidth={2} /> Imprimir Cupom
                 </button>
                 {vendaSelecionada.status !== 'cancelada' && (
                   <button onClick={() => setModalCancelarAberto(true)} className="flex-1 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-semibold py-4 rounded-2xl uppercase tracking-widest text-[11px] transition-colors active:scale-95 shadow-sm">

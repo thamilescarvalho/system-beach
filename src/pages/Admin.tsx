@@ -469,7 +469,7 @@ export function Admin() {
                 <button
                   type="button"
                   onClick={() => navigate('/perfil')}
-                  className="group w-full bg-white hover:bg-slate-50/60 rounded-[1.65rem] border border-slate-200/50 p-4 flex items-center justify-between gap-3 transition-all text-left cursor-pointer"
+                  className="group w-full bg-white hover:bg-slate-50/60 rounded-3xl border border-slate-200/50 p-4 flex items-center justify-between gap-3 transition-all text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <AvatarUsuario

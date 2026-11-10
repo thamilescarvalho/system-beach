@@ -24,6 +24,7 @@ import {
   type IdCicloCobranca
 } from '../utils/configuracoesSaaS';
 import { ModalConfirmacao, type TipoModalConfirmacao } from '../components/ModalConfirmacao';
+import { AvatarUsuario } from '../components/AvatarUsuario';
 
 interface EmpresaMaster {
   id: string;
@@ -79,7 +80,7 @@ interface DBProdutoClone {
   empresa_id?: string;
 }
 
-type AbaMaster = 'estabelecimentos' | 'planos' | 'mercadopago_cms';
+type AbaMaster = 'estabelecimentos' | 'planos' | 'mercadopago_cms' | 'financeiro';
 type FiltroStatusEmpresa = 'todas' | 'ativas' | 'degustacao' | 'pendentes' | 'bloqueadas';
 type ModoClonagemCardapio = 'mesclar' | 'substituir';
 type ModoEstoqueClonagem = 'manter' | 'zerar';
@@ -121,13 +122,61 @@ function calcularDiasRestantes(dataISO: string): number | null {
   return Math.ceil((limite.getTime() - Date.now()) / 86_400_000) - 1;
 }
 
+interface ItemMenuMasterProps {
+  icone: React.ReactNode;
+  titulo: string;
+  subtitulo?: string;
+  ativo?: boolean;
+  onClick: () => void;
+  badge?: React.ReactNode;
+}
+
+function ItemMenuMaster({ icone, titulo, subtitulo, ativo, onClick, badge }: ItemMenuMasterProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl transition-all duration-150 text-left cursor-pointer active:scale-[0.99] ${
+        ativo
+          ? 'bg-white text-slate-900 shadow-2xs font-medium'
+          : 'hover:bg-white hover:shadow-2xs text-slate-700'
+      }`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className={`shrink-0 ${ativo ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
+          {icone}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium leading-tight truncate">{titulo}</p>
+          {subtitulo && <p className="text-[11px] text-slate-400 font-normal leading-tight truncate">{subtitulo}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {badge}
+        <LucideIcons.ChevronRight
+          size={14}
+          strokeWidth={1.8}
+          className={`transition-all ${
+            ativo
+              ? 'text-slate-900 translate-x-0.5'
+              : 'text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5'
+          }`}
+        />
+      </div>
+    </button>
+  );
+}
+
 export function SuperAdminDashboard() {
   const contexto = useContext(AppContext);
   const navigate = useNavigate();
 
   // Navegação Principal do Command Center
   const [abaAtiva, setAbaAtiva] = useState<AbaMaster>('estabelecimentos');
+  const [menuAberto, setMenuAberto] = useState<boolean>(false);
   const [empresas, setEmpresas] = useState<EmpresaMaster[]>([]);
+  const [empresaIdsComSuperAdmin, setEmpresaIdsComSuperAdmin] = useState<Set<string>>(() => new Set());
+  const [contagemUsuariosPorEmpresa, setContagemUsuariosPorEmpresa] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [toast, setToast] = useState<{ mensagem: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
@@ -155,6 +204,8 @@ export function SuperAdminDashboard() {
   // Filtros e Navegação Nível 2 (Usuários de um Estabelecimento)
   const [busca, setBusca] = useState<string>('');
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusEmpresa>('todas');
+  const [buscaFinanceiro, setBuscaFinanceiro] = useState<string>('');
+  const [filtroFinanceiro, setFiltroFinanceiro] = useState<string>('todos');
   const [empresaSelecionada, setEmpresaSelecionada] = useState<EmpresaMaster | null>(null);
   const [usuariosDaEmpresa, setUsuariosDaEmpresa] = useState<Garcom[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState<boolean>(false);
@@ -230,20 +281,109 @@ export function SuperAdminDashboard() {
     }
   }, [contexto?.garcomLogado, navigate]);
 
+  // Atalho de Teclado (Ctrl+K / ⌘K para alternar Menu e Escape para fechar)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setMenuAberto((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setMenuAberto(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Bloqueio de scroll do body quando o menu lateral estiver aberto
+  useEffect(() => {
+    if (menuAberto) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuAberto]);
+
+  const EMAIL_SUPER_ADMIN_OFICIAL = 'ancorazero85@gmail.com';
+  const cargoLogado = contexto?.garcomLogado?.cargo;
+  const empresaIdLogado = contexto?.garcomLogado?.empresaId;
+
   const carregarEmpresas = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .order('nome_fantasia', { ascending: true });
-      if (error) throw error;
-      if (data) setEmpresas(data as EmpresaMaster[]);
+      const [resEmpresas, resUsuarios] = await Promise.all([
+        supabase
+          .from('empresas')
+          .select('*')
+          .order('nome_fantasia', { ascending: true }),
+        supabase
+          .from('usuarios')
+          .select('id, nome, avatar, email, cargo, status, empresa_id, deletado_em')
+          .is('deletado_em', null)
+      ]);
+
+      if (resEmpresas.error) throw resEmpresas.error;
+
+      const listaEmpresas = (resEmpresas.data as EmpresaMaster[] | null) || [];
+      const listaUsuarios = (resUsuarios.data as DBUsuario[] | null) || [];
+
+      const idsSuper = new Set<string>();
+      const mapaContagem: Record<string, number> = {};
+
+      for (const u of listaUsuarios) {
+        if (!u.empresa_id) continue;
+        mapaContagem[u.empresa_id] = (mapaContagem[u.empresa_id] || 0) + 1;
+        const emailUser = (u.email || '').trim().toLowerCase();
+        if (u.cargo === 'super_admin' || emailUser === EMAIL_SUPER_ADMIN_OFICIAL) {
+          idsSuper.add(u.empresa_id);
+        }
+      }
+
+      if (cargoLogado === 'super_admin' && empresaIdLogado && idsSuper.size === 0) {
+        idsSuper.add(empresaIdLogado);
+      }
+
+      // Higienização automática e segura de estabelecimentos duplicados e órfãos (0 usuários):
+      // Se existir um estabelecimento com o mesmo nome de um estabelecimento que já possui equipe/Super Admin,
+      // mas que está órfão (0 usuários vinculados, status pendente e sem identidade personalizada),
+      // remove o registro fantasma automaticamente para manter a integridade do banco.
+      const nomesComUsuarios = new Set(
+        listaEmpresas
+          .filter((e) => (mapaContagem[e.id] || 0) > 0 || idsSuper.has(e.id))
+          .map((e) => e.nome_fantasia.trim().toUpperCase())
+      );
+
+      const duplicadosOrfaos = listaEmpresas.filter((e) => {
+        const nomeNorm = e.nome_fantasia.trim().toUpperCase();
+        const semUsuarios = (mapaContagem[e.id] || 0) === 0;
+        const naoEhSuper = !idsSuper.has(e.id);
+        const temOriginalAtivo = nomesComUsuarios.has(nomeNorm);
+        const semIdentidade = !e.nome_exibicao || !e.nome_exibicao.trim();
+        return semUsuarios && naoEhSuper && temOriginalAtivo && (e.status_assinatura === 'pendente' || semIdentidade);
+      });
+
+      if (duplicadosOrfaos.length > 0) {
+        const idsRemover = new Set(duplicadosOrfaos.map((d) => d.id));
+        for (const orfao of duplicadosOrfaos) {
+          await supabase.from('mesas').delete().eq('empresa_id', orfao.id);
+          await supabase.from('faturas_assinatura').delete().eq('empresa_id', orfao.id);
+          await supabase.from('empresas').delete().eq('id', orfao.id);
+        }
+        setEmpresas(listaEmpresas.filter((e) => !idsRemover.has(e.id)));
+      } else {
+        setEmpresas(listaEmpresas);
+      }
+
+      setEmpresaIdsComSuperAdmin(idsSuper);
+      setContagemUsuariosPorEmpresa(mapaContagem);
     } catch {
       mostrarToast('Falha ao carregar estabelecimentos.', 'erro');
     } finally {
       setLoading(false);
     }
-  }, [mostrarToast]);
+  }, [cargoLogado, empresaIdLogado, mostrarToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -264,20 +404,21 @@ export function SuperAdminDashboard() {
         .from('usuarios')
         .select('*')
         .eq('empresa_id', empresa.id)
+        .is('deletado_em', null)
         .order('cargo', { ascending: true });
       if (error) throw error;
       if (data) {
-        setUsuariosDaEmpresa(
-          (data as DBUsuario[]).map((u) => ({
-            id: u.id,
-            nome: u.nome,
-            avatar: u.avatar,
-            email: u.email,
-            cargo: u.cargo,
-            status: (u.status as 'ativo' | 'bloqueado') || 'ativo',
-            empresaId: u.empresa_id
-          }))
-        );
+        const lista = (data as DBUsuario[]).map((u) => ({
+          id: u.id,
+          nome: u.nome,
+          avatar: u.avatar,
+          email: u.email,
+          cargo: u.cargo,
+          status: (u.status as 'ativo' | 'bloqueado') || 'ativo',
+          empresaId: u.empresa_id
+        }));
+        setUsuariosDaEmpresa(lista);
+        setContagemUsuariosPorEmpresa((prev) => ({ ...prev, [empresa.id]: lista.length }));
       }
     } catch {
       mostrarToast('Erro ao listar contas do estabelecimento.', 'erro');
@@ -304,15 +445,46 @@ export function SuperAdminDashboard() {
     });
   };
 
-  const EMAIL_SUPER_ADMIN_OFICIAL = 'ancorazero85@gmail.com';
-
   const executarExclusaoEmpresa = async (empresa: EmpresaMaster) => {
     try {
+      // Verificação real no banco: garante que nenhuma conta super_admin pertença a este empresa.id
+      const { data: usuariosVinculados } = await supabase
+        .from('usuarios')
+        .select('id, email, cargo')
+        .eq('empresa_id', empresa.id)
+        .is('deletado_em', null);
+
+      const contemSuperAdminReal = (usuariosVinculados || []).some(
+        (u) =>
+          u.cargo === 'super_admin' ||
+          (u.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN_OFICIAL
+      );
+
+      if (contemSuperAdminReal) {
+        mostrarToast(
+          'Proteção ativa: Este estabelecimento possui a conta Super Admin vinculada e não pode ser excluído.',
+          'erro'
+        );
+        return;
+      }
+
       await supabase.functions
         .invoke('admin-auth', {
           body: { action: 'deleteWorkspace', empresaId: empresa.id }
         })
         .catch(() => null);
+
+      // Limpeza segura em cascata das tabelas filhas antes de remover o estabelecimento
+      await Promise.allSettled([
+        supabase.from('mesas').delete().eq('empresa_id', empresa.id),
+        supabase.from('produtos').delete().eq('empresa_id', empresa.id),
+        supabase.from('categorias').delete().eq('empresa_id', empresa.id),
+        supabase.from('historico_estoque').delete().eq('empresa_id', empresa.id),
+        supabase.from('pagamentos_garcons').delete().eq('empresa_id', empresa.id),
+        supabase.from('metas_financeiras').delete().eq('empresa_id', empresa.id),
+        supabase.from('faturas_assinatura').delete().eq('empresa_id', empresa.id),
+        supabase.from('vendas').delete().eq('empresa_id', empresa.id)
+      ]);
 
       await supabase.from('usuarios').delete().eq('empresa_id', empresa.id);
       const { error } = await supabase.from('empresas').delete().eq('id', empresa.id);
@@ -328,9 +500,10 @@ export function SuperAdminDashboard() {
   };
 
   const handleExcluirEmpresa = (empresa: EmpresaMaster) => {
-    if (empresa.nome_fantasia.trim().toUpperCase() === 'T-SYSTEM BEACH OFICIAL') {
+    // Verifica pelo vínculo real do ID do estabelecimento com a conta Super Admin (e nunca apenas pelo texto do nome)
+    if (empresaIdsComSuperAdmin.has(empresa.id)) {
       mostrarToast(
-        'Proteção ativa: O estabelecimento T-SYSTEM BEACH OFICIAL contém a conta Super Admin e não pode ser excluído.',
+        'Proteção ativa: Este estabelecimento contém a conta Super Admin (ancorazero85@gmail.com) e não pode ser excluído.',
         'erro'
       );
       return;
@@ -1001,9 +1174,9 @@ export function SuperAdminDashboard() {
   }, [mostrarToast]);
 
   const abrirModalClonarCardapio = (empresaClicada?: EmpresaMaster) => {
-    const empresaOficial = empresas.find(
-      (e) => e.nome_fantasia.trim().toUpperCase() === 'T-SYSTEM BEACH OFICIAL'
-    );
+    const empresaOficial =
+      empresas.find((e) => empresaIdsComSuperAdmin.has(e.id)) ||
+      empresas.find((e) => e.nome_fantasia.trim().toUpperCase() === 'T-SYSTEM BEACH OFICIAL');
 
     let origemId = empresaOficial?.id || empresas[0]?.id || '';
     let destinoId = '';
@@ -1174,6 +1347,38 @@ export function SuperAdminDashboard() {
     navigate('/login');
   };
 
+  const navegarParaSecao = (secao: AbaMaster) => {
+    setAbaAtiva(secao);
+    setEmpresaSelecionada(null);
+    setMenuAberto(false);
+  };
+
+  const aplicarFiltroMenu = (status: FiltroStatusEmpresa) => {
+    setAbaAtiva('estabelecimentos');
+    setEmpresaSelecionada(null);
+    setFiltroStatus(status);
+    setMenuAberto(false);
+  };
+
+  const handleCopiarWebhookMenu = () => {
+    navigator.clipboard
+      .writeText(urlWebhookOficial)
+      .then(() => {
+        mostrarToast('URL do Webhook Mercado Pago copiada com sucesso!', 'sucesso');
+      })
+      .catch(() => {
+        mostrarToast('Não foi possível copiar o webhook automaticamente.', 'erro');
+      });
+    setMenuAberto(false);
+  };
+
+  const handleAtualizarDadosMenu = async () => {
+    setMenuAberto(false);
+    setLoading(true);
+    await carregarEmpresas();
+    mostrarToast('Dados sincronizados com o banco!', 'sucesso');
+  };
+
   const empresasFiltradas = empresas.filter((e) => {
     const termo = busca.toLowerCase().trim();
     const matchNome = e.nome_fantasia.toLowerCase().includes(termo);
@@ -1202,6 +1407,30 @@ export function SuperAdminDashboard() {
         : (configSaaS.ciclos[curr.ciclo_cobranca as IdCicloCobranca]?.valorMensalEquivalente ?? configSaaS.ciclos.mensal.valorMensalEquivalente);
       return acc + Number(valor || 0);
     }, 0);
+
+  const empresasEmRisco = empresas.filter(
+    (e) => e.status_assinatura === 'pendente' || e.status_assinatura === 'bloqueada' || e.status_assinatura === 'inadimplente'
+  );
+
+  const receitaEmRisco = empresasEmRisco.reduce((acc, curr) => {
+    const valor = typeof curr.valor_mensalidade === 'number'
+      ? curr.valor_mensalidade
+      : (configSaaS.ciclos[curr.ciclo_cobranca as IdCicloCobranca]?.valorMensalEquivalente ?? configSaaS.ciclos.mensal.valorMensalEquivalente);
+    return acc + Number(valor || 0);
+  }, 0);
+
+  const empresasFinanceiroFiltradas = empresas.filter((e) => {
+    const termo = buscaFinanceiro.toLowerCase().trim();
+    const matchNome = e.nome_fantasia.toLowerCase().includes(termo) || (e.nome_exibicao || '').toLowerCase().includes(termo);
+    const matchDoc = (e.documento || '').includes(termo);
+    if (!matchNome && !matchDoc) return false;
+
+    if (filtroFinanceiro === 'ativa') return e.status_assinatura === 'ativa';
+    if (filtroFinanceiro === 'degustacao') return e.status_assinatura === 'degustacao';
+    if (filtroFinanceiro === 'pendente') return e.status_assinatura === 'pendente';
+    if (filtroFinanceiro === 'bloqueada') return e.status_assinatura === 'bloqueada' || e.status_assinatura === 'inadimplente';
+    return true;
+  });
 
   const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || 'https://edpubwaxpzwnqlyjscwk.supabase.co';
   const urlWebhookOficial = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/mercadopago-webhook`;
@@ -1239,107 +1468,326 @@ export function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* HEADER SUPER ADMIN COMMAND CENTER */}
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full sm:w-auto gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-linear-to-br from-fuchsia-600 to-fuchsia-900 text-white rounded-xl flex items-center justify-center shadow-md shadow-fuchsia-900/20 shrink-0">
-                <LucideIcons.ShieldCheck size={18} strokeWidth={2} />
+      {/* =====================================================================
+          DRAWER / MENU LATERAL ESTILO ADMIN (CINZA EM BRANCO GELO, MINIMALISTA)
+      ===================================================================== */}
+      {menuAberto && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop com blur suave */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setMenuAberto(false)}
+            aria-hidden="true"
+          />
+
+          {/* Painel do Menu (Paleta Cinza sobre Branco Gelo #F8F9FA, idêntico ao padrão Admin) */}
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu de Navegação do Command Center"
+            className="relative w-full max-w-sm sm:max-w-md bg-slate-50 border-r border-slate-200/80 shadow-2xl z-50 flex flex-col justify-between overflow-hidden animate-in slide-in-from-left duration-300"
+          >
+            {/* Cabeçalho do Menu */}
+            <div className="p-4 sm:p-5 border-b border-slate-200/70 bg-white/70 backdrop-blur-md flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <AvatarUsuario
+                  avatar="👑"
+                  nome="Super Admin"
+                  className="w-10 h-10 rounded-2xl bg-slate-900 text-white shadow-xs border border-slate-800"
+                  emojiClassName="text-xl"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-slate-900 truncate">Super Admin</p>
+                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200/60 uppercase tracking-wider">
+                      Master
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 truncate">
+                    {contexto?.garcomLogado?.email || 'ancorazero85@gmail.com'}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-base font-medium text-slate-900 tracking-tight leading-none mb-1 truncate">
-                  Command Center
-                </h1>
-                <p className="text-xs text-slate-400 flex items-center gap-1.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {configSaaS.nomeSistema} · Super Admin
+
+              <button
+                type="button"
+                onClick={() => setMenuAberto(false)}
+                className="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-700 border border-slate-200/80 shadow-2xs hover:shadow-xs active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                title="Fechar Menu (Esc)"
+              >
+                <LucideIcons.X size={16} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Conteúdo com Grupos de Ações (Estilo Admin Settings) */}
+            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
+              {/* GRUPO 1: MÓDULOS PRINCIPAIS */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
+                  Módulos do Sistema
                 </p>
+                <div className="bg-slate-100/75 border border-slate-200/60 rounded-3xl p-1.5 space-y-0.5">
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Building2 size={18} strokeWidth={1.8} />}
+                    titulo="Estabelecimentos"
+                    subtitulo="Clientes cadastrados e licenças"
+                    ativo={abaAtiva === 'estabelecimentos'}
+                    onClick={() => navegarParaSecao('estabelecimentos')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-slate-200/70 text-[11px] font-medium text-slate-700">
+                        {totalEmpresas}
+                      </span>
+                    }
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Wallet size={18} strokeWidth={1.8} />}
+                    titulo="Financeiro T-System"
+                    subtitulo="Panorama financeiro, faturamento e MRR"
+                    ativo={abaAtiva === 'financeiro'}
+                    onClick={() => navegarParaSecao('financeiro')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100/90 text-[11px] font-semibold text-emerald-800">
+                        R$ {formatarMoedaBR(mrrEstimado)}
+                      </span>
+                    }
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Crown size={18} strokeWidth={1.8} />}
+                    titulo="Planos & Promoções"
+                    subtitulo="Preços por ciclo e avisos"
+                    ativo={abaAtiva === 'planos'}
+                    onClick={() => navegarParaSecao('planos')}
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.CreditCard size={18} strokeWidth={1.8} />}
+                    titulo="Mercado Pago & Textos"
+                    subtitulo="Credenciais de pagamento e copy"
+                    ativo={abaAtiva === 'mercadopago_cms'}
+                    onClick={() => navegarParaSecao('mercadopago_cms')}
+                  />
+                </div>
+              </div>
+
+              {/* GRUPO 2: ATALHOS RÁPIDOS DE CLIENTES */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
+                  Filtros Rápidos
+                </p>
+                <div className="bg-slate-100/75 border border-slate-200/60 rounded-3xl p-1.5 space-y-0.5">
+                  <ItemMenuMaster
+                    icone={<LucideIcons.CheckCircle2 size={18} strokeWidth={1.8} className="text-emerald-600" />}
+                    titulo="Clientes Ativos"
+                    subtitulo="Assinaturas em dia"
+                    ativo={abaAtiva === 'estabelecimentos' && filtroStatus === 'ativas'}
+                    onClick={() => aplicarFiltroMenu('ativas')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100/80 text-[11px] font-medium text-emerald-800">
+                        {ativasEmDia}
+                      </span>
+                    }
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Clock size={18} strokeWidth={1.8} className="text-amber-600" />}
+                    titulo="Clientes em Teste Grátis"
+                    subtitulo="Período de degustação"
+                    ativo={abaAtiva === 'estabelecimentos' && filtroStatus === 'degustacao'}
+                    onClick={() => aplicarFiltroMenu('degustacao')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100/80 text-[11px] font-medium text-amber-800">
+                        {emDegustacao}
+                      </span>
+                    }
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.AlertTriangle size={18} strokeWidth={1.8} className="text-orange-600" />}
+                    titulo="Pagamento Pendente"
+                    subtitulo="Aguardando confirmação"
+                    ativo={abaAtiva === 'estabelecimentos' && filtroStatus === 'pendentes'}
+                    onClick={() => aplicarFiltroMenu('pendentes')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-orange-100/80 text-[11px] font-medium text-orange-800">
+                        {aguardandoPlano}
+                      </span>
+                    }
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Lock size={18} strokeWidth={1.8} className="text-slate-500" />}
+                    titulo="Estabelecimentos Suspensos"
+                    subtitulo="Acesso temporariamente bloqueado"
+                    ativo={abaAtiva === 'estabelecimentos' && filtroStatus === 'bloqueadas'}
+                    onClick={() => aplicarFiltroMenu('bloqueadas')}
+                    badge={
+                      <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-[11px] font-medium text-slate-700">
+                        {empresas.filter((e) => e.status_assinatura === 'bloqueada' || e.status_assinatura === 'inadimplente').length}
+                      </span>
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* GRUPO 3: AÇÕES & FERRAMENTAS */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
+                  Ações & Ferramentas
+                </p>
+                <div className="bg-slate-100/75 border border-slate-200/60 rounded-3xl p-1.5 space-y-0.5">
+                  <ItemMenuMaster
+                    icone={<LucideIcons.PlusCircle size={18} strokeWidth={1.8} className="text-slate-800" />}
+                    titulo="Cadastrar Novo Cliente"
+                    subtitulo="Criar estabelecimento e admin inicial"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      setModalNovoCliente(true);
+                    }}
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Copy size={18} strokeWidth={1.8} className="text-slate-800" />}
+                    titulo="Clonar Cardápio"
+                    subtitulo="Replicar categorias e produtos"
+                    onClick={() => {
+                      setMenuAberto(false);
+                      abrirModalClonarCardapio();
+                    }}
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.Link2 size={18} strokeWidth={1.8} className="text-slate-800" />}
+                    titulo="Copiar URL Webhook MP"
+                    subtitulo="Endpoint de retorno de pagamento"
+                    onClick={handleCopiarWebhookMenu}
+                  />
+
+                  <ItemMenuMaster
+                    icone={<LucideIcons.RefreshCw size={18} strokeWidth={1.8} className="text-slate-800" />}
+                    titulo="Sincronizar Dados"
+                    subtitulo="Recarregar clientes e usuários"
+                    onClick={handleAtualizarDadosMenu}
+                  />
+                </div>
               </div>
             </div>
 
+            {/* Rodapé do Menu com Logout */}
+            <div className="p-4 border-t border-slate-200/70 bg-white/70 backdrop-blur-md space-y-2">
+              <button
+                type="button"
+                onClick={handleSair}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/70 shadow-2xs hover:shadow-xs active:scale-[0.99] transition-all duration-150 text-xs font-medium cursor-pointer"
+              >
+                <LucideIcons.LogOut size={15} strokeWidth={1.8} />
+                <span>Encerrar Sessão</span>
+              </button>
+              <p className="text-[10px] text-center text-slate-400">
+                Pressione <kbd className="px-1.5 py-0.5 bg-slate-200/60 rounded text-[9px] font-mono text-slate-600">Esc</kbd> para fechar ou <kbd className="px-1.5 py-0.5 bg-slate-200/60 rounded text-[9px] font-mono text-slate-600">Ctrl+K</kbd>
+              </p>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* HEADER SUPER ADMIN COMMAND CENTER */}
+      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
+          {/* Lado Esquerdo: Botão Menu + Identidade Command Center */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
-              onClick={handleSair}
-              className="sm:hidden w-10 h-10 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer"
-              title="Sair"
+              onClick={() => setMenuAberto(true)}
+              className="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
+              title="Abrir Menu do Sistema (Ctrl + K)"
+              aria-label="Abrir menu de navegação"
             >
-              <LucideIcons.LogOut size={18} strokeWidth={2.3} />
+              <LucideIcons.Menu size={16} strokeWidth={2} />
             </button>
+
+            <div className="w-8 h-8 bg-slate-900 text-white rounded-lg hidden sm:flex items-center justify-center shadow-xs shrink-0">
+              <LucideIcons.ShieldCheck size={16} strokeWidth={2.2} />
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-sm font-medium text-slate-900 tracking-tight leading-none mb-0.5 truncate">
+                Command Center
+              </h1>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1.5 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="truncate">{configSaaS.nomeSistema} · Super Admin</span>
+              </p>
+            </div>
           </div>
 
-          {/* Navegação por Abas (Quick Actions) */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-            <button
-              type="button"
-              onClick={() => {
-                setAbaAtiva('estabelecimentos');
-                setEmpresaSelecionada(null);
-              }}
-              className={`flex-1 sm:flex-initial h-8 px-3.5 rounded-xl text-xs font-medium tracking-tight transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                abaAtiva === 'estabelecimentos'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <LucideIcons.Building2 size={14} />
-              <span>Estabelecimentos</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setAbaAtiva('planos')}
-              className={`flex-1 sm:flex-initial h-8 px-3.5 rounded-xl text-xs font-medium tracking-tight transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                abaAtiva === 'planos'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <LucideIcons.Crown size={14} />
-              <span className="sm:inline hidden">Planos & Promoções</span>
-              <span className="sm:hidden">Planos & Preços</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setAbaAtiva('mercadopago_cms')}
-              className={`flex-1 sm:flex-initial h-8 px-3.5 rounded-xl text-xs font-medium tracking-tight transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                abaAtiva === 'mercadopago_cms'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <LucideIcons.CreditCard size={14} />
-              <span className="sm:inline hidden">Mercado Pago & Textos</span>
-              <span className="sm:hidden">Mercado Pago</span>
-            </button>
+          {/* Centro: Indicador Sutil do Módulo Ativo (Não polui a tela, visual limpo) */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/80 border border-slate-200/60 text-xs text-slate-600 font-medium shadow-2xs">
+            {abaAtiva === 'estabelecimentos' && (
+              <>
+                <LucideIcons.Building2 size={13} className="text-slate-700" />
+                <span>Estabelecimentos</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-[11px] text-slate-500 font-normal">{totalEmpresas} clientes</span>
+              </>
+            )}
+            {abaAtiva === 'financeiro' && (
+              <>
+                <LucideIcons.Wallet size={13} className="text-emerald-600" />
+                <span>Financeiro T-System</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-[11px] text-slate-500 font-normal">MRR R$ {formatarMoedaBR(mrrEstimado)}</span>
+              </>
+            )}
+            {abaAtiva === 'planos' && (
+              <>
+                <LucideIcons.Crown size={13} className="text-amber-600" />
+                <span>Planos & Promoções</span>
+              </>
+            )}
+            {abaAtiva === 'mercadopago_cms' && (
+              <>
+                <LucideIcons.CreditCard size={13} className="text-sky-600" />
+                <span>Mercado Pago & Textos</span>
+              </>
+            )}
           </div>
 
-          <div className="hidden sm:flex items-center gap-2">
+          {/* Lado Direito: Ações Rápidas Alinhadas (Totalmente responsivo, sem quebra em mobile) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Botão Clonar Cardápio - Formato Ícone Minimalista 3D */}
             <button
               type="button"
               onClick={() => abrirModalClonarCardapio()}
-              className="h-8 px-3 rounded-lg bg-white text-slate-700 hover:text-slate-900 text-xs font-medium border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              title="Clonar categorias, produtos e fotos entre estabelecimentos"
+              className="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
+              title="Clonar cardápio entre estabelecimentos"
+              aria-label="Clonar cardápio"
             >
-              <LucideIcons.Copy size={14} className="text-fuchsia-700" />
-              <span>Clonar cardápio</span>
+              <LucideIcons.Copy size={15} strokeWidth={1.9} />
             </button>
+
+            {/* Botão Novo Cliente - Exposto no Header como solicitado, adaptável no mobile */}
             <button
               type="button"
               onClick={() => setModalNovoCliente(true)}
-              className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm shadow-slate-900/20 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="h-8 px-2.5 sm:px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm shadow-slate-900/20 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+              title="Cadastrar Novo Cliente"
             >
-              <LucideIcons.Plus size={14} />
-              <span>Novo cliente</span>
+              <LucideIcons.Plus size={14} strokeWidth={2.2} />
+              <span className="hidden sm:inline">Novo cliente</span>
+              <span className="sm:hidden">Novo</span>
             </button>
+
+            {/* Encerrar Sessão */}
             <button
               type="button"
               onClick={handleSair}
-              className="w-8 h-8 rounded-lg bg-white text-slate-400 hover:text-rose-600 border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-400 hover:text-rose-600 border border-slate-200 shadow-2xs hover:shadow-xs hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0"
               title="Encerrar Sessão"
+              aria-label="Encerrar sessão"
             >
-              <LucideIcons.LogOut size={14} />
+              <LucideIcons.LogOut size={14} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -1353,25 +1801,6 @@ export function SuperAdminDashboard() {
           <>
             {!empresaSelecionada ? (
               <div className="animate-in fade-in duration-300">
-                {/* Botões Mobile para Novo Estabelecimento e Clonagem */}
-                <div className="sm:hidden mb-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => abrirModalClonarCardapio()}
-                    className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 h-10 px-3 rounded-2xl text-xs font-medium shadow-xs active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <LucideIcons.Copy size={14} className="text-fuchsia-700" />
-                    <span>Clonar Cardápio</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalNovoCliente(true)}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white h-10 px-3 rounded-2xl text-xs font-medium shadow-md shadow-slate-900/10 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <LucideIcons.Plus size={15} strokeWidth={2.3} />
-                    <span>Novo Cliente</span>
-                  </button>
-                </div>
 
                 {/* CARDS DE MÉTRICAS FINANCEIRAS E OPERACIONAIS (RESPONSIVOS & LIMPOS) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-5 sm:mb-6">
@@ -1474,177 +1903,174 @@ export function SuperAdminDashboard() {
                   </div>
                 </div>
 
-                {/* GRID DE ESTABELECIMENTOS COM QUICK ACTIONS E EFEITO 3D */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {/* GRID DE ESTABELECIMENTOS — MINIMALISTA, SOFISTICADO E COM EFEITO 3D */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                   {empresasFiltradas.map((emp) => {
                     const isBloqueada =
                       emp.status_assinatura === 'bloqueada' || emp.status_assinatura === 'inadimplente';
                     const isDegustacao = emp.status_assinatura === 'degustacao';
                     const isPendente = emp.status_assinatura === 'pendente';
-                    const valorMensalCliente =
-                      typeof emp.valor_mensalidade === 'number'
-                        ? emp.valor_mensalidade
-                        : configSaaS.ciclos.mensal.valorMensalEquivalente;
-                    const cicloCliente = configSaaS.ciclos[(emp.ciclo_cobranca as IdCicloCobranca) || 'mensal']?.id || 'mensal';
-                    const diasLicenca = calcularDiasRestantes(emp.data_vencimento || '');
+                    const temSuperAdmin = empresaIdsComSuperAdmin.has(emp.id);
+                    const qtdUsuarios = contagemUsuariosPorEmpresa[emp.id] || 0;
 
                     return (
                       <div
                         key={emp.id}
-                        className="group bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => abrirModalEdicao(emp)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            abrirModalEdicao(emp);
+                          }
+                        }}
+                        className="group relative bg-linear-to-b from-white to-slate-50/40 px-4 py-3.5 rounded-3xl border border-slate-200/85 shadow-xs hover:shadow-lg hover:border-slate-300/90 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 flex flex-col justify-between gap-3 cursor-pointer select-none"
                       >
-                        <div>
-                          <div className="flex justify-between items-start gap-3 mb-4">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-center text-slate-500 shrink-0 group-hover:text-fuchsia-700 group-hover:border-fuchsia-200 transition-colors">
-                                <LucideIcons.Store size={18} strokeWidth={1.8} />
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="text-sm font-medium text-slate-900 tracking-tight truncate">
-                                  {emp.nome_fantasia}
-                                </h3>
-                                <p className="text-xs text-slate-400 truncate">
-                                  {emp.nome_exibicao || emp.email_contato || 'Sem identidade personalizada'}
-                                </p>
-                              </div>
-                            </div>
-                            <span
-                              className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                isBloqueada
-                                  ? 'bg-rose-50 text-rose-700'
-                                  : isPendente
-                                    ? 'bg-slate-100 text-slate-600'
-                                    : isDegustacao
-                                      ? 'bg-amber-50 text-amber-700'
-                                      : 'bg-emerald-50 text-emerald-700'
+                        {/* Cabeçalho Minimalista: Emoji + Nome + Status */}
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-lg shrink-0 shadow-2xs group-hover:scale-105 transition-transform duration-200 ${
+                                temSuperAdmin
+                                  ? 'bg-linear-to-b from-fuchsia-50 to-white border-fuchsia-200/80'
+                                  : 'bg-linear-to-b from-white to-slate-100/80 border-slate-200/80'
                               }`}
                             >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  isBloqueada
-                                    ? 'bg-rose-500'
-                                    : isPendente
-                                      ? 'bg-slate-400'
-                                      : isDegustacao
-                                        ? 'bg-amber-500'
-                                        : 'bg-emerald-500'
-                                }`}
-                              />
-                              {isBloqueada ? 'Suspenso' : isPendente ? 'Pendente' : isDegustacao ? 'Teste' : 'Ativo'}
-                            </span>
+                              <span role="img" aria-label="Estabelecimento">
+                                {temSuperAdmin ? '👑' : isBloqueada ? '🔒' : isDegustacao ? '✨' : '🏖️'}
+                              </span>
+                            </div>
+
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-medium text-slate-900 group-hover:text-fuchsia-950 tracking-tight truncate transition-colors">
+                                {emp.nome_fantasia}
+                              </h3>
+                              <p className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1">
+                                {temSuperAdmin ? (
+                                  <span className="text-fuchsia-700 font-medium">
+                                    Workspace Oficial · Super Admin
+                                  </span>
+                                ) : (
+                                  <span>{emp.nome_exibicao || 'Toque para ver dados e licença'}</span>
+                                )}
+                              </p>
+                            </div>
                           </div>
 
-                          <dl className="space-y-2 text-xs mb-1">
-                            <div className="flex items-center justify-between gap-3">
-                              <dt className="text-slate-400 flex items-center gap-1.5">
-                                <LucideIcons.CalendarDays size={13} />
-                                Vencimento
-                              </dt>
-                              <dd className="text-slate-700 tabular-nums">
-                                {emp.data_vencimento
-                                  ? new Date(emp.data_vencimento).toLocaleDateString('pt-BR')
-                                  : '—'}
-                                {diasLicenca !== null && (
-                                  <span className={`ml-1.5 ${diasLicenca < 0 ? 'text-rose-500' : diasLicenca <= 7 ? 'text-amber-600' : 'text-slate-400'}`}>
-                                    {diasLicenca < 0 ? 'vencida' : `${diasLicenca}d`}
-                                  </span>
-                                )}
-                              </dd>
-                            </div>
-
-                            <div className="flex items-center justify-between gap-3">
-                              <dt className="text-slate-400 flex items-center gap-1.5">
-                                <LucideIcons.Wallet size={13} />
-                                Mensalidade
-                              </dt>
-                              <dd className="text-slate-700 tabular-nums">
-                                {isDegustacao
-                                  ? 'Isento'
-                                  : `R$ ${formatarMoedaBR(valorMensalCliente)}`}
-                                <span className="ml-1.5 text-slate-400 capitalize">{cicloCliente}</span>
-                              </dd>
-                            </div>
-
-                            {emp.documento && (
-                              <div className="flex items-center justify-between gap-3">
-                                <dt className="text-slate-400 flex items-center gap-1.5">
-                                  <LucideIcons.FileCheck2 size={13} />
-                                  CPF/CNPJ
-                                </dt>
-                                <dd className="text-slate-700 tabular-nums">{formatarCpfCnpj(emp.documento)}</dd>
-                              </div>
-                            )}
-
-                            {emp.telefone && (
-                              <div className="flex items-center justify-between gap-3">
-                                <dt className="text-slate-400 flex items-center gap-1.5">
-                                  <LucideIcons.Phone size={13} />
-                                  WhatsApp
-                                </dt>
-                                <dd>
-                                  <a
-                                    href={`https://wa.me/55${emp.telefone.replace(/\D/g, '')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-emerald-700 hover:underline tabular-nums inline-flex items-center gap-1"
-                                  >
-                                    <span>{formatarTelefoneBR(emp.telefone)}</span>
-                                    <LucideIcons.ArrowUpRight size={12} />
-                                  </a>
-                                </dd>
-                              </div>
-                            )}
-                          </dl>
+                          <span
+                            className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border shadow-2xs ${
+                              isBloqueada
+                                ? 'bg-rose-50/90 text-rose-700 border-rose-200/70'
+                                : isPendente
+                                  ? 'bg-slate-100/90 text-slate-600 border-slate-200/80'
+                                  : isDegustacao
+                                    ? 'bg-amber-50/90 text-amber-700 border-amber-200/70'
+                                    : 'bg-emerald-50/90 text-emerald-700 border-emerald-200/70'
+                            }`}
+                          >
+                            <span role="img" aria-hidden="true" className="text-[10px] leading-none">
+                              {isBloqueada ? '🔴' : isPendente ? '⏳' : isDegustacao ? '🎁' : '🟢'}
+                            </span>
+                            <span>
+                              {isBloqueada
+                                ? 'Suspenso'
+                                : isPendente
+                                  ? 'Pendente'
+                                  : isDegustacao
+                                    ? 'Teste'
+                                    : 'Ativo'}
+                            </span>
+                          </span>
                         </div>
 
-                        {/* Quick Actions do Estabelecimento */}
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => abrirModalEdicao(emp)}
-                            className="flex-1 h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm shadow-slate-900/20 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <LucideIcons.PencilLine size={13} />
-                            <span>Editar</span>
-                          </button>
+                        {/* Rodapé Minimalista: Indicador de Detalhes + Quick Actions 3D Compactas */}
+                        <div className="pt-2.5 border-t border-slate-100/90 flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-slate-700 transition-colors truncate">
+                            <LucideIcons.SlidersHorizontal size={12} strokeWidth={1.9} />
+                            <span>Detalhes e licença</span>
+                            <LucideIcons.ChevronRight
+                              size={12}
+                              strokeWidth={2}
+                              className="opacity-60 group-hover:translate-x-0.5 transition-transform"
+                            />
+                          </span>
 
-                          <button
-                            type="button"
-                            onClick={() => abrirEmpresa(emp)}
-                            className="w-8 h-8 rounded-lg bg-white text-slate-500 hover:text-slate-900 border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer"
-                            title="Equipe / Assumir identidade"
+                          <div
+                            className="flex items-center gap-1"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <LucideIcons.Users size={14} />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirModalEdicao(emp)}
+                              className="h-7 px-2.5 rounded-xl bg-linear-to-b from-white to-slate-50 hover:from-slate-900 hover:to-slate-800 text-slate-600 hover:text-white border border-slate-200/90 hover:border-slate-900 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 flex items-center gap-1 text-[11px] font-medium cursor-pointer"
+                              title="Editar dados e licença"
+                            >
+                              <LucideIcons.PencilLine size={12} strokeWidth={2} />
+                              <span>Editar</span>
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => abrirModalClonarCardapio(emp)}
-                            className="w-8 h-8 rounded-lg bg-white text-slate-500 hover:text-fuchsia-700 border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer"
-                            title="Clonar cardápio para este estabelecimento"
-                          >
-                            <LucideIcons.Copy size={14} />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirEmpresa(emp)}
+                              className="h-7 px-2 rounded-xl bg-linear-to-b from-white to-slate-50 hover:from-white hover:to-white text-slate-500 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 flex items-center justify-center gap-1 text-[11px] font-medium cursor-pointer"
+                              title="Equipe / Assumir identidade"
+                            >
+                              <LucideIcons.Users size={12} strokeWidth={2} />
+                              {qtdUsuarios > 0 && (
+                                <span className="text-[10px] tabular-nums text-slate-400">
+                                  {qtdUsuarios}
+                                </span>
+                              )}
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleToggleBloqueio(emp)}
-                            className={`w-8 h-8 rounded-lg bg-white border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                              isBloqueada ? 'text-emerald-600 hover:text-emerald-700' : 'text-slate-500 hover:text-amber-600'
-                            }`}
-                            title={isBloqueada ? 'Liberar acesso' : 'Suspender acesso'}
-                          >
-                            {isBloqueada ? <LucideIcons.Unlock size={14} /> : <LucideIcons.Lock size={14} />}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirModalClonarCardapio(emp)}
+                              className="w-7 h-7 rounded-xl bg-linear-to-b from-white to-slate-50 hover:from-white hover:to-white text-slate-500 hover:text-fuchsia-700 border border-slate-200/90 hover:border-fuchsia-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 flex items-center justify-center cursor-pointer"
+                              title="Clonar cardápio para este estabelecimento"
+                            >
+                              <LucideIcons.Copy size={12} strokeWidth={2} />
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleExcluirEmpresa(emp)}
-                            className="w-8 h-8 rounded-lg bg-white text-slate-400 hover:text-rose-600 hover:border-rose-200 border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer"
-                            title="Excluir estabelecimento"
-                          >
-                            <LucideIcons.Trash2 size={14} />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleBloqueio(emp)}
+                              className={`w-7 h-7 rounded-xl bg-linear-to-b from-white to-slate-50 border border-slate-200/90 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 flex items-center justify-center cursor-pointer ${
+                                isBloqueada
+                                  ? 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-200'
+                                  : 'text-slate-500 hover:text-amber-600 hover:border-amber-200'
+                              }`}
+                              title={isBloqueada ? 'Liberar acesso' : 'Suspender acesso'}
+                            >
+                              {isBloqueada ? (
+                                <LucideIcons.Unlock size={12} strokeWidth={2} />
+                              ) : (
+                                <LucideIcons.Lock size={12} strokeWidth={2} />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleExcluirEmpresa(emp)}
+                              className={`w-7 h-7 rounded-xl bg-linear-to-b from-white to-slate-50 border border-slate-200/90 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-150 flex items-center justify-center cursor-pointer ${
+                                temSuperAdmin
+                                  ? 'text-slate-300 hover:text-slate-400'
+                                  : 'text-slate-400 hover:text-rose-600 hover:border-rose-200'
+                              }`}
+                              title={
+                                temSuperAdmin
+                                  ? 'Protegido (contém a conta Super Admin)'
+                                  : 'Excluir estabelecimento'
+                              }
+                            >
+                              {temSuperAdmin ? (
+                                <LucideIcons.ShieldCheck size={12} strokeWidth={2} />
+                              ) : (
+                                <LucideIcons.Trash2 size={12} strokeWidth={2} />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1657,30 +2083,30 @@ export function SuperAdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setEmpresaSelecionada(null)}
-                  className="mb-5 flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors bg-white px-4 py-2.5 rounded-2xl shadow-xs border border-slate-200 active:scale-95 cursor-pointer"
+                  className="mb-4 h-8 px-3.5 rounded-xl bg-white hover:bg-slate-50 text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <LucideIcons.ArrowLeft size={15} strokeWidth={2.5} />
+                  <LucideIcons.ArrowLeft size={14} strokeWidth={2.2} />
                   <span>Voltar para Estabelecimentos</span>
                 </button>
 
-                <div className="bg-white p-6 rounded-4xl border border-slate-200/80 shadow-xs mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
-                    <h2 className="text-xl font-medium text-slate-900 tracking-tight mb-1">
+                    <h2 className="text-base sm:text-lg font-medium text-slate-900 tracking-tight mb-0.5">
                       {empresaSelecionada.nome_fantasia}
                     </h2>
-                    <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                      <LucideIcons.Users size={15} className="text-fuchsia-800" />
-                      <span>Gestão de Contas e Acesso Rápido (Impersonation)</span>
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <LucideIcons.Users size={13} className="text-fuchsia-700" />
+                      <span>Equipe vinculada e acesso rápido (Impersonation)</span>
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setModalNovoUsuario(true)}
-                    className="bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 rounded-2xl text-xs font-medium transition-all active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer"
+                    className="h-8 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-sm shadow-slate-900/15 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                   >
-                    <LucideIcons.UserPlus size={15} strokeWidth={2.3} />
-                    <span>Adicionar Usuário</span>
+                    <LucideIcons.UserPlus size={14} strokeWidth={2} />
+                    <span>Novo usuário</span>
                   </button>
                 </div>
 
@@ -1688,88 +2114,106 @@ export function SuperAdminDashboard() {
                   <div className="flex justify-center py-16">
                     <div className="w-10 h-10 border-4 border-slate-200 border-t-fuchsia-800 rounded-full animate-spin" />
                   </div>
+                ) : usuariosDaEmpresa.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-10 text-center shadow-xs">
+                    <div className="w-11 h-11 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                      <LucideIcons.Users size={20} strokeWidth={1.8} />
+                    </div>
+                    <h3 className="text-sm font-medium text-slate-800 mb-1">
+                      Nenhum usuário vinculado a este estabelecimento
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
+                      Adicione um administrador ou garçom para liberar o acesso operacional desta equipe.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setModalNovoUsuario(true)}
+                      className="h-8 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <LucideIcons.UserPlus size={13} />
+                      <span>Adicionar primeiro usuário</span>
+                    </button>
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                     {usuariosDaEmpresa.map((u) => (
                       <div
                         key={u.id}
-                        className="bg-white p-6 rounded-4xl border border-slate-200/80 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+                        className="group bg-linear-to-b from-white to-slate-50/40 p-4 rounded-3xl border border-slate-200/85 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between gap-3"
                       >
-                        <div>
-                          <div className="flex items-start justify-between gap-3 mb-4">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-11 h-11 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-center text-xl shrink-0">
-                                {u.avatar}
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="text-sm font-medium text-slate-900 truncate">
-                                  {u.nome}
-                                </h4>
-                                <p className="text-xs font-medium text-slate-500 truncate">{u.email}</p>
-                              </div>
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 bg-linear-to-b from-white to-slate-100/80 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-center text-lg shrink-0">
+                              {u.avatar}
                             </div>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-medium text-slate-900 truncate">
+                                {u.nome}
+                              </h4>
+                              <p className="text-[11px] text-slate-400 truncate">{u.email}</p>
+                            </div>
+                          </div>
 
-                            <span
-                              className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium   shrink-0 ${
-                                u.cargo === 'super_admin'
-                                  ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
-                                  : u.cargo === 'admin'
-                                    ? 'bg-fuchsia-50 text-fuchsia-800 border border-fuchsia-200'
-                                    : 'bg-slate-100 text-slate-700'
-                              }`}
-                            >
-                              {u.cargo === 'super_admin'
-                                ? 'Super Admin'
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border shrink-0 ${
+                              u.cargo === 'super_admin'
+                                ? 'bg-indigo-50 text-indigo-800 border-indigo-200/80'
                                 : u.cargo === 'admin'
-                                  ? 'Admin'
-                                  : 'Garçom'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-5">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium   border ${
-                                u.status === 'bloqueado'
-                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              }`}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  u.status === 'bloqueado' ? 'bg-rose-500' : 'bg-emerald-500'
-                                }`}
-                              />
-                              {u.status === 'bloqueado' ? 'Bloqueado' : 'Ativo'}
-                            </span>
-                          </div>
+                                  ? 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200/80'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200/80'
+                            }`}
+                          >
+                            {u.cargo === 'super_admin'
+                              ? 'Super Admin'
+                              : u.cargo === 'admin'
+                                ? 'Admin'
+                                : 'Garçom'}
+                          </span>
                         </div>
 
-                        <div className="space-y-2 pt-4 border-t border-slate-100">
-                          <button
-                            type="button"
-                            onClick={() => entrarComoUsuario(u)}
-                            className="w-full h-10 bg-slate-900 hover:bg-fuchsia-800 text-white rounded-2xl text-xs font-medium transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                        <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                              u.status === 'bloqueado'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200/70'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
+                            }`}
                           >
-                            <LucideIcons.KeyRound size={15} strokeWidth={2.3} />
-                            <span>Assumir Identidade</span>
-                          </button>
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                u.status === 'bloqueado' ? 'bg-rose-500' : 'bg-emerald-500'
+                              }`}
+                            />
+                            {u.status === 'bloqueado' ? 'Bloqueado' : 'Ativo'}
+                          </span>
 
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => entrarComoUsuario(u)}
+                              className="h-7 px-2.5 rounded-xl bg-slate-900 hover:bg-fuchsia-800 text-white text-[11px] font-medium shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Assumir identidade deste usuário"
+                            >
+                              <LucideIcons.KeyRound size={12} strokeWidth={2} />
+                              <span>Acessar</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => abrirModalEditUsuario(u)}
-                              className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="w-7 h-7 rounded-xl bg-linear-to-b from-white to-slate-50 hover:from-white hover:to-white text-slate-500 hover:text-slate-900 border border-slate-200/90 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                              title="Editar usuário"
                             >
-                              <LucideIcons.UserCog size={14} />
-                              <span>Editar</span>
+                              <LucideIcons.UserCog size={12} strokeWidth={2} />
                             </button>
+
                             <button
                               type="button"
                               onClick={() => handleExcluirUsuario(u)}
-                              className="h-9 px-3 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-xl text-xs font-medium transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-rose-200 cursor-pointer"
+                              className="w-7 h-7 rounded-xl bg-linear-to-b from-white to-slate-50 hover:from-rose-50 hover:to-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200/90 hover:border-rose-200 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                              title="Remover usuário"
                             >
-                              <LucideIcons.Trash2 size={14} />
-                              <span>Excluir</span>
+                              <LucideIcons.Trash2 size={12} strokeWidth={2} />
                             </button>
                           </div>
                         </div>
@@ -2383,6 +2827,326 @@ export function SuperAdminDashboard() {
             </div>
           </form>
         )}
+
+        {/* =====================================================================
+            ABA 4: PAINEL FINANCEIRO EXECUTIVO · T-SYSTEM BEACH
+        ===================================================================== */}
+        {abaAtiva === 'financeiro' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Cabeçalho do Painel Financeiro */}
+            <div className="bg-white p-5 sm:p-6 rounded-4xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 mb-1">
+                  <LucideIcons.ShieldCheck size={14} />
+                  Controle Executivo & Faturamento
+                </span>
+                <h2 className="text-lg sm:text-xl font-medium text-slate-900 tracking-tight">
+                  Financeiro · T-System Beach
+                </h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Panorama completo de receita recorrente (MRR), contratos por ciclo e saúde de pagamento dos clientes.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva('planos')}
+                  className="flex-1 sm:flex-initial h-9 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-medium border border-slate-200/70 shadow-2xs hover:shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <LucideIcons.Crown size={14} className="text-amber-600" />
+                  <span>Ajustar Preços</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva('mercadopago_cms')}
+                  className="flex-1 sm:flex-initial h-9 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-medium border border-slate-200/70 shadow-2xs hover:shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <LucideIcons.CreditCard size={14} className="text-sky-600" />
+                  <span>Mercado Pago</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAtualizarDadosMenu}
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 shadow-2xs hover:shadow-xs active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                  title="Atualizar dados do banco"
+                >
+                  <LucideIcons.RefreshCw size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* CARDS DE KPIS FINANCEIROS (ESTILO FINTECH) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* Card 1: MRR */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-medium truncate">Receita Mensal (MRR)</span>
+                  <div className="w-8 h-8 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center shrink-0">
+                    <LucideIcons.DollarSign size={16} strokeWidth={2.3} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">
+                  R$ {formatarMoedaBR(mrrEstimado)}
+                </h3>
+                <span className="text-[11px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1">
+                  <LucideIcons.CheckCircle2 size={12} />
+                  {ativasEmDia} {ativasEmDia === 1 ? 'cliente ativo' : 'clientes ativos'}
+                </span>
+              </div>
+
+              {/* Card 2: ARR Estimado */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-medium truncate">ARR Anual Projetado</span>
+                  <div className="w-8 h-8 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center shrink-0">
+                    <LucideIcons.TrendingUp size={16} strokeWidth={2.3} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">
+                  R$ {formatarMoedaBR(mrrEstimado * 12)}
+                </h3>
+                <span className="text-[11px] text-slate-400 mt-1.5 font-normal truncate">
+                  Projeção 12 meses
+                </span>
+              </div>
+
+              {/* Card 3: Ticket Médio */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-medium truncate">Ticket Médio / Cliente</span>
+                  <div className="w-8 h-8 bg-fuchsia-50 text-fuchsia-700 rounded-xl flex items-center justify-center shrink-0">
+                    <LucideIcons.PiggyBank size={16} strokeWidth={2.3} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">
+                  R$ {formatarMoedaBR(ativasEmDia > 0 ? mrrEstimado / ativasEmDia : 0)}
+                </h3>
+                <span className="text-[11px] text-slate-400 mt-1.5 font-normal truncate">
+                  Média por assinatura
+                </span>
+              </div>
+
+              {/* Card 4: Em Atenção / Inadimplência */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-medium truncate">Receita em Risco</span>
+                  <div className="w-8 h-8 bg-rose-50 text-rose-700 rounded-xl flex items-center justify-center shrink-0">
+                    <LucideIcons.AlertTriangle size={16} strokeWidth={2.3} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight tabular-nums truncate">
+                  R$ {formatarMoedaBR(receitaEmRisco)}
+                </h3>
+                <span className="text-[11px] text-rose-600 font-medium mt-1.5 flex items-center gap-1">
+                  <LucideIcons.Lock size={12} />
+                  {empresasEmRisco.length} {empresasEmRisco.length === 1 ? 'cliente requer atenção' : 'clientes requerem atenção'}
+                </span>
+              </div>
+            </div>
+
+            {/* DISTRIBUIÇÃO POR CICLO DE FATURAMENTO */}
+            <div className="bg-white p-5 sm:p-6 rounded-4xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                    Distribuição por Ciclo de Contrato
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Volume de clientes e receita mensal proporcional em cada ciclo de cobrança
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {LISTA_CICLOS_IDS.map((cId) => {
+                  const cfgCiclo = configSaaS.ciclos[cId];
+                  const qtd = empresas.filter((e) => (e.ciclo_cobranca || 'mensal') === cId).length;
+                  const receitaCiclo = empresas
+                    .filter((e) => (e.ciclo_cobranca || 'mensal') === cId && e.status_assinatura === 'ativa')
+                    .reduce((acc, curr) => acc + (curr.valor_mensalidade ?? cfgCiclo.valorMensalEquivalente), 0);
+
+                  return (
+                    <div
+                      key={cId}
+                      className="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-3.5 flex flex-col justify-between"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                          {cfgCiclo.nome}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-slate-200/70 text-[10px] font-medium text-slate-600">
+                          {qtd} {qtd === 1 ? 'cliente' : 'clientes'}
+                        </span>
+                      </div>
+                      <p className="text-base font-semibold text-slate-900 tracking-tight">
+                        R$ {formatarMoedaBR(receitaCiclo)}
+                        <span className="text-[10px] font-normal text-slate-400">/mês</span>
+                      </p>
+                      <span className="text-[11px] text-slate-400 mt-1">
+                        Valor tabela: R$ {formatarMoedaBR(cfgCiclo.valorTotalCiclo)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* TABELA DE CONTROLE FINANCEIRO DOS CLIENTES */}
+            <div className="bg-white p-5 sm:p-6 rounded-4xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                    Gestão de Mensalidades por Estabelecimento
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Acompanhe datas de vencimento, ciclos e status de cobrança de cada cliente
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <LucideIcons.Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nome ou CPF/CNPJ..."
+                      value={buscaFinanceiro}
+                      onChange={(e) => setBuscaFinanceiro(e.target.value)}
+                      className="h-8 pl-8 pr-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-700 placeholder:text-slate-400 outline-none focus:bg-white focus:border-slate-900 transition-all w-48 sm:w-60"
+                    />
+                  </div>
+
+                  <select
+                    value={filtroFinanceiro}
+                    onChange={(e) => setFiltroFinanceiro(e.target.value)}
+                    className="h-8 px-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-700 outline-none focus:bg-white focus:border-slate-900 transition-all cursor-pointer"
+                  >
+                    <option value="todos">Todos os status</option>
+                    <option value="ativa">Ativos</option>
+                    <option value="degustacao">Em Teste</option>
+                    <option value="pendente">Pendentes</option>
+                    <option value="bloqueada">Suspensos</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Grid de Cards de Estabelecimentos Financeiros */}
+              <div className="space-y-2.5">
+                {empresasFinanceiroFiltradas.length === 0 ? (
+                  <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <LucideIcons.ReceiptText size={24} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-xs font-medium text-slate-500">Nenhum estabelecimento encontrado com os filtros atuais.</p>
+                  </div>
+                ) : (
+                  empresasFinanceiroFiltradas.map((emp) => {
+                    const diasRestantes = emp.data_vencimento ? calcularDiasRestantes(emp.data_vencimento) : null;
+                    const cicloId = (emp.ciclo_cobranca as IdCicloCobranca) || 'mensal';
+                    const valorMensal = typeof emp.valor_mensalidade === 'number'
+                      ? emp.valor_mensalidade
+                      : (configSaaS.ciclos[cicloId]?.valorMensalEquivalente ?? configSaaS.ciclos.mensal.valorMensalEquivalente);
+
+                    const statusAssinatura = emp.status_assinatura || 'ativa';
+                    const isBloqueado = statusAssinatura === 'bloqueada' || statusAssinatura === 'inadimplente';
+
+                    return (
+                      <div
+                        key={emp.id}
+                        className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 hover:bg-white border border-slate-200/70 hover:border-slate-300 hover:shadow-xs transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center shrink-0 text-lg">
+                            🏢
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                {emp.nome_fantasia}
+                              </p>
+                              {emp.nome_exibicao && (
+                                <span className="text-[11px] text-slate-400 font-normal truncate hidden sm:inline">
+                                  ({emp.nome_exibicao})
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                              <span className="capitalize">{cicloId}</span>
+                              <span className="text-slate-300">·</span>
+                              <span className="font-medium text-slate-800">
+                                R$ {formatarMoedaBR(valorMensal)}/mês
+                              </span>
+                              {emp.documento && (
+                                <>
+                                  <span className="text-slate-300">·</span>
+                                  <span className="font-mono text-[11px] text-slate-400">
+                                    {formatarCpfCnpj(emp.documento)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
+                          <div className="text-left sm:text-right">
+                            <p className="text-[11px] text-slate-400">Vencimento</p>
+                            <p className="text-xs font-medium text-slate-800">
+                              {emp.data_vencimento ? emp.data_vencimento.split('T')[0].split('-').reverse().join('/') : 'Sem data'}
+                            </p>
+                            {diasRestantes !== null && (
+                              <span
+                                className={`text-[10px] font-semibold ${
+                                  diasRestantes < 0
+                                    ? 'text-rose-600'
+                                    : diasRestantes <= 5
+                                    ? 'text-amber-600'
+                                    : 'text-emerald-600'
+                                }`}
+                              >
+                                {diasRestantes < 0
+                                  ? `Vencido há ${Math.abs(diasRestantes)} dias`
+                                  : diasRestantes === 0
+                                  ? 'Vence hoje'
+                                  : `${diasRestantes} dias restantes`}
+                              </span>
+                            )}
+                          </div>
+
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${
+                              isBloqueado
+                                ? 'bg-rose-100 text-rose-800'
+                                : statusAssinatura === 'degustacao'
+                                ? 'bg-amber-100 text-amber-800'
+                                : statusAssinatura === 'pendente'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {isBloqueado
+                              ? 'Suspenso'
+                              : statusAssinatura === 'degustacao'
+                              ? 'Degustação'
+                              : statusAssinatura === 'pendente'
+                              ? 'Pendente'
+                              : 'Ativo'}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => abrirModalEdicao(emp)}
+                            className="h-8 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:shadow-xs active:scale-95 transition-all text-xs font-medium cursor-pointer"
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* =======================================================================
@@ -2698,7 +3462,20 @@ export function SuperAdminDashboard() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-600 pl-0.5">Telefone / WhatsApp</label>
+                      <div className="flex items-center justify-between px-0.5">
+                        <label className="text-xs font-medium text-slate-600">Telefone / WhatsApp</label>
+                        {extrairDigitos(editTelefone).length >= 10 && (
+                          <a
+                            href={`https://wa.me/55${extrairDigitos(editTelefone)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 hover:underline inline-flex items-center gap-0.5"
+                          >
+                            <span>Abrir WhatsApp</span>
+                            <LucideIcons.ArrowUpRight size={11} />
+                          </a>
+                        )}
+                      </div>
                       <input
                         type="tel"
                         inputMode="numeric"

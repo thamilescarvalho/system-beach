@@ -2,203 +2,267 @@
 import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Header } from '../components/Header';
-import type { Mesa } from '../types';
+import type { Mesa, ItemComanda } from '../types';
 import * as LucideIcons from 'lucide-react';
 
 export function Cozinha() {
   const contexto = useContext(AppContext);
 
   const mesas: Mesa[] = contexto?.mesas || [];
-  const mesasAtivas = mesas.filter(m => m.status === 'ocupada' && m.itens.length > 0);
+  const mesasAtivas = mesas.filter((m) => m.status === 'ocupada' && m.itens.length > 0);
 
   const formatarHora = (iso: string) => {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
+  /**
+   * Ciclo progressivo em 1 único botão circular:
+   * 1º clique (pendente -> preparo)
+   * 2º clique (preparo -> pronto)
+   * 3º clique se precisar desfazer (pronto -> pendente)
+   */
+  const avancarStatusItem = (numeroMesa: number, item: ItemComanda) => {
+    if (!contexto?.atualizarStatusCozinha) return;
+
+    if (item.statusCozinha === 'pendente' || !item.statusCozinha) {
+      contexto.atualizarStatusCozinha(numeroMesa, item.id, 'preparo');
+    } else if (item.statusCozinha === 'preparo') {
+      contexto.atualizarStatusCozinha(numeroMesa, item.id, 'pronto');
+    } else if (item.statusCozinha === 'pronto') {
+      contexto.atualizarStatusCozinha(numeroMesa, item.id, 'pendente');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-200/50 font-sans text-slate-900 selection:bg-green-500 selection:text-white">
+    <div className="min-h-screen bg-slate-100/80 font-sans text-slate-800 antialiased selection:bg-emerald-600 selection:text-white">
       <Header />
 
-      <div className="pt-20 md:pt-24 pb-28 md:pb-8 md:pl-18 flex flex-col items-center w-full">
+      <div className="pt-20 md:pt-24 pb-28 md:pb-10 md:pl-20 flex flex-col items-center w-full">
         <main className="w-full max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between sm:justify-center mb-6 px-2 gap-3">
-            <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 uppercase tracking-widest truncate">
-              Recebendo Pedidos
-            </h2>
-            <span className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-white bg-slate-800 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-md shrink-0">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Online
-            </span>
+          {/* BARRA SUPERIOR KDS: STATUS ONLINE */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-5 bg-white border border-slate-200/80 rounded-full px-4 py-2 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-xs font-medium text-slate-800 uppercase tracking-wider">
+                Fila de Pedidos
+              </h2>
+            </div>
+
+            
           </div>
 
           {mesasAtivas.length === 0 ? (
-            <div className="w-full bg-white border border-slate-300 rounded-3xl py-20 sm:py-24 flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-500 shadow-sm mt-4">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                <LucideIcons.ChefHat size={44} strokeWidth={1.5} />
+            <div className="w-full bg-white border border-slate-200/80 rounded-4xl py-20 sm:py-24 flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-300 shadow-xs mt-2">
+              <div className="w-16 h-16 bg-slate-100 border border-slate-200/70 text-slate-400 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <LucideIcons.ChefHat size={32} strokeWidth={1.6} />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mb-2">Cozinha Livre</h3>
-              <p className="text-xs sm:text-sm text-slate-500 max-w-xs">
-                Nenhum pedido na fila. A praça está organizada e limpa.
+              <h3 className="text-base sm:text-lg font-medium text-slate-800 tracking-tight mb-1">
+                Bar e Cozinha Livres
+              </h3>
+              <p className="text-xs text-slate-400 max-w-xs">
+                Nenhum pedido pendente na fila no momento.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
-              {mesasAtivas.map(mesa => {
-                const itensPendentes = mesa.itens.filter(i => i.statusCozinha === 'pendente');
-                const itensPreparo = mesa.itens.filter(i => i.statusCozinha === 'preparo');
-                const itensProntos = mesa.itens.filter(i => i.statusCozinha === 'pronto');
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+              {mesasAtivas.map((mesa) => {
+                const itensPendentes = mesa.itens.filter((i) => i.statusCozinha === 'pendente');
+                const itensPreparo = mesa.itens.filter((i) => i.statusCozinha === 'preparo');
+                const itensProntos = mesa.itens.filter((i) => i.statusCozinha === 'pronto');
 
-                if (itensPendentes.length === 0 && itensPreparo.length === 0 && itensProntos.length === 0) return null;
+                if (
+                  itensPendentes.length === 0 &&
+                  itensPreparo.length === 0 &&
+                  itensProntos.length === 0
+                ) {
+                  return null;
+                }
 
-                const isTotalmentePronto = itensPendentes.length === 0 && itensPreparo.length === 0;
-                const isEmPreparo = !isTotalmentePronto && itensPreparo.length > 0 && itensPendentes.length === 0;
+                const isTotalmentePronto =
+                  itensPendentes.length === 0 && itensPreparo.length === 0;
+                const isEmPreparo =
+                  !isTotalmentePronto && itensPreparo.length > 0 && itensPendentes.length === 0;
                 const itensAbertos = [...itensPendentes, ...itensPreparo];
+                const numeroFormatado = String(mesa.numero).padStart(2, '0');
 
                 return (
                   <div
                     key={mesa.id}
-                    className={`bg-white rounded-3xl overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl flex flex-col group ${
+                    className={`bg-slate-200/55 rounded-4xl p-2 transition-all duration-200 flex flex-col shadow-xs border ${
                       isTotalmentePronto
-                        ? 'border-2 border-green-500 shadow-xl shadow-green-500/15'
+                        ? 'border-emerald-400/80 bg-emerald-50/40'
                         : isEmPreparo
-                          ? 'border-2 border-yellow-400 shadow-xl shadow-yellow-500/10'
-                          : 'border border-slate-200 shadow-md'
+                          ? 'border-amber-300/90 bg-amber-50/30'
+                          : 'border-slate-200/90'
                     }`}
                   >
-                    {/* CABEÇALHO DO TICKET */}
-                    <div className="p-4 sm:p-5 flex justify-between items-start gap-2 border-b border-slate-100 bg-white">
-                      <div className="min-w-0">
-                        <h2 className="text-2xl sm:text-3xl font-black tracking-tighter text-slate-900 leading-none mb-2.5">
-                          MESA {mesa.numero}
-                        </h2>
+                    {/* CABEÇALHO DO CARD DA MESA */}
+                    <div className="bg-white rounded-3xl px-4 py-3 mb-1.5 border border-slate-200/70 shadow-2xs flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-10 h-10 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center shrink-0 tabular-nums shadow-2xs">
+                          {numeroFormatado}
+                        </span>
 
-                        <div className="flex flex-col gap-1.5 min-w-0">
-                          {mesa.nomeCliente && (
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md w-max max-w-full flex items-center gap-1.5 truncate">
-                              <LucideIcons.User size={12} className="text-slate-400 shrink-0" />
-                              <span className="truncate">{mesa.nomeCliente}</span>
-                            </span>
-                          )}
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 truncate">
-                            Atendente: <span className="text-slate-700">{mesa.garcomNome || 'Sistema'}</span>
-                          </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-tight truncate">
+                              {mesa.nomeCliente?.trim() || `Mesa ${numeroFormatado}`}
+                            </h2>
+                          </div>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            Atendente: <span className="text-slate-600">{mesa.garcomNome || 'Equipe'}</span>
+                          </p>
                         </div>
                       </div>
 
-                      {/* Badge */}
+                      {/* Status Geral da Mesa */}
                       {isTotalmentePronto ? (
-                        <span className="text-[10px] font-black bg-green-50 text-green-600 border border-green-200 px-3 py-2 rounded-xl uppercase tracking-widest flex items-center gap-1.5 shadow-xs shrink-0">
-                          <LucideIcons.Check size={14} strokeWidth={3} /> Pronto
+                        <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
+                          <LucideIcons.Check size={12} strokeWidth={2.5} />
+                          <span>Pronto</span>
                         </span>
                       ) : isEmPreparo ? (
-                        <span className="text-[10px] font-black bg-yellow-50 text-yellow-700 border border-yellow-300 px-3 py-2 rounded-xl uppercase tracking-widest flex items-center gap-1.5 shadow-xs shrink-0">
-                          <LucideIcons.Flame size={14} className="text-yellow-600" /> Em preparo
+                        <span className="text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
+                          <LucideIcons.Flame size={12} className="text-amber-600" />
+                          <span>Preparo</span>
                         </span>
                       ) : (
-                        <span className="text-[10px] font-black bg-slate-900 text-white px-3 py-2 rounded-xl uppercase tracking-widest shadow-md flex items-center gap-1.5 shrink-0">
-                          <LucideIcons.Timer size={14} className="text-yellow-400" /> Recebido
+                        <span className="text-[10px] font-semibold bg-slate-900 text-white px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
+                          <LucideIcons.Timer size={12} className="text-amber-400" />
+                          <span>Recebido</span>
                         </span>
                       )}
                     </div>
 
-                    {/* LISTA DE ITENS */}
-                    <div className="flex flex-col divide-y divide-slate-100">
+                    {/* LISTA DE ITENS DA MESA */}
+                    <div className="space-y-1.5">
                       {/* ITENS RECEBIDOS / EM PREPARO */}
-                      {itensAbertos.map(item => {
+                      {itensAbertos.map((item) => {
                         const emPreparo = item.statusCozinha === 'preparo';
                         return (
                           <div
                             key={item.id}
-                            className={`w-full text-left p-4 sm:p-5 flex justify-between items-center gap-3 transition-all duration-200 ${
-                              emPreparo ? 'bg-yellow-50/40' : 'bg-white hover:bg-slate-50/70'
+                            onClick={() => avancarStatusItem(mesa.numero, item)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                avancarStatusItem(mesa.numero, item);
+                              }
+                            }}
+                            className={`w-full text-left px-3.5 py-2.5 rounded-3xl border transition-all duration-150 flex items-center justify-between gap-2.5 cursor-pointer select-none active:scale-[0.99] ${
+                              emPreparo
+                                ? 'bg-amber-50/90 border-amber-300/90 shadow-2xs'
+                                : 'bg-white hover:bg-slate-50/80 border-slate-200/70 shadow-2xs'
                             }`}
                           >
-                            <div className="flex-1 pr-2 min-w-0">
-                              <div className="flex items-start gap-3 sm:gap-4">
-                                <span className={`font-black text-base sm:text-lg min-w-10 h-10 sm:min-w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 border transition-colors duration-300 ${
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              {/* Quantidade Compacta */}
+                              <span
+                                className={`text-xs font-semibold w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 border tabular-nums transition-colors ${
                                   emPreparo
-                                    ? 'bg-yellow-100 border-yellow-300 text-yellow-800'
-                                    : 'bg-slate-100 border-slate-200 text-slate-900'
-                                }`}>
-                                  {item.quantidade}x
-                                </span>
-
-                                <div className="pt-0.5 min-w-0">
-                                  <p className="font-bold text-slate-900 text-base sm:text-[17px] leading-snug tracking-tight wrap-break-word">
-                                    {item.produto.nome}
-                                  </p>
-                                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-2 flex-wrap">
-                                    <span className="flex items-center gap-1">
-                                      <LucideIcons.Clock size={12} />
-                                      {item.horaPedido ? formatarHora(item.horaPedido) : 'Agora'}
-                                    </span>
-                                    {emPreparo && (
-                                      <span className="text-yellow-700 bg-yellow-100/80 border border-yellow-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                                        Em preparo
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {item.observacao && (
-                                <div className="mt-3 ml-13 sm:ml-15 bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex gap-2 items-start">
-                                  <LucideIcons.MessageSquare size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                                  <p className="text-xs sm:text-[13px] text-slate-600 font-medium leading-snug wrap-break-word">
-                                    {item.observacao}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Botões de Status: Em preparo (Yellow) e Pronto (Green) */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => contexto?.atualizarStatusCozinha(mesa.numero, item.id, emPreparo ? 'pendente' : 'preparo')}
-                                title={emPreparo ? 'Voltar para recebido' : 'Confirmar recebimento (Em preparo)'}
-                                className={`h-8 px-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border transition-all duration-200 active:scale-95 cursor-pointer ${
-                                  emPreparo
-                                    ? 'bg-yellow-400 text-slate-950 border-yellow-500 shadow-sm shadow-yellow-400/30'
-                                    : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300'
+                                    ? 'bg-amber-200/80 border-amber-300 text-amber-950'
+                                    : 'bg-slate-100 border-slate-200/80 text-slate-800'
                                 }`}
                               >
-                                <LucideIcons.Flame size={13} strokeWidth={2.5} />
-                                <span>Em preparo</span>
-                              </button>
+                                {item.quantidade}x
+                              </span>
 
-                              <button
-                                type="button"
-                                onClick={() => contexto?.atualizarStatusCozinha(mesa.numero, item.id, 'pronto')}
-                                title="Marcar como pronto"
-                                className="w-8 h-8 rounded-full border-3 border-slate-200 hover:border-green-500 text-transparent hover:text-green-500 flex items-center justify-center shrink-0 transition-all duration-200 active:scale-90 cursor-pointer"
-                              >
-                                <LucideIcons.Check size={14} strokeWidth={3} />
-                              </button>
+                              {/* Nome do Item (Sem quebrar palavras) + Hora e Status */}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs sm:text-sm font-medium text-slate-900 truncate uppercase tracking-tight">
+                                  {item.produto.nome}
+                                </p>
+
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                                  <span className="inline-flex items-center gap-1 tabular-nums">
+                                    <LucideIcons.Clock size={10} />
+                                    {item.horaPedido ? formatarHora(item.horaPedido) : 'Agora'}
+                                  </span>
+                                  <span>•</span>
+                                  {emPreparo ? (
+                                    <span className="font-semibold text-amber-700 inline-flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                      Em preparo
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">Aguardando</span>
+                                  )}
+                                </div>
+
+                                {item.observacao && (
+                                  <div className="mt-1.5 bg-white/90 border border-slate-200/80 px-2.5 py-1 rounded-xl flex gap-1.5 items-center">
+                                    <LucideIcons.MessageSquare
+                                      size={11}
+                                      className="text-amber-600 shrink-0"
+                                    />
+                                    <p className="text-[11px] text-slate-600 truncate">
+                                      {item.observacao}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
+
+                            {/* ÚNICA BOLINHA SELETORA DE STATUS (1º Toque: Em Preparo | 2º Toque: Pronto) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                avancarStatusItem(mesa.numero, item);
+                              }}
+                              title={
+                                emPreparo
+                                  ? 'Toque para marcar como Pronto'
+                                  : 'Toque para iniciar preparo'
+                              }
+                              aria-label={
+                                emPreparo
+                                  ? 'Marcar item como pronto'
+                                  : 'Colocar item em preparo'
+                              }
+                              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 active:scale-90 cursor-pointer ${
+                                emPreparo
+                                  ? 'bg-amber-400 hover:bg-emerald-500 text-slate-950 hover:text-white border-2 border-amber-500 hover:border-emerald-500 shadow-xs'
+                                  : 'bg-white hover:bg-amber-50 text-slate-300 hover:text-amber-500 border-2 border-slate-300 hover:border-amber-400'
+                              }`}
+                            >
+                              {emPreparo ? (
+                                <LucideIcons.Flame size={16} strokeWidth={2.2} />
+                              ) : (
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-200 group-hover:bg-amber-400 transition-colors" />
+                              )}
+                            </button>
                           </div>
                         );
                       })}
 
                       {/* ITENS PRONTOS */}
-                      {itensProntos.map(item => (
+                      {itensProntos.map((item) => (
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => contexto?.atualizarStatusCozinha(mesa.numero, item.id, 'pendente')}
-                          className="w-full text-left bg-slate-50/50 p-4 sm:p-5 flex justify-between items-center opacity-60 hover:opacity-100 transition-all active:bg-slate-100"
+                          onClick={() => avancarStatusItem(mesa.numero, item)}
+                          title="Toque caso precise voltar o item para a fila"
+                          className="w-full text-left bg-white/70 hover:bg-white px-3.5 py-2.5 rounded-3xl border border-slate-200/60 flex justify-between items-center gap-2.5 opacity-75 hover:opacity-100 transition-all active:scale-[0.99] cursor-pointer"
                         >
-                          <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-3">
-                            <span className="text-slate-400 font-bold text-base sm:text-lg bg-slate-200 min-w-10 h-10 sm:min-w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className="text-slate-400 font-semibold text-xs bg-slate-100 border border-slate-200/70 w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 tabular-nums">
                               {item.quantidade}x
                             </span>
-                            <p className="font-semibold text-slate-500 text-base sm:text-[17px] line-through tracking-tight truncate">
-                              {item.produto.nome}
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-slate-400 text-xs sm:text-sm line-through truncate uppercase">
+                                {item.produto.nome}
+                              </p>
+                              <span className="text-[10px] text-emerald-600 font-medium">
+                                Pronto para servir
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-green-500/40">
-                            <LucideIcons.Check size={16} strokeWidth={3} />
+                          <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <LucideIcons.Check size={16} strokeWidth={2.8} />
                           </div>
                         </button>
                       ))}

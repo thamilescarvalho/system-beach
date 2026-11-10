@@ -131,29 +131,41 @@ export function Cadastro() {
         });
 
         if (rpcError) {
-          const { data: empresaData } = await supabase
-            .from('empresas')
-            .insert([{
-              nome_fantasia: nomeEmpresa.trim(),
-              documento: docLimpo,
-              telefone: telLimpo,
-              status_assinatura: 'pendente',
-              data_vencimento: null
-            }])
+          const { data: jaProvisionado } = await supabase
+            .from('usuarios')
             .select('id')
-            .single();
+            .eq('id', authData.user.id)
+            .maybeSingle();
 
-          if (empresaData) {
-            await supabase.from('usuarios').insert([{
-              id: authData.user.id,
-              nome: nomeUsuario.trim(),
-              email: emailLimpo,
-              telefone: telLimpo,
-              cargo: 'admin',
-              status: 'ativo',
-              avatar: '👑',
-              empresa_id: empresaData.id
-            }]);
+          if (!jaProvisionado) {
+            const { data: empresaData } = await supabase
+              .from('empresas')
+              .insert([{
+                nome_fantasia: nomeEmpresa.trim(),
+                documento: docLimpo,
+                telefone: telLimpo,
+                status_assinatura: 'pendente',
+                data_vencimento: null
+              }])
+              .select('id')
+              .single();
+
+            if (empresaData) {
+              const { error: errInsertUser } = await supabase.from('usuarios').insert([{
+                id: authData.user.id,
+                nome: nomeUsuario.trim(),
+                email: emailLimpo,
+                telefone: telLimpo,
+                cargo: 'admin',
+                status: 'ativo',
+                avatar: '👑',
+                empresa_id: empresaData.id
+              }]);
+
+              if (errInsertUser) {
+                await supabase.from('empresas').delete().eq('id', empresaData.id);
+              }
+            }
           }
         }
 
