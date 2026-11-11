@@ -133,8 +133,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [garcomLogado, setGarcomLogadoState] = useState<Garcom | null>(null);
 
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFluxoRecuperacaoSenhaRef = useRef<boolean>(
+    typeof window !== 'undefined' &&
+      (window.location.hash.includes('type=recovery') ||
+        window.location.search.includes('type=recovery') ||
+        window.location.search.includes('modo=redefinir-senha'))
+  );
   const isFluxoConfirmacaoEmailRef = useRef<boolean>(
     typeof window !== 'undefined' &&
+      !isFluxoRecuperacaoSenhaRef.current &&
       (window.location.hash.includes('type=signup') ||
         window.location.hash.includes('access_token=') ||
         window.location.search.includes('confirmado=sucesso') ||
@@ -158,12 +165,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (!perfil && emailUsuario) {
+      const emailLimpoFallback = emailUsuario.trim().toLowerCase();
       const resPorEmail = await supabase
         .from('usuarios')
         .select('id, nome, avatar, cargo, empresa_id, email, status')
-        .eq('email', emailUsuario.trim().toLowerCase())
+        .eq('email', emailLimpoFallback)
         .maybeSingle();
       perfil = resPorEmail.data;
+
+      // Salvaguarda Zero-Lockout para a conta Super Admin oficial já autenticada pelo Supabase Auth
+      if (!perfil && emailLimpoFallback === 'ancorazero85@gmail.com') {
+        perfil = {
+          id: userId,
+          nome: 'THAMILES DEV',
+          avatar: '👑',
+          cargo: 'super_admin',
+          email: 'ancorazero85@gmail.com',
+          status: 'ativo',
+          empresa_id: '887a56e0-9151-493f-9801-732245b535f3'
+        };
+      }
     }
 
     if (!perfil && metadata) {
@@ -324,10 +345,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined' && window.location.search.includes('token_hash=')) {
         const params = new URLSearchParams(window.location.search);
         const tokenHash = params.get('token_hash');
+        const tipoOtp = params.get('type') === 'recovery' || isFluxoRecuperacaoSenhaRef.current ? 'recovery' : 'signup';
         if (tokenHash) {
           await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: 'signup'
+            type: tipoOtp
           }).catch(() => null);
         }
       }
@@ -341,6 +363,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem(IMPERSONATION_STORAGE_KEY);
         localStorage.removeItem('coral_device_session');
         setGarcomLogadoState(null);
+        setCarregandoContexto(false);
+        return;
+      }
+
+      // Se o usuário chegou pelo link de recuperação de senha (Reset password), mantém a sessão aberta
+      // e aguarda ele cadastrar a nova senha na tela de Login sem deslogar e sem redirecionar antes da hora
+      if (
+        isFluxoRecuperacaoSenhaRef.current ||
+        sessionStorage.getItem('tsystem_password_recovery_mode') === 'true'
+      ) {
+        sessionStorage.setItem('tsystem_password_recovery_mode', 'true');
+        if (session.user.email) {
+          localStorage.setItem('tsystem_saved_email', session.user.email.trim().toLowerCase());
+        }
         setCarregandoContexto(false);
         return;
       }
@@ -436,8 +472,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         sessionStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+        sessionStorage.removeItem('tsystem_password_recovery_mode');
         setGarcomLogadoState(null);
         setDadosEmpresa(null);
+        setCarregandoContexto(false);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        isFluxoRecuperacaoSenhaRef.current = true;
+        sessionStorage.setItem('tsystem_password_recovery_mode', 'true');
         setCarregandoContexto(false);
       } else if (event === 'SIGNED_IN' && isFluxoConfirmacaoEmailRef.current) {
         void sincronizarSessaoSegura();
@@ -791,7 +832,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const autenticarUsuario = async (email: string, senha: string): Promise<boolean> => {
     isFluxoConfirmacaoEmailRef.current = false;
+    isFluxoRecuperacaoSenhaRef.current = false;
     sessionStorage.removeItem('tsystem_email_confirmado_aviso');
+    sessionStorage.removeItem('tsystem_password_recovery_mode');
     sessionStorage.removeItem(IMPERSONATION_STORAGE_KEY);
     const emailLimpo = email.trim().toLowerCase();
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

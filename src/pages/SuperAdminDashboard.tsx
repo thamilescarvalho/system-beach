@@ -313,6 +313,46 @@ export function SuperAdminDashboard() {
 
   const carregarEmpresas = useCallback(async () => {
     try {
+      // 1. Tenta a RPC Enterprise 'super_admin_listar_estabelecimentos' (SECURITY DEFINER)
+      // Essa RPC lê diretamente do banco sem ser afetada por filtros ou limitações de RLS client-side
+      const { data: rpcEmpresas, error: rpcError } = await supabase.rpc('super_admin_listar_estabelecimentos');
+
+      if (!rpcError && Array.isArray(rpcEmpresas)) {
+        const listaEmpresas = rpcEmpresas as (EmpresaMaster & { total_usuarios?: number })[];
+        const mapaContagem: Record<string, number> = {};
+        const idsSuper = new Set<string>();
+
+        for (const e of listaEmpresas) {
+          mapaContagem[e.id] = Number(e.total_usuarios || 0);
+        }
+
+        // Identifica os estabelecimentos com Super Admin vinculado
+        const { data: usersData } = await supabase
+          .from('usuarios')
+          .select('id, email, cargo, empresa_id')
+          .is('deletado_em', null);
+
+        if (usersData) {
+          for (const u of usersData) {
+            if (!u.empresa_id) continue;
+            const emailUser = (u.email || '').trim().toLowerCase();
+            if (u.cargo === 'super_admin' || emailUser === EMAIL_SUPER_ADMIN_OFICIAL) {
+              idsSuper.add(u.empresa_id);
+            }
+          }
+        }
+
+        if (cargoLogado === 'super_admin' && empresaIdLogado && idsSuper.size === 0) {
+          idsSuper.add(empresaIdLogado);
+        }
+
+        setEmpresas(listaEmpresas);
+        setEmpresaIdsComSuperAdmin(idsSuper);
+        setContagemUsuariosPorEmpresa(mapaContagem);
+        return;
+      }
+
+      // 2. Fallback resiliente: consulta direta em caso de RPC ainda não executada no banco
       const [resEmpresas, resUsuarios] = await Promise.all([
         supabase
           .from('empresas')
@@ -345,37 +385,7 @@ export function SuperAdminDashboard() {
         idsSuper.add(empresaIdLogado);
       }
 
-      // Higienização automática e segura de estabelecimentos duplicados e órfãos (0 usuários):
-      // Se existir um estabelecimento com o mesmo nome de um estabelecimento que já possui equipe/Super Admin,
-      // mas que está órfão (0 usuários vinculados, status pendente e sem identidade personalizada),
-      // remove o registro fantasma automaticamente para manter a integridade do banco.
-      const nomesComUsuarios = new Set(
-        listaEmpresas
-          .filter((e) => (mapaContagem[e.id] || 0) > 0 || idsSuper.has(e.id))
-          .map((e) => e.nome_fantasia.trim().toUpperCase())
-      );
-
-      const duplicadosOrfaos = listaEmpresas.filter((e) => {
-        const nomeNorm = e.nome_fantasia.trim().toUpperCase();
-        const semUsuarios = (mapaContagem[e.id] || 0) === 0;
-        const naoEhSuper = !idsSuper.has(e.id);
-        const temOriginalAtivo = nomesComUsuarios.has(nomeNorm);
-        const semIdentidade = !e.nome_exibicao || !e.nome_exibicao.trim();
-        return semUsuarios && naoEhSuper && temOriginalAtivo && (e.status_assinatura === 'pendente' || semIdentidade);
-      });
-
-      if (duplicadosOrfaos.length > 0) {
-        const idsRemover = new Set(duplicadosOrfaos.map((d) => d.id));
-        for (const orfao of duplicadosOrfaos) {
-          await supabase.from('mesas').delete().eq('empresa_id', orfao.id);
-          await supabase.from('faturas_assinatura').delete().eq('empresa_id', orfao.id);
-          await supabase.from('empresas').delete().eq('id', orfao.id);
-        }
-        setEmpresas(listaEmpresas.filter((e) => !idsRemover.has(e.id)));
-      } else {
-        setEmpresas(listaEmpresas);
-      }
-
+      setEmpresas(listaEmpresas);
       setEmpresaIdsComSuperAdmin(idsSuper);
       setContagemUsuariosPorEmpresa(mapaContagem);
     } catch {
@@ -400,6 +410,28 @@ export function SuperAdminDashboard() {
     setEmpresaSelecionada(empresa);
     setLoadingUsuarios(true);
     try {
+      // 1. Tenta a RPC Enterprise 'super_admin_listar_usuarios_empresa'
+      const { data: rpcUsers, error: rpcErr } = await supabase.rpc(
+        'super_admin_listar_usuarios_empresa',
+        { p_empresa_id: empresa.id }
+      );
+
+      if (!rpcErr && Array.isArray(rpcUsers)) {
+        const lista = (rpcUsers as DBUsuario[]).map((u) => ({
+          id: u.id,
+          nome: u.nome,
+          avatar: u.avatar,
+          email: u.email,
+          cargo: u.cargo,
+          status: (u.status as 'ativo' | 'bloqueado') || 'ativo',
+          empresaId: u.empresa_id
+        }));
+        setUsuariosDaEmpresa(lista);
+        setContagemUsuariosPorEmpresa((prev) => ({ ...prev, [empresa.id]: lista.length }));
+        return;
+      }
+
+      // 2. Fallback para consulta direta
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')

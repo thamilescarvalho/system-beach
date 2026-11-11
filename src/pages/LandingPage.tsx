@@ -161,6 +161,8 @@ const BEACH_SCENES = [
   },
 ];
 
+const TYPEWRITER_WORDS = ['intuitiva', 'eficiente', 'prática', 'em poucos toques'];
+
 export function LandingPage() {
   const [heroStep, setHeroStep] = useState<0 | 1>(0);
   const [logoSpin, setLogoSpin] = useState<boolean>(false);
@@ -172,6 +174,14 @@ export function LandingPage() {
   const [heroCocoQty, setHeroCocoQty] = useState<number>(2);
   const [deliveryToast, setDeliveryToast] = useState<string | null>(null);
   const [activeDevice, setActiveDevice] = useState<'iphone' | 'notebook' | 'tablet'>('notebook');
+
+  // Efeito de digitação ("intuitiva" sendo digitado no Hero)
+  const [wordIndex, setWordIndex] = useState<number>(0);
+  const [typedText, setTypedText] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Aba ativa do bloco de módulos (App de Garçom, Cardápio Digital, QR Code de Mesas, Frente de Caixa PDV)
+  const [activeModule, setActiveModule] = useState<'garcom' | 'cardapio' | 'qrcode' | 'pdv'>('garcom');
 
   // Estados da simulação interativa no canto direito do bloco #ambiente
   const [simTick, setSimTick] = useState<number>(0);
@@ -188,6 +198,31 @@ export function LandingPage() {
 
   const selectedUmbrella =
     UMBRELLAS_DATA.find((u) => u.id === selectedUmbrellaId) || UMBRELLAS_DATA[3];
+
+  // Loop de digitação estilo máquina de escrever ("intuitiva", "eficiente", "prática"...)
+  useEffect(() => {
+    const currentFullWord = TYPEWRITER_WORDS[wordIndex];
+    const typingSpeed = isDeleting ? 55 : 95;
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        const nextText = currentFullWord.slice(0, typedText.length + 1);
+        setTypedText(nextText);
+        if (nextText === currentFullWord) {
+          setTimeout(() => setIsDeleting(true), 2000);
+        }
+      } else {
+        const nextText = currentFullWord.slice(0, typedText.length - 1);
+        setTypedText(nextText);
+        if (nextText === '') {
+          setIsDeleting(false);
+          setWordIndex((prev) => (prev + 1) % TYPEWRITER_WORDS.length);
+        }
+      }
+    }, typingSpeed);
+
+    return () => clearTimeout(timer);
+  }, [typedText, isDeleting, wordIndex]);
 
   useEffect(() => {
     const stepTimer = setInterval(() => {
@@ -283,6 +318,12 @@ export function LandingPage() {
               Início
             </a>
             <a
+              href="#solucoes"
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-white transition-all whitespace-nowrap"
+            >
+              Soluções
+            </a>
+            <a
               href="#ambiente"
               className="px-3.5 py-1.5 rounded-full text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-white transition-all whitespace-nowrap"
             >
@@ -351,6 +392,13 @@ export function LandingPage() {
                 Início
               </a>
               <a
+                href="#solucoes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-50 text-center"
+              >
+                Soluções
+              </a>
+              <a
                 href="#ambiente"
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-50 text-center"
@@ -381,7 +429,7 @@ export function LandingPage() {
               <a
                 href="#seguranca"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-50 text-center"
+                className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-50 text-center col-span-2"
               >
                 Segurança
               </a>
@@ -406,21 +454,51 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             {/* Coluna Esquerda */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5 space-y-5">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-slate-600 text-xs font-medium">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                Operação Pé na Areia em Tempo Real
+                Operação Pé na Areia & Salão em Tempo Real
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight text-slate-800">
-                Do guarda-sol ao bar em{' '}
-                <span className="text-amber-500">poucos toques</span>, sem papel e sem fila.
+                Gestão simples, fácil e{' '}
+                <span className="text-amber-500 inline-flex items-baseline">
+                  <span>{typedText}</span>
+                  <span
+                    aria-hidden="true"
+                    className="ml-0.5 inline-block w-0.5 sm:w-[3px] h-7 sm:h-9 lg:h-11 bg-amber-500 animate-pulse rounded-full translate-y-0.5"
+                  />
+                </span>{' '}
+                do guarda-sol ao bar.
               </h1>
 
               <p className="text-base text-slate-500 leading-relaxed font-normal">
-                O garçom abre a mesa no celular, lança o balde de cerveja Corona e a água de coco
-                gelada, e o pedido já aparece pronto para entrega na areia.
+                Sem papel e sem fila: o garçom abre a mesa no celular, lança o balde de cerveja
+                Corona e a água de coco gelada, e o pedido chega ao bar e à cozinha em segundos.
               </p>
+
+              {/* Badges Rápidas dos 4 Módulos Principais */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {[
+                  { id: 'cardapio' as const, label: 'Cardápio Digital', icon: LucideIcons.UtensilsCrossed },
+                  { id: 'pdv' as const, label: 'Frente de Caixa (PDV)', icon: LucideIcons.MonitorCheck },
+                  { id: 'garcom' as const, label: 'App de Garçom', icon: LucideIcons.Smartphone },
+                  { id: 'qrcode' as const, label: 'QR Code de Mesas', icon: LucideIcons.QrCode },
+                ].map((mod) => {
+                  const ModIcon = mod.icon;
+                  return (
+                    <a
+                      key={mod.id}
+                      href="#solucoes"
+                      onClick={() => setActiveModule(mod.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 hover:bg-amber-50/80 border border-slate-200/80 hover:border-amber-300 text-xs font-medium text-slate-600 hover:text-slate-800 transition-all"
+                    >
+                      <ModIcon className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{mod.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
 
               {/* Seletor Clean no Padrão Admin.tsx (slate-500) */}
               <div className="inline-flex p-1 rounded-full bg-slate-100/80 border border-slate-200/70">
@@ -793,6 +871,411 @@ export function LandingPage() {
                   <p className="text-xs text-slate-500 mt-0.5">
                     Balde de Corona e água de coco verde entregues direto no guarda-sol.
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* NOVA SEÇÃO #SOLUCOES: AGILIDADE NO SALÃO E NA AREIA + OS 4 MÓDULOS INTEGRADOS */}
+      <section id="solucoes" className="py-14 lg:py-20 bg-white border-t border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Topo: 4 Módulos do Ecossistema (Cardápio Digital, Frente de Caixa PDV, App de Garçom, QR Code de Mesas) */}
+          <div className="mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-600 text-xs font-medium mb-3">
+              <LucideIcons.Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Plataforma 4 em 1 • Tudo Integrado na Mesma Tela
+            </div>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-3xl font-semibold tracking-tight text-slate-800">
+                  Agilidade no salão e na areia.{' '}
+                  <span className="text-amber-500">Controle total da operação.</span>
+                </h2>
+                <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">
+                  O garçom registra o pedido direto na mesa ou no guarda-sol e o pedido chega à
+                  cozinha e ao bar em segundos, totalmente integrado ao frente de caixa (PDV).
+                </p>
+              </div>
+            </div>
+
+            {/* Grade dos 4 Pilares Selecionáveis */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-7">
+              {[
+                {
+                  id: 'garcom' as const,
+                  title: 'App de Garçom',
+                  badge: 'Salão & Areia',
+                  desc: 'Lançamento de pedidos direto na mesa em poucos toques com aviso de prato pronto.',
+                  icon: LucideIcons.Smartphone,
+                },
+                {
+                  id: 'cardapio' as const,
+                  title: 'Cardápio Digital',
+                  badge: 'Catálogo Vivo',
+                  desc: 'Cardápio interativo com fotos, categorias de bar e cozinha e atualização instantânea.',
+                  icon: LucideIcons.UtensilsCrossed,
+                },
+                {
+                  id: 'pdv' as const,
+                  title: 'Frente de Caixa (PDV)',
+                  badge: 'Fechamento Seguro',
+                  desc: 'Abertura e fechamento de caixa, divisão de conta, PIX, cartão e impressão 80mm.',
+                  icon: LucideIcons.MonitorCheck,
+                },
+                {
+                  id: 'qrcode' as const,
+                  title: 'QR Code de Mesas',
+                  badge: 'Autoatendimento',
+                  desc: 'O cliente escaneia o QR Code na mesa ou guarda-sol e pede direto pelo celular.',
+                  icon: LucideIcons.QrCode,
+                },
+              ].map((item) => {
+                const IconComp = item.icon;
+                const isSelected = activeModule === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onMouseEnter={() => setActiveModule(item.id)}
+                    onClick={() => setActiveModule(item.id)}
+                    className={`text-left p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      isSelected
+                        ? 'bg-slate-800 text-white border-slate-800 shadow-lg -translate-y-0.5'
+                        : 'bg-slate-50/80 hover:bg-white text-slate-700 border-slate-200/80 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-400'
+                            : 'bg-white text-amber-500 border-slate-200'
+                        }`}
+                      >
+                        <IconComp className="w-5 h-5" />
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                          isSelected
+                            ? 'bg-white/15 text-amber-300'
+                            : 'bg-slate-200/70 text-slate-600'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+                    <div>
+                      <h3
+                        className={`text-sm font-semibold ${
+                          isSelected ? 'text-white' : 'text-slate-800'
+                        }`}
+                      >
+                        {item.title}
+                      </h3>
+                      <p
+                        className={`text-xs mt-1 leading-relaxed ${
+                          isSelected ? 'text-slate-300' : 'text-slate-500'
+                        }`}
+                      >
+                        {item.desc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Painel Principal: Benefícios Operacionais à Esquerda + Demonstração Ao Vivo do Módulo Selecionado à Direita */}
+          <div className="bg-slate-50/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 lg:p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              {/* Coluna Esquerda: Benefícios de Operação Integrada */}
+              <div className="lg:col-span-6 space-y-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                  <LucideIcons.Zap className="w-3.5 h-3.5 text-amber-500" />
+                  Fluxo Sincronizado de Ponta a Ponta
+                </div>
+
+                <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-800 leading-snug">
+                  Da mesa para a cozinha em segundos, sem papel e sem desencontro de informações
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  Seja pelo lançamento rápido no <strong>App de Garçom</strong> ou pelo{' '}
+                  <strong>QR Code da Mesa</strong>, cada item entra automaticamente na fila do bar e
+                  da cozinha e já fica contabilizado no <strong>Frente de Caixa (PDV)</strong>.
+                </p>
+
+                {/* Os 3 Benefícios Chave Solicitados */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <LucideIcons.CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Atendimento mais rápido e sem erros
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Pedidos padronizados chegam na hora à cozinha e ao bar, eliminando letra
+                        ilegível e esquecimentos no salão ou na areia.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <LucideIcons.TrendingDown className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Redução de retrabalho e custos operacionais
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Menos deslocamento desnecessário da equipe, maior giro por mesa e controle
+                        automático de estoque a cada venda.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <LucideIcons.ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
+                        Fechamento de contas seguro no PDV
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Conferência transparente de todos os itens consumidos, divisão por pessoa,
+                        múltiplos pagamentos e emissão de cupom térmico.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna Direita: Simulador Visual do Módulo Selecionado (Garçom, Cardápio Digital, PDV ou QR Code) */}
+              <div className="lg:col-span-6 flex justify-center">
+                <div className="w-full max-w-md bg-white rounded-3xl p-5 border border-slate-200/90 shadow-lg min-h-88 flex flex-col justify-between">
+                  {/* Cabeçalho do Simulador de Módulo */}
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span className="text-xs font-semibold text-slate-800">
+                        {activeModule === 'garcom' && 'App de Garçom → Cozinha & PDV'}
+                        {activeModule === 'cardapio' && 'Cardápio Digital Interativo'}
+                        {activeModule === 'pdv' && 'Frente de Caixa (PDV) Integrado'}
+                        {activeModule === 'qrcode' && 'QR Code Exclusivo por Mesa'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                      Sincronizado
+                    </span>
+                  </div>
+
+                  {/* MÓDULO 1: APP DE GARÇOM */}
+                  {activeModule === 'garcom' && (
+                    <div className="space-y-3 my-auto">
+                      <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider block">
+                            Registro Direto na Mesa 04
+                          </span>
+                          <span className="text-sm font-semibold">
+                            Garçom Lucas lançou 2 itens agora
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
+                          0,4s → Cozinha
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-7 h-7 rounded-xl bg-amber-500 text-white font-bold flex items-center justify-center">
+                              1x
+                            </span>
+                            <div>
+                              <p className="font-semibold text-slate-800">CAMARÃO CROCANTE</p>
+                              <span className="text-[10px] text-slate-400">
+                                Enviado para KDS Cozinha • Sem cebola
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold">
+                            Na Cozinha
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-7 h-7 rounded-xl bg-slate-800 text-white font-bold flex items-center justify-center">
+                              2x
+                            </span>
+                            <div>
+                              <p className="font-semibold text-slate-800">CAIPIRINHA DE LIMÃO</p>
+                              <span className="text-[10px] text-slate-400">
+                                Enviado para Fila do Bar • Pouco gelo
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">
+                            Pronto 🔔
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MÓDULO 2: CARDÁPIO DIGITAL */}
+                  {activeModule === 'cardapio' && (
+                    <div className="space-y-2.5 my-auto">
+                      <div className="flex items-center gap-1.5 pb-1">
+                        <span className="px-3 py-1 rounded-full bg-slate-800 text-white text-[11px] font-medium">
+                          🍹 Drinks & Cervejas
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">
+                          🍤 Petiscos da Praia
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">
+                          🥥 Naturais
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src="/drinks-camarao-5d.png"
+                            alt="Camarão Empanado"
+                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">
+                              Porção Camarão Empanado Premium
+                            </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              Acompanha molho especial da casa e limão
+                            </p>
+                            <span className="text-xs font-bold text-amber-600">R$ 108,00</span>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-semibold shrink-0">
+                          + Pedir
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src="/barman-luva-caipirinha.png"
+                            alt="Caipirinha"
+                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">
+                              Caipirinha Artesanal de Limão Taiti
+                            </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              Preparada na hora com fruta fresca selecionada
+                            </p>
+                            <span className="text-xs font-bold text-amber-600">R$ 28,00</span>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-semibold shrink-0">
+                          + Pedir
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MÓDULO 3: FRENTE DE CAIXA (PDV) */}
+                  {activeModule === 'pdv' && (
+                    <div className="space-y-3 my-auto">
+                      <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-300 uppercase tracking-wider block">
+                            Frente de Caixa (PDV) • Mesa 04
+                          </span>
+                          <span className="text-xl font-bold tabular-nums">R$ 246,00</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-emerald-300 block">Divisão (3 pessoas)</span>
+                          <span className="text-xs font-semibold">R$ 82,00 / pessoa</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                          <LucideIcons.QrCode className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                          <span className="text-[11px] font-semibold text-emerald-800 block">
+                            PIX QR
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                          <LucideIcons.CreditCard className="w-4 h-4 text-slate-700 mx-auto mb-1" />
+                          <span className="text-[11px] font-semibold text-slate-700 block">
+                            Cartão
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                          <LucideIcons.Printer className="w-4 h-4 text-amber-600 mx-auto mb-1" />
+                          <span className="text-[11px] font-semibold text-slate-700 block">
+                            Cupom 80mm
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                        <span className="text-slate-600">Status do Caixa Diário</span>
+                        <span className="font-semibold text-emerald-700">
+                          Conferido & Sem Divergências
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MÓDULO 4: QR CODE DE MESAS */}
+                  {activeModule === 'qrcode' && (
+                    <div className="space-y-3 my-auto">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-white border-2 border-slate-800 p-2 flex flex-col items-center justify-center shrink-0 shadow-xs">
+                          <LucideIcons.QrCode className="w-12 h-12 text-slate-800" />
+                          <span className="text-[9px] font-extrabold tracking-widest text-amber-600 mt-0.5">
+                            MESA 04
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold">
+                            Autoatendimento Inteligente
+                          </span>
+                          <h4 className="text-sm font-semibold text-slate-800">
+                            Aponte a câmera e peça na hora
+                          </h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            O cliente abre o cardápio digital pelo QR Code da mesa ou guarda-sol e o
+                            pedido já cai identificado na comanda dele.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between text-xs">
+                        <span className="text-emerald-800 font-medium">
+                          ✓ Sem precisar baixar aplicativo
+                        </span>
+                        <span className="font-semibold text-emerald-700">Direto no Navegador</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rodapé de Navegação Rápida entre os 4 Módulos */}
+                  <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Clique nos 4 cartões acima para alternar</span>
+                    <span className="font-medium text-slate-700">100% Integrado</span>
+                  </div>
                 </div>
               </div>
             </div>

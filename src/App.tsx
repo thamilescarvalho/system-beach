@@ -73,9 +73,19 @@ function AuthRoute({ children }: { children: ReactNode }) {
 function RootRoute() {
   const contexto = useAppContext();
 
-  // Preserva confirmação de e-mail do Supabase
+  // Preserva recuperação de senha e confirmação de e-mail do Supabase
   const hashAtual = typeof window !== 'undefined' ? window.location.hash : '';
   const searchAtual = typeof window !== 'undefined' ? window.location.search : '';
+  const veioDeRecuperacaoSenha =
+    hashAtual.includes('type=recovery') ||
+    searchAtual.includes('type=recovery') ||
+    searchAtual.includes('modo=redefinir-senha');
+
+  if (veioDeRecuperacaoSenha) {
+    const queryExtra = searchAtual ? `${searchAtual}&modo=redefinir-senha` : '?modo=redefinir-senha';
+    return <Navigate to={`/login${queryExtra}${hashAtual}`} replace />;
+  }
+
   const veioDeConfirmacaoEmail =
     hashAtual.includes('type=signup') ||
     hashAtual.includes('access_token=') ||
