@@ -25,6 +25,11 @@ import {
 } from '../utils/configuracoesSaaS';
 import { ModalConfirmacao, type TipoModalConfirmacao } from '../components/ModalConfirmacao';
 import { AvatarUsuario } from '../components/AvatarUsuario';
+import {
+  carregarFaturasGeradasBancoEmpresa,
+  excluirFaturaNaoPaga,
+  type FaturaAssinatura
+} from '../utils/faturasSaaS';
 
 interface EmpresaMaster {
   id: string;
@@ -233,6 +238,11 @@ export function SuperAdminDashboard() {
   const [abaEdicaoEmpresa, setAbaEdicaoEmpresa] = useState<'dados' | 'licenca'>('dados');
   const [erroEdicaoEmpresa, setErroEdicaoEmpresa] = useState<string>('');
   const [loadingEdicao, setLoadingEdicao] = useState<boolean>(false);
+  const [faturasClienteEdicao, setFaturasClienteEdicao] = useState<FaturaAssinatura[]>([]);
+  const [carregandoFaturasCliente, setCarregandoFaturasCliente] = useState<boolean>(false);
+  const [filtroStatusFaturaEdicao, setFiltroStatusFaturaEdicao] = useState<'todas' | 'paga' | 'pendente' | 'em_atraso'>('todas');
+  const [confirmandoExclusaoFaturaId, setConfirmandoExclusaoFaturaId] = useState<string | null>(null);
+  const [excluindoFaturaId, setExcluindoFaturaId] = useState<string | null>(null);
 
   // Modais: Gestão de Usuários do Estabelecimento
   const [usuarioEdicao, setUsuarioEdicao] = useState<Garcom | null>(null);
@@ -642,33 +652,29 @@ export function SuperAdminDashboard() {
 
     setLoadingEditUser(true);
     try {
-      const payload = {
-        nome: editUserNome.trim(),
-        email: isSuperAdminOficial ? EMAIL_SUPER_ADMIN_OFICIAL : emailFinal,
-        cargo: cargoValidado,
-        status: editUserStatus
-      };
+      const emailAlvo = isSuperAdminOficial ? EMAIL_SUPER_ADMIN_OFICIAL : emailFinal;
 
-      const { error } = await supabase.from('usuarios').update(payload).eq('id', usuarioEdicao.id);
-      if (error) throw error;
+      // 1. Executa a RPC atômica que sincroniza auth.users e public.usuarios
+      const { error: rpcError } = await supabase.rpc('admin_atualizar_usuario_estabelecimento', {
+        p_usuario_id: usuarioEdicao.id,
+        p_nome: editUserNome.trim(),
+        p_email: emailAlvo,
+        p_cargo: cargoValidado,
+        p_avatar: usuarioEdicao.avatar ?? null,
+        p_status: editUserStatus ?? null
+      });
 
-      await supabase.functions
-        .invoke('admin-auth', {
-          body: {
-            userId: usuarioEdicao.id,
-            newEmail: payload.email,
-            status: editUserStatus
-          }
-        })
-        .catch(() => null);
+      if (rpcError) {
+        throw new Error(rpcError.message || 'Falha ao sincronizar dados e credenciais do usuário.');
+      }
 
       setUsuariosDaEmpresa((prev) =>
         prev.map((u) =>
           u.id === usuarioEdicao.id
             ? {
                 ...u,
-                nome: payload.nome,
-                email: payload.email,
+                nome: editUserNome.trim(),
+                email: emailAlvo,
                 cargo: cargoValidado,
                 status: editUserStatus
               }
@@ -883,11 +889,44 @@ export function SuperAdminDashboard() {
     }
   };
 
+  // Carrega faturas geradas no banco para o cliente em edição
+  const carregarFaturasClienteEdicao = useCallback(async (empresaId: string) => {
+    setCarregandoFaturasCliente(true);
+    try {
+      const lista = await carregarFaturasGeradasBancoEmpresa(empresaId);
+      setFaturasClienteEdicao(lista);
+    } finally {
+      setCarregandoFaturasCliente(false);
+    }
+  }, []);
+
+  // Excluir fatura NÃO paga do cliente
+  const handleExcluirFaturaCliente = async (fatura: FaturaAssinatura) => {
+    if (!empresaEdicao || fatura.status === 'paga') return;
+    setExcluindoFaturaId(fatura.id);
+    try {
+      const res = await excluirFaturaNaoPaga(fatura.id, empresaEdicao.id);
+      if (!res.ok) {
+        mostrarToast(res.erro || 'Não foi possível excluir a fatura.', 'erro');
+        return;
+      }
+      setFaturasClienteEdicao((prev) => prev.filter((item) => item.id !== fatura.id));
+      setConfirmandoExclusaoFaturaId(null);
+      mostrarToast('Fatura excluída com sucesso.', 'sucesso');
+    } finally {
+      setExcluindoFaturaId(null);
+    }
+  };
+
   // Abrir Modal de Edição Completa do Cliente (Dados Cadastrais + Licença)
   const abrirModalEdicao = (empresa: EmpresaMaster) => {
     setEmpresaEdicao(empresa);
     setAbaEdicaoEmpresa('dados');
     setErroEdicaoEmpresa('');
+    setFiltroStatusFaturaEdicao('todas');
+    setConfirmandoExclusaoFaturaId(null);
+    setFaturasClienteEdicao([]);
+    void carregarFaturasClienteEdicao(empresa.id);
     setEditNome(empresa.nome_fantasia);
     setEditNomeExibicao(empresa.nome_exibicao || '');
     setEditDocumento(empresa.documento ? formatarCpfCnpj(empresa.documento) : '');
@@ -3402,7 +3441,7 @@ export function SuperAdminDashboard() {
           onClick={() => !loadingEdicao && setEmpresaEdicao(null)}
         >
           <div
-            className="bg-white border border-slate-200/80 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 max-h-screen overflow-y-auto"
+            className="bg-white border border-slate-200/80 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl shadow-2xl animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 max-h-screen overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cabeçalho */}
@@ -3631,6 +3670,267 @@ export function SuperAdminDashboard() {
                       </div>
                     );
                   })()}
+
+                  {/* Faturas geradas para este estabelecimento */}
+                  <div className="pt-3 border-t border-slate-200/80 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                          <LucideIcons.Receipt size={14} />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-semibold text-slate-800 truncate">
+                            Faturas geradas do cliente
+                          </h4>
+                          <p className="text-xs text-slate-400">
+                            {faturasClienteEdicao.length}{' '}
+                            {faturasClienteEdicao.length === 1 ? 'fatura registrada' : 'faturas registradas'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => empresaEdicao && void carregarFaturasClienteEdicao(empresaEdicao.id)}
+                        disabled={carregandoFaturasCliente}
+                        className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-600 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Atualizar faturas"
+                      >
+                        <LucideIcons.RefreshCw
+                          size={13}
+                          className={carregandoFaturasCliente ? 'animate-spin' : ''}
+                        />
+                        <span>Atualizar</span>
+                      </button>
+                    </div>
+
+                    {/* Filtros rápidos de status */}
+                    {faturasClienteEdicao.length > 0 && (() => {
+                      const qtdPagas = faturasClienteEdicao.filter((f) => f.status === 'paga').length;
+                      const qtdAbertas = faturasClienteEdicao.filter((f) => f.status === 'pendente').length;
+                      const qtdAtraso = faturasClienteEdicao.filter((f) => f.status === 'em_atraso').length;
+
+                      const filtros: Array<{
+                        id: 'todas' | 'paga' | 'pendente' | 'em_atraso';
+                        label: string;
+                        qtd: number;
+                      }> = [
+                        { id: 'todas', label: 'Todas', qtd: faturasClienteEdicao.length },
+                        { id: 'paga', label: 'Pagas', qtd: qtdPagas },
+                        { id: 'pendente', label: 'Em aberto', qtd: qtdAbertas },
+                        { id: 'em_atraso', label: 'Em atraso', qtd: qtdAtraso }
+                      ];
+
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {filtros.map((filtro) => (
+                            <button
+                              key={filtro.id}
+                              type="button"
+                              onClick={() => setFiltroStatusFaturaEdicao(filtro.id)}
+                              className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+                                filtroStatusFaturaEdicao === filtro.id
+                                  ? 'bg-slate-900 text-white shadow-xs'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                              }`}
+                            >
+                              <span>{filtro.label}</span>
+                              <span
+                                className={`px-1.5 py-0.5 rounded-md text-xs tabular-nums ${
+                                  filtroStatusFaturaEdicao === filtro.id
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-white text-slate-500'
+                                }`}
+                              >
+                                {filtro.qtd}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Lista de Faturas */}
+                    {carregandoFaturasCliente ? (
+                      <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-4 py-6 flex items-center justify-center gap-2 text-xs text-slate-500">
+                        <LucideIcons.Loader2 size={15} className="animate-spin" />
+                        <span>Carregando faturas do cliente...</span>
+                      </div>
+                    ) : (() => {
+                      const faturasFiltradas = faturasClienteEdicao.filter((f) =>
+                        filtroStatusFaturaEdicao === 'todas' ? true : f.status === filtroStatusFaturaEdicao
+                      );
+
+                      if (faturasClienteEdicao.length === 0) {
+                        return (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-5 text-center space-y-1">
+                            <p className="text-xs font-medium text-slate-600">
+                              Nenhuma fatura gerada no banco para este cliente.
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              As faturas aparecem aqui assim que forem emitidas ou pagas via PIX.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      if (faturasFiltradas.length === 0) {
+                        return (
+                          <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 px-4 py-4 text-center text-xs text-slate-500">
+                            Nenhuma fatura encontrada para o filtro selecionado.
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                          {faturasFiltradas.map((fatura) => {
+                            const ehPaga = fatura.status === 'paga';
+                            const ehAtraso = fatura.status === 'em_atraso';
+                            const ehCancelada = fatura.status === 'cancelada';
+
+                            const badgeClasses = ehPaga
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : ehAtraso
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : ehCancelada
+                                  ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200';
+
+                            const statusLabel = ehPaga
+                              ? 'Paga'
+                              : ehAtraso
+                                ? 'Em atraso'
+                                : ehCancelada
+                                  ? 'Cancelada'
+                                  : 'Em aberto';
+
+                            const vencimentoFmt = new Date(fatura.dataVencimento).toLocaleDateString('pt-BR');
+                            const pagamentoFmt = fatura.dataPagamento
+                              ? new Date(fatura.dataPagamento).toLocaleString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : null;
+
+                            const confirmandoEsta = confirmandoExclusaoFaturaId === fatura.id;
+                            const excluindoEsta = excluindoFaturaId === fatura.id;
+
+                            return (
+                              <div
+                                key={fatura.id}
+                                className="rounded-xl border border-slate-200/80 bg-white p-3 space-y-2 shadow-xs"
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${badgeClasses}`}
+                                      >
+                                        {ehPaga ? (
+                                          <LucideIcons.CheckCircle2 size={12} />
+                                        ) : ehAtraso ? (
+                                          <LucideIcons.AlertTriangle size={12} />
+                                        ) : (
+                                          <LucideIcons.Clock size={12} />
+                                        )}
+                                        <span>{statusLabel}</span>
+                                      </span>
+                                      <span className="text-xs font-semibold text-slate-900 truncate">
+                                        {fatura.competencia}
+                                      </span>
+                                      <span className="text-xs text-slate-400 font-mono truncate">
+                                        {fatura.id}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                      <span>
+                                        {fatura.planoNome} · {fatura.cicloNome}
+                                      </span>
+                                      <span className="tabular-nums">Venc.: {vencimentoFmt}</span>
+                                    </div>
+
+                                    {ehPaga && (
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-emerald-700 bg-emerald-50/70 border border-emerald-100 rounded-lg px-2.5 py-1.5">
+                                        <span className="inline-flex items-center gap-1 font-medium">
+                                          <LucideIcons.BadgeCheck size={13} />
+                                          {pagamentoFmt
+                                            ? `Pago em ${pagamentoFmt}`
+                                            : 'Pagamento confirmado'}
+                                        </span>
+                                        {fatura.formaPagamento && (
+                                          <span className="text-emerald-600">{fatura.formaPagamento}</span>
+                                        )}
+                                        {fatura.paymentIdMp && (
+                                          <span className="font-mono text-emerald-600">
+                                            MP #{fatura.paymentIdMp}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                    <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                                      R$ {formatarMoedaBR(fatura.valor)}
+                                    </span>
+
+                                    {ehPaga ? (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-xs text-slate-400"
+                                        title="Faturas pagas não podem ser apagadas pelo painel, apenas diretamente no banco de dados."
+                                      >
+                                        <LucideIcons.Lock size={12} />
+                                        <span>Protegida</span>
+                                      </span>
+                                    ) : confirmandoEsta ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => void handleExcluirFaturaCliente(fatura)}
+                                          disabled={excluindoEsta}
+                                          className="h-7 px-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                                        >
+                                          {excluindoEsta ? (
+                                            <LucideIcons.Loader2 size={12} className="animate-spin" />
+                                          ) : (
+                                            <LucideIcons.Trash2 size={12} />
+                                          )}
+                                          <span>Confirmar</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmandoExclusaoFaturaId(null)}
+                                          disabled={excluindoEsta}
+                                          className="h-7 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition-colors cursor-pointer"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmandoExclusaoFaturaId(fatura.id)}
+                                        className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                        title="Excluir fatura não paga"
+                                      >
+                                        <LucideIcons.Trash2 size={12} />
+                                        <span>Excluir</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
 

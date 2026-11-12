@@ -725,7 +725,7 @@ export function Header() {
                 className={temPedidoProntoNaoLido ? 'animate-bounce text-yellow-600' : ''}
               />
               {alertasNaoLidos.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-xs scale-75 font-medium rounded-full border-2 border-white flex items-center justify-center leading-none">
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-amber-500 text-white text-xs scale-85 font-sans rounded-full border-2 border-white flex items-center justify-center leading-none">
                   {alertasNaoLidos.length > 9 ? '9+' : alertasNaoLidos.length}
                 </span>
               )}

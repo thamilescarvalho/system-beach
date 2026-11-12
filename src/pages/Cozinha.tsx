@@ -15,12 +15,7 @@ export function Cozinha() {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  /**
-   * Ciclo progressivo em 1 único botão circular:
-   * 1º clique (pendente -> preparo)
-   * 2º clique (preparo -> pronto)
-   * 3º clique se precisar desfazer (pronto -> pendente)
-   */
+
   const avancarStatusItem = (numeroMesa: number, item: ItemComanda) => {
     if (!contexto?.atualizarStatusCozinha) return;
 
@@ -34,16 +29,16 @@ export function Cozinha() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/80 font-sans text-slate-800 antialiased selection:bg-emerald-600 selection:text-white">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-700 antialiased selection:bg-emerald-600 selection:text-white">
       <Header />
 
-      <div className="pt-20 md:pt-24 pb-28 md:pb-10 md:pl-20 flex flex-col items-center w-full">
-        <main className="w-full max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="pt-20 md:pt-24 pb-28 md:pb-20 md:pl-20 flex flex-col items-center w-full">
+        <main className="w-full max-w-6xl mx-auto px-5 sm:px-6">
           {/* BARRA SUPERIOR KDS: STATUS ONLINE */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-5 bg-white border border-slate-200/80 rounded-full px-4 py-2 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-7 bg-white/90 border border-slate-300 rounded-full px-1 py-2 shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <h2 className="text-xs font-medium text-slate-800 uppercase tracking-wider">
+              <h2 className="text-xs font-sans text-slate-800 uppercase tracking-wider">
                 Fila de Pedidos
               </h2>
             </div>
@@ -52,7 +47,7 @@ export function Cozinha() {
           </div>
 
           {mesasAtivas.length === 0 ? (
-            <div className="w-full bg-white border border-slate-200/80 rounded-4xl py-20 sm:py-24 flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-300 shadow-xs mt-2">
+            <div className="w-full bg-white border border-slate-200/80 rounded-2xl py-20 sm:py-24 flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-300 shadow-xs mt-2">
               <div className="w-16 h-16 bg-slate-100 border border-slate-200/70 text-slate-400 rounded-full flex items-center justify-center mb-4 shadow-inner">
                 <LucideIcons.ChefHat size={32} strokeWidth={1.6} />
               </div>
@@ -64,7 +59,7 @@ export function Cozinha() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-10 items-start">
               {mesasAtivas.map((mesa) => {
                 const itensPendentes = mesa.itens.filter((i) => i.statusCozinha === 'pendente');
                 const itensPreparo = mesa.itens.filter((i) => i.statusCozinha === 'preparo');
@@ -88,7 +83,7 @@ export function Cozinha() {
                 return (
                   <div
                     key={mesa.id}
-                    className={`bg-slate-200/55 rounded-4xl p-2 transition-all duration-200 flex flex-col shadow-xs border ${
+                    className={`bg-slate-200/85 rounded-2xl p-1 transition-all duration-200 flex flex-col shadow-xs border ${
                       isTotalmentePronto
                         ? 'border-emerald-400/80 bg-emerald-50/40'
                         : isEmPreparo
@@ -97,27 +92,27 @@ export function Cozinha() {
                     }`}
                   >
                     {/* CABEÇALHO DO CARD DA MESA */}
-                    <div className="bg-white rounded-3xl px-4 py-3 mb-1.5 border border-slate-200/70 shadow-2xs flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-10 h-10 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center shrink-0 tabular-nums shadow-2xs">
+                    <div className="bg-slate-400 rounded-2xl px-4 py-3 mb-1.5 border border-slate-200 shadow-2xs flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-9 h-9 rounded-xl bg-slate-600 text-white text-[13px] font-semibold flex items-center justify-center shrink-0 tabular-nums shadow-2xs">
                           {numeroFormatado}
                         </span>
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-tight truncate">
+                            <h2 className="text-[12px] font-bold text-slate-100 uppercase tracking-tight truncate">
                               {mesa.nomeCliente?.trim() || `Mesa ${numeroFormatado}`}
                             </h2>
                           </div>
-                          <p className="text-[11px] text-slate-400 truncate">
-                            Atendente: <span className="text-slate-600">{mesa.garcomNome || 'Equipe'}</span>
+                          <p className="text-[11px] font-semibold uppercase text-slate-700 truncate">
+                            Atendente: <span className="text-white font-bold">{mesa.garcomNome || 'Equipe'}</span>
                           </p>
                         </div>
                       </div>
 
                       {/* Status Geral da Mesa */}
                       {isTotalmentePronto ? (
-                        <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
                           <LucideIcons.Check size={12} strokeWidth={2.5} />
                           <span>Pronto</span>
                         </span>
@@ -127,15 +122,14 @@ export function Cozinha() {
                           <span>Preparo</span>
                         </span>
                       ) : (
-                        <span className="text-[10px] font-semibold bg-slate-900 text-white px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
-                          <LucideIcons.Timer size={12} className="text-amber-400" />
+                        <span className="text-[10px] font-semibold bg-slate-700 text-white px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0">
                           <span>Recebido</span>
                         </span>
                       )}
                     </div>
 
                     {/* LISTA DE ITENS DA MESA */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       {/* ITENS RECEBIDOS / EM PREPARO */}
                       {itensAbertos.map((item) => {
                         const emPreparo = item.statusCozinha === 'preparo';
@@ -151,27 +145,27 @@ export function Cozinha() {
                                 avancarStatusItem(mesa.numero, item);
                               }
                             }}
-                            className={`w-full text-left px-3.5 py-2.5 rounded-3xl border transition-all duration-150 flex items-center justify-between gap-2.5 cursor-pointer select-none active:scale-[0.99] ${
+                            className={`w-full text-left px-4 py-2 rounded-3xl border transition-all duration-150 flex items-center justify-between gap-2.5 cursor-pointer select-none active:scale-[0.99] ${
                               emPreparo
                                 ? 'bg-amber-50/90 border-amber-300/90 shadow-2xs'
-                                : 'bg-white hover:bg-slate-50/80 border-slate-200/70 shadow-2xs'
+                                : 'bg-white hover:bg-slate-200/80 border-slate-200/70 shadow-2xs'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              {/* Quantidade Compacta */}
+                              {/* Quantidade */}
                               <span
                                 className={`text-xs font-semibold w-8 h-8 rounded-2xl flex items-center justify-center shrink-0 border tabular-nums transition-colors ${
                                   emPreparo
-                                    ? 'bg-amber-200/80 border-amber-300 text-amber-950'
+                                    ? 'bg-amber-200/80 border-amber-300 text-amber-800'
                                     : 'bg-slate-100 border-slate-200/80 text-slate-800'
                                 }`}
                               >
                                 {item.quantidade}x
                               </span>
 
-                              {/* Nome do Item (Sem quebrar palavras) + Hora e Status */}
+                              {/* Nome do Item + Hora e Status */}
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs sm:text-sm font-medium text-slate-900 truncate uppercase tracking-tight">
+                                <p className="text-[12px] sm:text-sm font-medium text-slate-800 truncate uppercase tracking-tight">
                                   {item.produto.nome}
                                 </p>
 
@@ -205,7 +199,7 @@ export function Cozinha() {
                               </div>
                             </div>
 
-                            {/* ÚNICA BOLINHA SELETORA DE STATUS (1º Toque: Em Preparo | 2º Toque: Pronto) */}
+                            {/* ÚNICA BOLINHA SELETORA DE STATUS */}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -224,7 +218,7 @@ export function Cozinha() {
                               }
                               className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 active:scale-90 cursor-pointer ${
                                 emPreparo
-                                  ? 'bg-amber-400 hover:bg-emerald-500 text-slate-950 hover:text-white border-2 border-amber-500 hover:border-emerald-500 shadow-xs'
+                                  ? 'bg-amber-400 hover:bg-emerald-500 text-slate-700 hover:text-white border-2 border-amber-500 hover:border-emerald-500 shadow-xs'
                                   : 'bg-white hover:bg-amber-50 text-slate-300 hover:text-amber-500 border-2 border-slate-300 hover:border-amber-400'
                               }`}
                             >
@@ -255,7 +249,7 @@ export function Cozinha() {
                               <p className="font-medium text-slate-400 text-xs sm:text-sm line-through truncate uppercase">
                                 {item.produto.nome}
                               </p>
-                              <span className="text-[10px] text-emerald-600 font-medium">
+                              <span className="text-[10px] text-slate-600 font-medium">
                                 Pronto para servir
                               </span>
                             </div>

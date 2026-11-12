@@ -124,7 +124,7 @@ export function Home() {
                     emojiClassName="text-xl"
                     fallbackEmoji="👋"
                   />
-                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
                 </div>
 
                 <div className="min-w-0">
@@ -247,7 +247,7 @@ export function Home() {
                   onClick={handleClickPedidosProntos}
                   className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-4xl border shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer ${
                     totalPedidosProntos > 0
-                      ? 'bg-white hover:bg-yellow-100 border-amber-300/90'
+                      ? 'bg-white hover:bg-green-100 border-green-300/90'
                       : 'bg-white hover:bg-white border-slate-200/60 hover:border-slate-300/80'
                   }`}
                 >
@@ -255,7 +255,7 @@ export function Home() {
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${
                         totalPedidosProntos > 0
-                          ? 'bg-yellow-100 text-yellow-800 border border-amber-500'
+                          ? 'bg-green-50 text-green-400 border border-green-400'
                           : 'bg-slate-50 border border-slate-200/70 text-slate-600'
                       }`}
                     >
@@ -273,7 +273,7 @@ export function Home() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0 pl-2">
                     {totalPedidosProntos > 0 ? (
-                      <span className="px-2.5 py-0.5 uppercase tracking-wider rounded-full bg-yellow-600 text-white text-[10px] font-sans">
+                      <span className="px-2.5 py-0.5 uppercase tracking-wider rounded-full bg-green-500 text-white text-[10px] font-sans">
                         Servir
                       </span>
                     ) : (

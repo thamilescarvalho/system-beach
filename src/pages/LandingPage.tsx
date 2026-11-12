@@ -40,7 +40,7 @@ const UMBRELLAS_DATA: UmbrellaItem[] = [
     total: 'R$ 246,00',
     time: '42 min',
     items: [
-      { name: 'BALDE CERVEJA CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
+      { name: 'COMBO CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
       { name: 'CAMARÃO EMPANADO CROCANTE', qty: 1, unitPrice: 'R$ 108,00', totalPrice: 'R$ 108,00', category: 'Cozinha', status: 'Preparando' },
       { name: 'ÁGUA DE COCO VERDE', qty: 2, unitPrice: 'R$ 12,00', totalPrice: 'R$ 24,00', category: 'Bar', status: 'Entregue' },
     ],
@@ -59,12 +59,12 @@ const UMBRELLAS_DATA: UmbrellaItem[] = [
     id: '04',
     number: '04',
     status: 'occupied',
-    client: 'Marina',
+    client: 'Thamiles',
     waiter: 'Garçom Mateus',
     total: 'R$ 138,00',
     time: '18 min',
     items: [
-      { name: 'BALDE CERVEJA CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
+      { name: 'COMBO CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
       { name: 'ÁGUA DE COCO VERDE GELADA', qty: 2, unitPrice: 'R$ 12,00', totalPrice: 'R$ 24,00', category: 'Bar', status: 'Entregue' },
     ],
   },
@@ -78,7 +78,7 @@ const UMBRELLAS_DATA: UmbrellaItem[] = [
     time: 'Pedido Pronto 🔔',
     items: [
       { name: 'CAIPIRINHA DE LIMÃO', qty: 2, unitPrice: 'R$ 28,00', totalPrice: 'R$ 56,00', category: 'Barman', status: 'Pronto 🔔' },
-      { name: 'BALDE CERVEJA CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Pronto 🔔' },
+      { name: 'COMBO CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Pronto 🔔' },
       { name: 'ÁGUA DE COCO VERDE', qty: 2, unitPrice: 'R$ 12,00', totalPrice: 'R$ 24,00', category: 'Bar', status: 'Entregue' },
     ],
   },
@@ -102,7 +102,7 @@ const UMBRELLAS_DATA: UmbrellaItem[] = [
     time: '55 min',
     items: [
       { name: 'PEIXE FRITO + CAMARÃO NO COCO', qty: 1, unitPrice: 'R$ 160,00', totalPrice: 'R$ 160,00', category: 'Cozinha', status: 'Entregue' },
-      { name: 'BALDE CERVEJA CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
+      { name: 'COMBO CORONA (6 UN)', qty: 1, unitPrice: 'R$ 114,00', totalPrice: 'R$ 114,00', category: 'Bar', status: 'Entregue' },
       { name: 'ÁGUA DE COCO VERDE', qty: 3, unitPrice: 'R$ 12,00', totalPrice: 'R$ 36,00', category: 'Bar', status: 'Entregue' },
     ],
   },
@@ -124,9 +124,9 @@ const UMBRELLAS_DATA: UmbrellaItem[] = [
 
 const BEACH_SCENES = [
   {
-    id: 'drinks-camarao-5d',
+    id: 'gestao-acesso',
     step: '01',
-    shortLabel: 'Drinks & Camarão',
+    shortLabel: 'Gestão de Acesso',
     title: 'Gestão de Equipe e Permissões de Acesso',
     description:
       'Cadastre garçons, barmans e administradores com avatares e permissões individuais em segundos.',
@@ -135,7 +135,7 @@ const BEACH_SCENES = [
   {
     id: 'barman-luva',
     step: '02',
-    shortLabel: 'Barman & Caipirinhas',
+    shortLabel: 'Bar e Cozinha',
     title: 'Fila do Bar & Cozinha Interativa em Tempo Real',
     description:
       '1º toque coloca o drink em preparo e o 2º toque avisa o celular do garçom que já está pronto para servir.',
@@ -144,7 +144,7 @@ const BEACH_SCENES = [
   {
     id: 'peixe-coco-5d',
     step: '03',
-    shortLabel: 'Peixe & Coco',
+    shortLabel: 'Painel Financeiro',
     title: 'Painel Financeiro e Extrato de Comandas',
     description:
       'Acompanhe o faturamento ao vivo, formas de pagamento, metas, vales e histórico detalhado de cada mesa.',
@@ -153,7 +153,7 @@ const BEACH_SCENES = [
   {
     id: 'guarda-sois',
     step: '04',
-    shortLabel: 'Guarda-sóis & Mar',
+    shortLabel: 'Mapa de Guarda-sóis',
     title: 'Controle de Guarda-sóis e Alertas na Areia',
     description:
       'Visualize todas as mesas livres, ocupadas ou piscando em amarelo quando há pedido pronto para entrega.',
@@ -265,7 +265,7 @@ export function LandingPage() {
   };
 
   const whatsappUrl =
-    'https://wa.me/5585999999999?text=Ol%C3%A1!%20Quero%20conhecer%20o%20sistema%20para%20o%20meu%20quiosque%20ou%20barraca%20de%20praia.';
+    'https://wa.me/5585920008349?text=Ol%C3%A1!%20Quero%20conhecer%20o%20sistema%20para%20o%20meu%20quiosque%20ou%20barraca%20de%20praia.';
 
   const heroTotal = heroCoronaQty * 114 + heroCocoQty * 12;
 
@@ -280,30 +280,30 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-700 font-sans selection:bg-slate-200 selection:text-slate-800 overflow-x-hidden">
-      {/* BARRA SUPERIOR FINA, ELEGANTE, SEM BOTÃO LARANJA DE WHATSAPP */}
+      {/* BARRA SUPERIOR */}
       <header className="sticky top-0 z-50 h-16 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 transition-all">
         <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-          {/* Logo Invertida com Giro ao Passar o Mouse ou Clicar */}
+          {/* Logo  */}
           <button
             type="button"
             onClick={() => setLogoSpin((prev) => !prev)}
-            className="group flex items-center gap-2.5 text-left focus:outline-none cursor-pointer shrink-0"
+            className="group flex items-center gap-3 text-left focus:outline-none cursor-pointer shrink-0"
             title="Clique ou passe o mouse para girar a logo"
           >
             <div
-              className={`w-10 h-10 rounded-2xl bg-white border-2 border-amber-400 shadow-xs flex items-center justify-center text-amber-500 transition-all duration-500 group-hover:border-slate-700 group-hover:text-slate-700 group-hover:scale-110 group-hover:rotate-45 ${
-                logoSpin ? 'rotate-180 scale-105 border-slate-700 text-slate-700' : ''
+              className={`w-10 h-10 rounded-xl bg-white flex items-center justify-center text-amber-500 transition-all duration-500 group-hover:border-slate-700 group-hover:text-slate-700 group-hover:scale-110 group-hover:rotate-45 ${
+                logoSpin ? 'rotate-180 scale-105 border-slate-500 text-slate-500' : ''
               }`}
             >
-              <LucideIcons.Umbrella className="w-5 h-5 transition-transform duration-500 group-hover:-rotate-12" />
+              <LucideIcons.Umbrella className="w-8 h-8 transition-transform duration-500 group-hover:-rotate-12" />
             </div>
 
-            {/* Identidade Tipográfica Exclusiva do Nome */}
-            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-lg font-extrabold tracking-tight text-slate-700">
+            {/* Nome */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-[16px] uppercase font-semibold tracking-normal text-slate-500">
                 T-System
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200/80 text-xs font-bold tracking-widest uppercase text-amber-600 transition-colors">
+              <span className="px-1.5 py-0.5 rounded-4xl bg-slate-200 border-slate-200/20 text-[15px] font-semibold tracking-normal uppercase text-slate-600 transition-colors">
                 Beach
               </span>
             </div>
@@ -457,7 +457,7 @@ export function LandingPage() {
             <div className="lg:col-span-5 space-y-5">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-slate-600 text-xs font-medium">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                Operação Pé na Areia & Salão em Tempo Real
+                Operação pé na areia em tempo real
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight text-slate-800">
@@ -466,19 +466,18 @@ export function LandingPage() {
                   <span>{typedText}</span>
                   <span
                     aria-hidden="true"
-                    className="ml-0.5 inline-block w-0.5 sm:w-[3px] h-7 sm:h-9 lg:h-11 bg-amber-500 animate-pulse rounded-full translate-y-0.5"
+                    className="ml-0.5 inline-block w-0.5 sm:w-0.75 h-7 sm:h-9 lg:h-11 bg-amber-500 animate-pulse rounded-full translate-y-0.5"
                   />
                 </span>{' '}
                 do guarda-sol ao bar.
               </h1>
 
               <p className="text-base text-slate-500 leading-relaxed font-normal">
-                Sem papel e sem fila: o garçom abre a mesa no celular, lança o balde de cerveja
-                Corona e a água de coco gelada, e o pedido chega ao bar e à cozinha em segundos.
+                O garçom abre a comanda no celular, lança o  pedido, chega ao bar/cozinha em segundos.
               </p>
 
-              {/* Badges Rápidas dos 4 Módulos Principais */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* 4 Módulos Principais */}
+              <div className="flex flex-wrap items-center gap-3 pt-0.5">
                 {[
                   { id: 'cardapio' as const, label: 'Cardápio Digital', icon: LucideIcons.UtensilsCrossed },
                   { id: 'pdv' as const, label: 'Frente de Caixa (PDV)', icon: LucideIcons.MonitorCheck },
@@ -500,62 +499,34 @@ export function LandingPage() {
                 })}
               </div>
 
-              {/* Seletor Clean no Padrão Admin.tsx (slate-500) */}
-              <div className="inline-flex p-1 rounded-full bg-slate-100/80 border border-slate-200/70">
-                <button
-                  type="button"
-                  onClick={() => setHeroStep(0)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 transition-all cursor-pointer ${
-                    heroStep === 0
-                      ? 'bg-white text-slate-800 shadow-2xs border border-slate-200/60'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <LucideIcons.LayoutGrid className="w-3.5 h-3.5 text-slate-600" />
-                  1. Mapa de Guarda-sóis
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHeroStep(1)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 transition-all cursor-pointer ${
-                    heroStep === 1
-                      ? 'bg-white text-slate-800 shadow-2xs border border-slate-200/60'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <LucideIcons.Receipt className="w-3.5 h-3.5 text-amber-500" />
-                  2. Comanda Mesa 04
-                </button>
-              </div>
-
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 pt-3">
                 <a
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-all shadow-sm"
+                  className="inline-flex items-center justify-center gap-1 px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-all shadow-sm"
                 >
-                  <LucideIcons.MessageCircle className="w-4 h-4" />
+                  <LucideIcons.MessageCircle className="w-3 h-3" />
                   Solicitar Demonstração
                 </a>
                 <a
                   href="#simulador"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:text-slate-800 transition-all"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:text-slate-800 transition-all"
                 >
-                  <LucideIcons.MousePointerClick className="w-4 h-4 text-slate-500" />
-                  Testar Simulador
+                  <LucideIcons.MousePointerClick className="w-3 h-3 text-slate-500" />
+                  Simulador
                 </a>
               </div>
             </div>
 
-            {/* Coluna Direita: CELULAR IPHONE MODERNO + CENA REAL DE PRAIA */}
+            {/* Coluna Direita: CELULAR IPHONE + CENA DE PRAIA */}
             <div
               onMouseMove={handleHeroMouseMove}
               onMouseLeave={handleHeroMouseLeave}
-              className="lg:col-span-7 flex flex-col md:flex-row items-center justify-center gap-6"
+              className="lg:col-span-7 flex flex-col md:flex-row items-center justify-center gap-5"
             >
-              {/* APARELHO IPHONE REALISTA NO HERO */}
+              {/* APARELHO NO HERO */}
               <div
                 style={{
                   transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
@@ -569,7 +540,7 @@ export function LandingPage() {
                 <div className="absolute -right-1 top-24 w-1 h-11 bg-slate-500 rounded-r-sm" />
 
                 {/* Tela Interna do iPhone */}
-                <div className="bg-white rounded-3xl p-3 pt-2 flex flex-col justify-between min-h-104 overflow-hidden">
+                <div className="bg-white rounded-3xl p-3 pt-2 flex flex-col justify-between min-h-110 overflow-hidden">
                   {/* Barra de Status iOS */}
                   <div className="flex items-center justify-between px-1 mb-2.5">
                     <span className="text-xs font-bold text-slate-800 tracking-tight">9:41</span>
@@ -583,10 +554,10 @@ export function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Corpo que alterna entre Mapa de Guarda-sóis e Comanda Mesa 04 */}
+                  {/* Corpo que alterna entre Mapa e Comanda */}
                   {heroStep === 0 ? (
                     <div className="space-y-2.5 flex-1 flex flex-col justify-between">
-                      <div className="flex items-center justify-between px-0.5">
+                      <div className="flex items-center justify-between px-1">
                         <div>
                           <span className="text-[11px] text-slate-400 block leading-none">
                             Setor Beira-Mar
@@ -611,7 +582,7 @@ export function LandingPage() {
                           Livre
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-600" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-600" />
                           Ocupada
                         </span>
                         <span className="flex items-center gap-1">
@@ -620,12 +591,12 @@ export function LandingPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-1.5">
+                      <div className="grid grid-cols-3 gap-3">
                         {[
                           { num: '01', status: 'free', client: '' },
-                          { num: '02', status: 'occupied', client: 'ANDRÉ' },
+                          { num: '02', status: 'occupied', client: 'JOÃO' },
                           { num: '03', status: 'free', client: '' },
-                          { num: '04', status: 'occupied', client: 'MARINA', highlight: true },
+                          { num: '04', status: 'occupied', client: 'MARIA', highlight: true },
                           { num: '05', status: 'ready', client: 'LUCAS' },
                           { num: '06', status: 'free', client: '' },
                           { num: '07', status: 'occupied', client: 'CARLOS' },
@@ -643,11 +614,11 @@ export function LandingPage() {
                               key={mesa.num}
                               type="button"
                               onClick={() => setHeroStep(1)}
-                              className={`relative aspect-square rounded-xl p-1 flex flex-col items-center justify-between transition-all cursor-pointer border ${
+                              className={`relative aspect-square rounded-xl p-2 flex flex-col items-center justify-between transition-all cursor-pointer border ${
                                 isReady
                                   ? 'bg-linear-to-br from-yellow-400 to-amber-500 border-amber-500 text-white'
                                   : isOccupied
-                                    ? 'bg-linear-to-br from-green-500 to-green-600 border-green-600 text-white'
+                                    ? 'bg-linear-to-br from-emerald-500 to-emerald-600 border-emerald-600 text-white'
                                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-400'
                               } ${mesa.highlight ? 'ring-2 ring-amber-400 scale-105 z-10 shadow-sm' : ''}`}
                             >
@@ -676,15 +647,6 @@ export function LandingPage() {
                           );
                         })}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setHeroStep(1)}
-                        className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <span>Abrir Mesa 04 (Marina)</span>
-                        <LucideIcons.ArrowRight className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   ) : (
                     <div className="space-y-2 flex-1 flex flex-col justify-between">
@@ -694,49 +656,49 @@ export function LandingPage() {
                           onClick={() => setHeroStep(0)}
                           className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-800 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 cursor-pointer"
                         >
-                          <LucideIcons.ArrowLeft className="w-3 h-3" />
-                          Mesas
+                          <LucideIcons.ArrowLeft className="w-2 h-2" />
+                          Voltar
                         </button>
-                        <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-                          Mesa 04 • Marina
+                        <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                          MESA 04
                         </span>
                       </div>
 
-                      <div className="rounded-2xl p-2.5 bg-slate-800 text-white flex items-center justify-between">
+                      <div className="rounded-xl p-2.5 bg-emerald-900 text-white flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] text-slate-300 block">Total da Mesa</span>
+                          <span className="text-[11px] text-slate-200 block">Valor Total</span>
                           <span className="text-base font-bold tabular-nums">
                             R$ {heroTotal.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
-                        <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-medium">
+                        <span className="px-2 py-0.5 rounded-full bg-white/15 text-[10px] font-sans">
                           {heroCoronaQty + heroCocoQty} Itens
                         </span>
                       </div>
 
                       {deliveryToast && (
                         <div className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-xl flex items-center gap-1.5">
-                          <LucideIcons.CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                          <LucideIcons.CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span className="truncate">{deliveryToast}</span>
                         </div>
                       )}
 
                       <div className="space-y-1.5">
-                        <div className="bg-slate-50 rounded-xl p-2 border border-slate-200/80 flex items-center justify-between gap-2">
+                        <div className="bg-slate-100 rounded-xl p-2 border border-slate-200/80 flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-semibold text-slate-700 text-xs truncate">
-                              BALDE CERVEJA CORONA
+                            <p className="font-sans text-slate-800 text-[9px] truncate">
+                              COMBO CERVEJA CORONA
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[10px] text-slate-500">
                               R$ {(heroCoronaQty * 114).toFixed(2).replace('.', ',')}
                             </p>
                           </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
+                          <div className="flex flex-col items-end gap-2 shrink-0">
                             <div className="flex items-center bg-white rounded-full border border-slate-200">
                               <button
                                 type="button"
                                 onClick={() => setHeroCoronaQty((q) => Math.max(1, q - 1))}
-                                className="w-5 h-5 flex items-center justify-center text-slate-600 text-xs font-bold cursor-pointer"
+                                className="w-6 h-5 flex items-center justify-center text-slate-600 text-xs font-bold cursor-pointer"
                               >
                                 -
                               </button>
@@ -746,36 +708,36 @@ export function LandingPage() {
                               <button
                                 type="button"
                                 onClick={() => setHeroCoronaQty((q) => q + 1)}
-                                className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                                className="w-4 h-4 flex items-center justify-center rounded-full bg-slate-600 text-white text-xs font-bold cursor-pointer"
                               >
                                 +
                               </button>
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleNotifyDelivery('Balde Corona')}
-                              className="text-[11px] font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+                              onClick={() => handleNotifyDelivery('Combo Corona')}
+                              className="text-[10px] font-sans text-amber-700 hover:text-teal-700 cursor-pointer"
                             >
                               🔔 Entregar
                             </button>
                           </div>
                         </div>
 
-                        <div className="bg-slate-50 rounded-xl p-2 border border-slate-200/80 flex items-center justify-between gap-2">
+                        <div className="bg-slate-100 rounded-xl p-2 border border-slate-200/80 flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-semibold text-slate-700 text-xs truncate">
+                            <p className="font-semibold text-slate-600 text-[9px] truncate">
                               ÁGUA DE COCO VERDE
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[10px] text-slate-500">
                               R$ {(heroCocoQty * 12).toFixed(2).replace('.', ',')}
                             </p>
                           </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
+                          <div className="flex flex-col items-end gap-2 shrink-0">
                             <div className="flex items-center bg-white rounded-full border border-slate-200">
                               <button
                                 type="button"
                                 onClick={() => setHeroCocoQty((q) => Math.max(1, q - 1))}
-                                className="w-5 h-5 flex items-center justify-center text-slate-600 text-xs font-bold cursor-pointer"
+                                className="w-6 h-5 flex items-center justify-center text-slate-600 text-xs font-bold cursor-pointer"
                               >
                                 -
                               </button>
@@ -785,7 +747,7 @@ export function LandingPage() {
                               <button
                                 type="button"
                                 onClick={() => setHeroCocoQty((q) => q + 1)}
-                                className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-white text-xs font-bold cursor-pointer"
+                                className="w-4 h-4 flex items-center justify-center rounded-full bg-slate-600 text-white text-xs font-bold cursor-pointer"
                               >
                                 +
                               </button>
@@ -793,7 +755,7 @@ export function LandingPage() {
                             <button
                               type="button"
                               onClick={() => handleNotifyDelivery('Água de Coco')}
-                              className="text-[11px] font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+                              className="text-[10px] font-medium text-amber-700 hover:text-teal-700 cursor-pointer"
                             >
                               🔔 Entregar
                             </button>
@@ -878,57 +840,51 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* NOVA SEÇÃO #SOLUCOES: AGILIDADE NO SALÃO E NA AREIA + OS 4 MÓDULOS INTEGRADOS */}
+      {/* #SOLUCOES */}
       <section id="solucoes" className="py-14 lg:py-20 bg-white border-t border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Topo: 4 Módulos do Ecossistema (Cardápio Digital, Frente de Caixa PDV, App de Garçom, QR Code de Mesas) */}
           <div className="mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-600 text-xs font-medium mb-3">
-              <LucideIcons.Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Plataforma 4 em 1 • Tudo Integrado na Mesma Tela
-            </div>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h2 className="text-xl sm:text-3xl font-semibold tracking-tight text-slate-800">
-                  Agilidade no salão e na areia.{' '}
+                <h2 className="text-[17px] sm:text-[28px] font-semibold tracking-tight text-slate-800">
+                  Agilidade na areia.{' '}
                   <span className="text-amber-500">Controle total da operação.</span>
                 </h2>
-                <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">
-                  O garçom registra o pedido direto na mesa ou no guarda-sol e o pedido chega à
-                  cozinha e ao bar em segundos, totalmente integrado ao frente de caixa (PDV).
+                <p className="text-[13px] text-slate-500 mt-1.5 max-w-4xl leading-relaxed">
+                  O garçom registra o pedido direto no guarda-sol e o pedido chega ao bar/cozinha em segundos, totalmente integrado ao frente de caixa (PDV).
                 </p>
               </div>
             </div>
 
-            {/* Grade dos 4 Pilares Selecionáveis */}
+            {/* Grade de 4 Selecionáveis */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-7">
               {[
                 {
                   id: 'garcom' as const,
                   title: 'App de Garçom',
-                  badge: 'Salão & Areia',
-                  desc: 'Lançamento de pedidos direto na mesa em poucos toques com aviso de prato pronto.',
+                  badge: 'Online',
+                  desc: 'Lançamento de pedidos direto no guarda-sol em poucos toques com aviso de prato pronto.',
                   icon: LucideIcons.Smartphone,
                 },
                 {
                   id: 'cardapio' as const,
                   title: 'Cardápio Digital',
-                  badge: 'Catálogo Vivo',
-                  desc: 'Cardápio interativo com fotos, categorias de bar e cozinha e atualização instantânea.',
+                  badge: 'Online',
+                  desc: 'Cardápio interativo com fotos, categorias e atualização instantânea.',
                   icon: LucideIcons.UtensilsCrossed,
                 },
                 {
                   id: 'pdv' as const,
                   title: 'Frente de Caixa (PDV)',
-                  badge: 'Fechamento Seguro',
-                  desc: 'Abertura e fechamento de caixa, divisão de conta, PIX, cartão e impressão 80mm.',
+                  badge: 'Online',
+                  desc: 'Gestão financeira com abertura e fechamento de caixa e configuração de impressão.',
                   icon: LucideIcons.MonitorCheck,
                 },
                 {
                   id: 'qrcode' as const,
                   title: 'QR Code de Mesas',
-                  badge: 'Autoatendimento',
-                  desc: 'O cliente escaneia o QR Code na mesa ou guarda-sol e pede direto pelo celular.',
+                  badge: 'Online',
+                  desc: 'O cliente escaneia o QR Code no guarda-sol e pede direto pelo celular.',
                   icon: LucideIcons.QrCode,
                 },
               ].map((item) => {
@@ -994,8 +950,8 @@ export function LandingPage() {
               {/* Coluna Esquerda: Benefícios de Operação Integrada */}
               <div className="lg:col-span-6 space-y-5">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium">
-                  <LucideIcons.Zap className="w-3.5 h-3.5 text-amber-500" />
-                  Fluxo Sincronizado de Ponta a Ponta
+                  <LucideIcons.Zap className="w-3.5 h-3.5 text-emerald-600" />
+                  Fluxo sincronizado de ponta a ponta
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-800 leading-snug">
@@ -1057,22 +1013,22 @@ export function LandingPage() {
                 </div>
               </div>
 
-              {/* Coluna Direita: Simulador Visual do Módulo Selecionado (Garçom, Cardápio Digital, PDV ou QR Code) */}
+              {/* Coluna Direita: Simulador */}
               <div className="lg:col-span-6 flex justify-center">
                 <div className="w-full max-w-md bg-white rounded-3xl p-5 border border-slate-200/90 shadow-lg min-h-88 flex flex-col justify-between">
                   {/* Cabeçalho do Simulador de Módulo */}
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span className="w-1 h-1 rounded-full bg-emerald-600 animate-ping" />
                       <span className="text-xs font-semibold text-slate-800">
-                        {activeModule === 'garcom' && 'App de Garçom → Cozinha & PDV'}
-                        {activeModule === 'cardapio' && 'Cardápio Digital Interativo'}
+                        {activeModule === 'garcom' && 'App de Garçom'}
+                        {activeModule === 'cardapio' && 'Cardápio Digital'}
                         {activeModule === 'pdv' && 'Frente de Caixa (PDV) Integrado'}
                         {activeModule === 'qrcode' && 'QR Code Exclusivo por Mesa'}
                       </span>
                     </div>
                     <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                      Sincronizado
+                      Online
                     </span>
                   </div>
 
@@ -1081,50 +1037,47 @@ export function LandingPage() {
                     <div className="space-y-3 my-auto">
                       <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider block">
-                            Registro Direto na Mesa 04
+                          <span className="text-[9px] text-amber-400 font-semibold uppercase tracking-wider block">
+                            Registro Direto na areia
                           </span>
-                          <span className="text-sm font-semibold">
-                            Garçom Lucas lançou 2 itens agora
+                          <span className="text-[11px] text-slate-400 font-semibold tracking-wider">
+                            Garçom Lucas lançou 2 itens
                           </span>
                         </div>
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-semibold">
-                          0,4s → Cozinha
-                        </span>
                       </div>
 
                       <div className="space-y-2">
                         <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-xl bg-amber-500 text-white font-bold flex items-center justify-center">
+                            <span className="w-7 h-7 rounded-xl bg-amber-600/70 text-white font-sans flex items-center justify-center">
                               1x
                             </span>
                             <div>
-                              <p className="font-semibold text-slate-800">CAMARÃO CROCANTE</p>
+                              <p className="font-semibold text-[9px] text-slate-800">CAMARÃO CROCANTE</p>
                               <span className="text-[10px] text-slate-400">
-                                Enviado para KDS Cozinha • Sem cebola
+                                Enviado para Cozinha • Sem cebola
                               </span>
                             </div>
                           </div>
-                          <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold">
-                            Na Cozinha
+                          <span className="px-1.5 py-0.5 rounded-full uppercase bg-slate-200 border border-slate-200 text-slate-600 text-[9px] font-medium">
+                            Em preparo
                           </span>
                         </div>
 
                         <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-xl bg-slate-800 text-white font-bold flex items-center justify-center">
+                            <span className="w-7 h-7 rounded-xl bg-slate-800/80 text-white font-sans flex items-center justify-center">
                               2x
                             </span>
                             <div>
-                              <p className="font-semibold text-slate-800">CAIPIRINHA DE LIMÃO</p>
+                              <p className="font-semibold text-[9px] text-slate-800">CAIPIRINHA DE LIMÃO</p>
                               <span className="text-[10px] text-slate-400">
                                 Enviado para Fila do Bar • Pouco gelo
                               </span>
                             </div>
                           </div>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">
-                            Pronto 🔔
+                          <span className="px-1.5 py-0.5 rounded-full uppercase bg-emerald-50 border border-emerald-300 text-emerald-800 text-[9px] font-medium">
+                            Pronto
                           </span>
                         </div>
                       </div>
@@ -1154,8 +1107,8 @@ export function LandingPage() {
                             className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-800 truncate">
-                              Porção Camarão Empanado Premium
+                            <p className="text-[10px] uppercase font-semibold text-slate-800 truncate">
+                              Porção de camarão empanado
                             </p>
                             <p className="text-[11px] text-slate-400 truncate">
                               Acompanha molho especial da casa e limão
@@ -1163,7 +1116,7 @@ export function LandingPage() {
                             <span className="text-xs font-bold text-amber-600">R$ 108,00</span>
                           </div>
                         </div>
-                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-semibold shrink-0">
+                        <span className="px-2 py-1 rounded-xl bg-slate-600 text-white text-[11px] font-semibold shrink-0">
                           + Pedir
                         </span>
                       </div>
@@ -1176,8 +1129,8 @@ export function LandingPage() {
                             className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-800 truncate">
-                              Caipirinha Artesanal de Limão Taiti
+                            <p className="text-[10px] font-semibold uppercase text-slate-800 truncate">
+                              Caipirinha artesanal de limão Taiti
                             </p>
                             <p className="text-[11px] text-slate-400 truncate">
                               Preparada na hora com fruta fresca selecionada
@@ -1185,7 +1138,7 @@ export function LandingPage() {
                             <span className="text-xs font-bold text-amber-600">R$ 28,00</span>
                           </div>
                         </div>
-                        <span className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-white text-[11px] font-semibold shrink-0">
+                        <span className="px-2 py-1 rounded-xl bg-slate-600 text-white text-[11px] font-semibold shrink-0">
                           + Pedir
                         </span>
                       </div>
@@ -1194,46 +1147,39 @@ export function LandingPage() {
 
                   {/* MÓDULO 3: FRENTE DE CAIXA (PDV) */}
                   {activeModule === 'pdv' && (
-                    <div className="space-y-3 my-auto">
+                    <div className="space-y-5 my-auto">
                       <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
                         <div>
                           <span className="text-[10px] text-slate-300 uppercase tracking-wider block">
-                            Frente de Caixa (PDV) • Mesa 04
+                            Mesa 04
                           </span>
                           <span className="text-xl font-bold tabular-nums">R$ 246,00</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-emerald-300 block">Divisão (3 pessoas)</span>
+                          <span className="text-[10px] text-emerald-500 block">Divisão (3 pessoas)</span>
                           <span className="text-xs font-semibold">R$ 82,00 / pessoa</span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-2 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
                           <LucideIcons.QrCode className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-emerald-800 block">
+                          <span className="text-[11px] font-semibold text-emerald-800">
                             PIX QR
                           </span>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="p-2 rounded-2xl bg-slate-100 border border-slate-200 text-center">
                           <LucideIcons.CreditCard className="w-4 h-4 text-slate-700 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-slate-700 block">
+                          <span className="text-[11px] font-semibold text-slate-700">
                             Cartão
                           </span>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="p-2 rounded-2xl bg-slate-100 border border-slate-200 text-center">
                           <LucideIcons.Printer className="w-4 h-4 text-amber-600 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-slate-700 block">
-                            Cupom 80mm
+                          <span className="text-[11px] font-semibold text-slate-700">
+                            Imprimir
                           </span>
                         </div>
-                      </div>
-
-                      <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                        <span className="text-slate-600">Status do Caixa Diário</span>
-                        <span className="font-semibold text-emerald-700">
-                          Conferido & Sem Divergências
-                        </span>
                       </div>
                     </div>
                   )}
@@ -1248,34 +1194,27 @@ export function LandingPage() {
                             MESA 04
                           </span>
                         </div>
-                        <div className="space-y-1">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold">
-                            Autoatendimento Inteligente
+                        <div className="space-y-2">
+                          <span className="px-3 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-semibold">
+                            Autoatendimento
                           </span>
-                          <h4 className="text-sm font-semibold text-slate-800">
+                          <h4 className="text-sm font-semibold text-slate-700">
                             Aponte a câmera e peça na hora
                           </h4>
                           <p className="text-xs text-slate-500 leading-relaxed">
-                            O cliente abre o cardápio digital pelo QR Code da mesa ou guarda-sol e o
+                            O cliente abre o cardápio digital pelo QR Code do guarda-sol e o
                             pedido já cai identificado na comanda dele.
                           </p>
                         </div>
                       </div>
 
-                      <div className="p-2.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between text-xs">
-                        <span className="text-emerald-800 font-medium">
+                      <div className="p-2 rounded-4xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between text-xs">
+                        <span className="text-emerald-800 font-sans">
                           ✓ Sem precisar baixar aplicativo
                         </span>
-                        <span className="font-semibold text-emerald-700">Direto no Navegador</span>
                       </div>
                     </div>
                   )}
-
-                  {/* Rodapé de Navegação Rápida entre os 4 Módulos */}
-                  <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Clique nos 4 cartões acima para alternar</span>
-                    <span className="font-medium text-slate-700">100% Integrado</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1283,20 +1222,20 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* BLOCO "FEITO PARA O RITMO DO SOL, DA AREIA E DO MAR": IMAGEM DE FUNDO FIXA (SEM SE MOVER NO HOVER) + INTERAÇÃO SOMENTE NO MINI CARD À DIREITA */}
+      {/* BLOCO 3 */}
       <section id="ambiente" className="py-12 lg:py-16 bg-slate-50/70 border-y border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-lg sm:text-2xl font-medium tracking-tight text-slate-800">
-                Feito para o ritmo do sol, da areia e do mar
+                Feito para o ritmo do sol, da areia e do mar.
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Interaja com o card do sistema à direita para testar cada setor na prática.
               </p>
             </div>
 
-            {/* Botões Seletores Compactos no Padrão Admin.tsx (slate-500) */}
+            {/* Botões Seletores */}
             <div className="inline-flex flex-wrap items-center gap-1 bg-slate-100/90 border border-slate-200/70 p-1 rounded-full self-start md:self-auto">
               {BEACH_SCENES.map((scene, index) => {
                 const isActive = activeSceneIndex === index;
@@ -1323,12 +1262,11 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* CARD ESTÁTICO COM IMAGEM DE FUNDO FIXA E INTERAÇÃO EXCLUSIVA NO MINI CARD À DIREITA */}
+          {/* INTERAÇÃO  NO MINI CARD À DIREITA */}
           <div
             onClick={() => setCaptionPinned((prev) => !prev)}
             className="group relative w-full min-h-112 sm:min-h-124 lg:min-h-136 rounded-3xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-xl select-none flex items-center justify-end p-4 sm:p-6 lg:p-8"
           >
-            {/* Imagem de Fundo 100% Estática (Não se move ao passar o mouse) */}
             {BEACH_SCENES.map((scene, index) => (
               <img
                 key={scene.id}
@@ -1340,7 +1278,7 @@ export function LandingPage() {
               />
             ))}
 
-            {/* MINI CARD INTERATIVO NO CANTO DIREITO (ONDE ACONTECE TODA A INTERAÇÃO) */}
+            {/* MINI CARD DIREITO */}
             <div
               onClick={(e) => e.stopPropagation()}
               className="relative z-20 w-full max-w-xs sm:max-w-sm bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 border border-white shadow-2xl cursor-default transition-all duration-300 hover:-translate-y-1"
@@ -1360,7 +1298,7 @@ export function LandingPage() {
                 </span>
               </div>
 
-              {/* CENA 01: GESTÃO DE USUÁRIOS (AdminUsuarios.tsx) */}
+              {/* CENA 01 */}
               {activeSceneIndex === 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -1629,7 +1567,7 @@ export function LandingPage() {
                       Extrato de Comandas
                     </span>
                     <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700">MESA 04 • MARINA</span>
+                      <span className="font-semibold text-slate-700">MESA 04 • THAMILES</span>
                       <span className="font-bold text-emerald-700">R$ 138,00 (PIX)</span>
                     </div>
                     <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
@@ -1901,12 +1839,12 @@ export function LandingPage() {
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                       <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                      <span className="text-xs font-medium text-slate-500 ml-2">
-                        Painel do Caixa & Gestão Financeira
+                      <span className="text-xs font-semibold text-slate-500 ml-2">
+                        Painel Financeiro
                       </span>
                     </div>
-                    <span className="text-xs font-medium text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-                      Sincronizado
+                    <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                      Online
                     </span>
                   </div>
 
@@ -1922,7 +1860,7 @@ export function LandingPage() {
                       </div>
                       <div className="px-2.5 py-1.5 rounded-lg text-slate-500 text-xs font-normal flex items-center gap-1.5">
                         <LucideIcons.Wallet className="w-3.5 h-3.5" />
-                        Caixa & PIX
+                        Caixa
                       </div>
                       <div className="px-2.5 py-1.5 rounded-lg text-slate-500 text-xs font-normal flex items-center gap-1.5">
                         <LucideIcons.Printer className="w-3.5 h-3.5" />
@@ -1934,19 +1872,19 @@ export function LandingPage() {
                       <div className="grid grid-cols-3 gap-2.5">
                         <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                           <span className="text-xs text-slate-400 block">Faturamento</span>
-                          <span className="text-sm font-semibold text-slate-800">
+                          <span className="text-[12px] font-semibold text-slate-800">
                             R$ 8.490,00
                           </span>
                         </div>
                         <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                           <span className="text-xs text-slate-400 block">Mesas Ativas</span>
-                          <span className="text-sm font-semibold text-slate-800">
+                          <span className="text-[12px] font-semibold text-slate-800">
                             18 Ocupadas
                           </span>
                         </div>
                         <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                           <span className="text-xs text-slate-400 block">Ticket Médio</span>
-                          <span className="text-sm font-semibold text-amber-600">
+                          <span className="text-[12px] font-semibold text-slate-600">
                             R$ 192,00
                           </span>
                         </div>
@@ -1959,14 +1897,14 @@ export function LandingPage() {
                           <span>Total</span>
                         </div>
                         <div className="px-3 py-2 flex justify-between items-center border-b border-slate-100">
-                          <span className="font-medium text-slate-700">04 • Marina</span>
+                          <span className="font-medium text-slate-700">04 • Thamiles</span>
                           <span className="text-slate-500">Balde Corona + 2x Coco</span>
                           <span className="font-semibold text-slate-800">R$ 138,00</span>
                         </div>
                         <div className="px-3 py-2 flex justify-between items-center">
-                          <span className="font-medium text-slate-700">05 • Lucas</span>
+                          <span className="font-medium text-slate-700">05 • João</span>
                           <span className="text-slate-500">2x Caipirinha + Camarão</span>
-                          <span className="font-semibold text-amber-600">R$ 194,00</span>
+                          <span className="font-semibold text-slate-800">R$ 194,00</span>
                         </div>
                       </div>
                     </div>
@@ -1983,7 +1921,7 @@ export function LandingPage() {
               </div>
 
               <div className="mt-3 text-center">
-                <h3 className="text-sm font-medium text-slate-800">Notebook & Computador</h3>
+                <h3 className="text-sm font-medium text-slate-800">Computador</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Versão desktop completa para fechamento de conta, PIX e administração
                 </p>
@@ -2009,20 +1947,20 @@ export function LandingPage() {
 
                   <div className="space-y-2 my-auto">
                     <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80">
-                      <div className="flex items-center justify-between text-xs font-semibold text-amber-700 mb-1">
+                      <div className="flex items-center justify-between text-[10px] font-semibold text-amber-700 mb-1">
                         <span>MESA 04 • BAR</span>
                         <span>AGORA</span>
                       </div>
-                      <p className="text-xs text-slate-700">1x Balde Cerveja Corona</p>
-                      <p className="text-xs text-slate-700">2x Água de Coco Gelada</p>
+                      <p className="text-[10px] text-slate-700">1x Balde Cerveja Corona</p>
+                      <p className="text-[10px] text-slate-700">2x Água de Coco Gelada</p>
                     </div>
 
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
+                      <div className="flex items-center justify-between text-[10px] font-semibold text-slate-700 mb-1">
                         <span>MESA 05 • COZINHA</span>
-                        <span className="text-teal-600">PRONTO 🔔</span>
+                        <span className="text-teal-600">PRONTO</span>
                       </div>
-                      <p className="text-xs text-slate-600">1x Camarão Empanado Crocante</p>
+                      <p className="text-[10px] text-slate-600">1x Camarão Empanado Crocante</p>
                     </div>
                   </div>
 
@@ -2031,9 +1969,9 @@ export function LandingPage() {
               </div>
 
               <div className="mt-4 text-center">
-                <h3 className="text-sm font-medium text-slate-800">Tablet no Bar & Cozinha</h3>
+                <h3 className="text-sm font-medium text-slate-800">Tablet</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Versão tablet com fila de preparo e alerta sonoro instantâneo
+                  Versão tablet da aba de KDS, acompanhamento de etapas até a entrega na mesa.
                 </p>
               </div>
             </div>
@@ -2041,12 +1979,12 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* SIMULADOR INTERATIVO DE GUARDA-SÓIS */}
+      {/* SIMULADOR DE GUARDA-SÓIS */}
       <section id="simulador" className="py-14 lg:py-20 bg-slate-50/70 border-t border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-lg sm:text-2xl font-medium tracking-tight text-slate-800">
-              Toque em um Guarda-sol para Inspecionar a Comanda
+              Mapa da Guarda-Sóis em Tempo Real
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Passe o mouse ou clique sobre as mesas para interagir em tempo real.
@@ -2295,7 +2233,7 @@ export function LandingPage() {
                       <div className="space-y-2">
                         <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
                           <div>
-                            <p className="font-semibold text-slate-800">MESA 04 • MARINA</p>
+                            <p className="font-semibold text-slate-800">MESA 04 • THAMILES</p>
                             <span className="text-[10px] text-slate-400">Fechada às 15:40 • PIX</span>
                           </div>
                           <span className="font-semibold text-emerald-700">+ R$ 138,00</span>
@@ -2416,72 +2354,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* NOVO CARD 2: SEGURANÇA DE DADOS E PROTEÇÃO CONTRA VAZAMENTOS */}
-      <section id="seguranca" className="py-14 lg:py-20 bg-slate-50/70 border-t border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-600 text-xs font-medium mb-3">
-              <LucideIcons.ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Arquitetura Blindada & Proteção de Dados
-            </div>
-            <h2 className="text-lg sm:text-2xl font-medium tracking-tight text-slate-800">
-              Segurança bancária para o seu estabelecimento ficar 100% despreocupado
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
-              Seus dados financeiros, faturamento e cadastros contam com isolamento criptográfico e
-              as ferramentas de cibersegurança mais modernas do mercado.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Pilar 1: Isolamento RLS */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-                <LucideIcons.Database className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-medium text-slate-800">
-                Isolamento Multi-Tenant (RLS)
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Banco de dados PostgreSQL em nuvem com políticas de <em>Row Level Security</em>{' '}
-                ativas: cada estabelecimento possui uma camada isolada, impedindo qualquer acesso
-                externo ou vazamento de informações.
-              </p>
-            </div>
-
-            {/* Pilar 2: Criptografia TLS 1.3 & JWT */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-                <LucideIcons.Lock className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-medium text-slate-800">
-                Criptografia de Ponta a Ponta
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Comunicação protegida via protocolo HTTPS/TLS 1.3, senhas criptografadas com hash
-                seguro e sessões autenticadas por tokens JWT com expiração e validação automática.
-              </p>
-            </div>
-
-            {/* Pilar 3: Controle de Permissões e Auditoria */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-2xs space-y-3">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-                <LucideIcons.UserCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-medium text-slate-800">
-                Controle de Acesso por Cargo
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Garçons acessam apenas o mapa de mesas e lançamento de pedidos, enquanto relatórios
-                financeiros, estornos e configurações ficam restritos exclusivamente à senha do
-                administrador.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* NOVO CARD 3: SOBRE A EMPRESA CRIADORA — ÂNCORA DEV & FUNDADORA / CEO THAMILES */}
+      {/* BLOCO 3: SOBRE A EMPRESA CRIADORA*/}
       <section id="ancora-dev" className="py-14 lg:py-20 bg-white border-t border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-slate-100/75 border border-slate-200/70 rounded-3xl p-6 sm:p-8 lg:p-10">
@@ -2489,16 +2362,16 @@ export function LandingPage() {
               {/* Identidade Âncora Dev */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium">
-                  <LucideIcons.Anchor className="w-3.5 h-3.5 text-amber-500" />
-                  Engenharia de Software de Última Geração
+                  <LucideIcons.Anchor className="w-3.5 h-3.5 text-emerald-400" />
+                  Engenharia de software de última geração
                 </div>
 
-                <h2 className="text-xl sm:text-3xl font-medium tracking-tight text-slate-800">
-                  Desenvolvido pela <span className="font-semibold">Âncora Dev</span>
+                <h2 className="text-[16px] sm:text-2xl font-sans tracking-normal text-slate-800">
+                  Desenvolvido pela Empresa: <span className="text-[20px] font-bold tracking-normal uppercase">Âncora-dev</span>
                 </h2>
 
                 <p className="text-sm text-slate-500 leading-relaxed">
-                  A <strong>Âncora Dev</strong> é uma empresa de desenvolvimento de software focada
+                  É uma empresa de desenvolvimento de software focada
                   na construção de plataformas comerciais de alta performance, combinando código
                   limpo, estabilidade em nuvem e design intuitivo para operações reais.
                 </p>
@@ -2516,16 +2389,16 @@ export function LandingPage() {
                 </div>
               </div>
 
-              {/* Card da Fundadora e CEO Thamiles */}
+              {/* Card da Fundadora e CEO */}
               <div className="lg:col-span-5">
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                      <LucideIcons.Code2 className="w-6 h-6" />
+                    <div className="w-10 h-10 rounded-4xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+                      <LucideIcons.Code2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 block">
-                        Fundadora & CEO • Âncora Dev
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 block">
+                        Fundadora & CEO
                       </span>
                       <h3 className="text-lg font-semibold text-slate-800">Thamiles</h3>
                       <p className="text-xs text-slate-500">
@@ -2548,7 +2421,7 @@ export function LandingPage() {
 
       {/* RODAPÉ MINIMALISTA */}
       <footer className="bg-white border-t border-slate-200/80 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 tracking-normal sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <span>Desenvolvido por Âncora Dev • Plataforma Digital de Atendimento e Gestão na Praia</span>
           <div className="flex items-center gap-6 font-medium">
             <a href="#inicio" className="hover:text-slate-800 transition-colors">
@@ -2570,13 +2443,13 @@ export function LandingPage() {
         </div>
       </footer>
 
-      {/* BOTÃO FLUTUANTE EXCLUSIVO DO WHATSAPP */}
+      {/* BOTÃO DO WHATSAPP */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Conversar no WhatsApp"
-        className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105"
+        className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105"
       >
         <LucideIcons.MessageCircle className="w-6 h-6" />
       </a>

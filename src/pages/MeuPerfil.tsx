@@ -79,6 +79,9 @@ export function MeuPerfil() {
     if (!garcomLogado) return;
     setNome(garcomLogado.nome || '');
     setNovoEmail(garcomLogado.email || '');
+    if (garcomLogado.telefone) {
+      setTelefone(formatarTelefoneBR(garcomLogado.telefone));
+    }
     const temFoto = isAvatarImagem(garcomLogado.avatar);
     setFotoUrl(temFoto ? garcomLogado.avatar : null);
     setModoVisual(temFoto ? 'foto' : 'emoji');
@@ -347,10 +350,10 @@ export function MeuPerfil() {
                 </p>
 
                 <div className="mt-2.5 flex items-center justify-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-medium text-slate-700 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full">
                     {labelCargo}
                   </span>
-                  <span className="text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-full truncate max-w-44">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-full truncate max-w-48">
                     {dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA}
                   </span>
                 </div>
@@ -361,7 +364,7 @@ export function MeuPerfil() {
                     type="button"
                     onClick={() => inputFotoRef.current?.click()}
                     disabled={enviandoFoto}
-                    className="flex-1 min-w-34 h-9 px-3.5 rounded-xl bg-slate-900 hover:bg-black disabled:opacity-60 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-[0.99] cursor-pointer"
+                    className="flex-1 min-w-32 h-9 px-3.5 rounded-xl bg-slate-900 hover:bg-black disabled:opacity-60 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                   >
                     <LucideIcons.Upload size={14} strokeWidth={1.8} />
                     <span>{fotoUrl && modoVisual === 'foto' ? 'Trocar foto' : 'Enviar foto'}</span>
@@ -376,7 +379,7 @@ export function MeuPerfil() {
                           : () => setModoVisual('foto')
                       }
                       disabled={salvandoCadastro}
-                      className="h-9 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-[0.99] cursor-pointer"
+                      className="h-9 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                     >
                       {modoVisual === 'foto' ? (
                         <>
@@ -393,7 +396,7 @@ export function MeuPerfil() {
                   )}
                 </div>
 
-                <p className="mt-2.5 text-[11px] text-slate-400 leading-relaxed">
+                <p className="mt-2.5 text-xs text-slate-400 leading-relaxed">
                   Quando uma foto de perfil está ativa, ela aparece automaticamente no cabeçalho superior e nas telas do sistema no lugar do emoji.
                 </p>
               </div>
@@ -407,7 +410,7 @@ export function MeuPerfil() {
                     <LucideIcons.Smile size={18} strokeWidth={1.8} className="text-slate-700 shrink-0" />
                     <div>
                       <h3 className="text-sm font-medium text-slate-900">Emoji do Perfil</h3>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Exibido quando você optar por não usar foto
                       </p>
                     </div>
@@ -453,7 +456,7 @@ export function MeuPerfil() {
                     <LucideIcons.UserRound size={18} strokeWidth={1.8} className="text-slate-700" />
                     <div>
                       <h3 className="text-sm font-medium text-slate-900">Dados Cadastrais</h3>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Informações de identificação exibidas nas comandas e relatórios
                       </p>
                     </div>
@@ -544,7 +547,7 @@ export function MeuPerfil() {
                     <LucideIcons.Mail size={18} strokeWidth={1.8} className="text-slate-700" />
                     <div>
                       <h3 className="text-sm font-medium text-slate-900">E-mail de Acesso</h3>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Utilizado para entrar na sua conta no sistema
                       </p>
                     </div>
@@ -626,7 +629,7 @@ export function MeuPerfil() {
                     <LucideIcons.KeyRound size={18} strokeWidth={1.8} className="text-slate-700" />
                     <div>
                       <h3 className="text-sm font-medium text-slate-900">Segurança e Senha</h3>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Altere sua senha de acesso mediante confirmação da senha atual
                       </p>
                     </div>

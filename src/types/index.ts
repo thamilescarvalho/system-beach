@@ -72,6 +72,7 @@ export interface Garcom {
   status?: StatusUsuario;
   cargo?: CargoUsuario;
   empresaId?: string;
+  telefone?: string;
 }
 
 export interface MovimentacaoEstoque {

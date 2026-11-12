@@ -60,6 +60,7 @@ export interface AppContextType {
   reordenarCategorias: (categoriasReordenadas: Categoria[]) => Promise<void>;
   darEntradaEstoque: (idProduto: number, qtdAdicionada: number, precoCusto: number, usuario: string) => Promise<void>;
   registrarInventario: (idProduto: number, qtdFisicaReal: number, usuario: string) => Promise<void>;
+  excluirMovimentacaoEstoque: (idMovimentacao: string) => Promise<void>;
   adicionarUsuario: (usuario: Garcom) => Promise<void>;
   removerUsuario: (id: string) => Promise<void>;
   editarUsuario: (id: string, dadosAtualizados: Partial<Garcom>) => Promise<void>;

@@ -1,31 +1,41 @@
 // src/App.tsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 
 import { AppProvider } from './context/AppProvider';
 import { useAppContext } from './context/AppContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ConexaoStatus } from './components/ConexaoStatus';
 
-// Páginas
-import { LandingPage } from './pages/LandingPage';
-import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
-import { Cadastro } from './pages/Cadastro';
-import { Home } from './pages/Home';
-import { MesasGarcom } from './pages/MesasGarcom';
-import { Comanda } from './pages/Comanda';
-import { Painel } from './pages/Painel';
-import { Admin } from './pages/Admin';
-import { Login } from './pages/Login';
-import { AdminUsuarios } from './pages/AdminUsuarios';
-import { AdminFinanceiro } from './pages/AdminFinanceiro';
-import { AdminImpressora } from './pages/AdminImpressora';
-import { AdminAssinatura } from './pages/AdminAssinatura';
-import { AdminAssinaturaRenovar } from './pages/AdminAssinaturaRenovar';
-import { Estoque } from './pages/Estoque';
-import { Cozinha } from './pages/Cozinha';
-import { AssinaturaPendente } from './pages/AssinaturaPendente';
-import { MeuPerfil } from './pages/MeuPerfil';
+// Páginas carregadas sob demanda (Code Splitting para internet móvel/oscilante)
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const Cadastro = lazy(() => import('./pages/Cadastro').then(m => ({ default: m.Cadastro })));
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const MesasGarcom = lazy(() => import('./pages/MesasGarcom').then(m => ({ default: m.MesasGarcom })));
+const Comanda = lazy(() => import('./pages/Comanda').then(m => ({ default: m.Comanda })));
+const Painel = lazy(() => import('./pages/Painel').then(m => ({ default: m.Painel })));
+const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const AdminUsuarios = lazy(() => import('./pages/AdminUsuarios').then(m => ({ default: m.AdminUsuarios })));
+const AdminFinanceiro = lazy(() => import('./pages/AdminFinanceiro').then(m => ({ default: m.AdminFinanceiro })));
+const AdminImpressora = lazy(() => import('./pages/AdminImpressora').then(m => ({ default: m.AdminImpressora })));
+const AdminAssinatura = lazy(() => import('./pages/AdminAssinatura').then(m => ({ default: m.AdminAssinatura })));
+const AdminAssinaturaRenovar = lazy(() => import('./pages/AdminAssinaturaRenovar').then(m => ({ default: m.AdminAssinaturaRenovar })));
+const Estoque = lazy(() => import('./pages/Estoque').then(m => ({ default: m.Estoque })));
+const Cozinha = lazy(() => import('./pages/Cozinha').then(m => ({ default: m.Cozinha })));
+const AssinaturaPendente = lazy(() => import('./pages/AssinaturaPendente').then(m => ({ default: m.AssinaturaPendente })));
+const MeuPerfil = lazy(() => import('./pages/MeuPerfil').then(m => ({ default: m.MeuPerfil })));
+
+function CarregandoTela() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-9 h-9 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function AdminRoute({ children }: { children: ReactNode }) {
   const contexto = useAppContext();
@@ -119,8 +129,10 @@ function RootRoute() {
 export function App() {
   return (
     <AppProvider>
+      <ConexaoStatus />
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={<CarregandoTela />}>
+          <Routes>
           {/* ROTAS PÚBLICAS */}
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -174,7 +186,8 @@ export function App() {
 
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
       <Analytics />
     </AppProvider>

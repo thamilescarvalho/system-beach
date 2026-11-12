@@ -381,3 +381,115 @@ export async function carregarFaturasEmpresa(
 
   return lista;
 }
+
+/**
+ * Carrega exclusivamente as faturas geradas e persistidas no banco de dados
+ * para um estabelecimento (usado no painel SuperAdmin).
+ */
+export async function carregarFaturasGeradasBancoEmpresa(
+  empresaId: string
+): Promise<FaturaAssinatura[]> {
+  const { data, error } = await supabase
+    .from('faturas_assinatura')
+    .select('*')
+    .eq('empresa_id', empresaId)
+    .order('data_vencimento', { ascending: false });
+
+  if (error || !Array.isArray(data)) {
+    return [];
+  }
+
+  const agoraMs = Date.now();
+
+  return data
+    .filter((row: Record<string, unknown>) => Boolean(row.id))
+    .map((row: Record<string, unknown>) => {
+      const id = String(row.id);
+      const mesAno = String(row.mes_ano_referencia || '');
+      const statusBruto = (row.status as StatusFatura) || 'pendente';
+      const dataVencStr = String(row.data_vencimento || new Date().toISOString());
+      const vencimentoMs = new Date(dataVencStr).getTime();
+      const statusEfetivo: StatusFatura =
+        statusBruto === 'pendente' && !Number.isNaN(vencimentoMs) && vencimentoMs < agoraMs
+          ? 'em_atraso'
+          : statusBruto;
+
+      return {
+        id,
+        empresaId: String(row.empresa_id || empresaId),
+        competencia: String(row.competencia || 'Período Atual'),
+        mesAnoReferencia: mesAno,
+        valor: Number(row.valor || 0),
+        dataEmissao: String(row.data_emissao || new Date().toISOString()),
+        dataVencimento: dataVencStr,
+        dataPagamento: row.data_pagamento ? String(row.data_pagamento) : undefined,
+        status: statusEfetivo,
+        formaPagamento: row.forma_pagamento ? String(row.forma_pagamento) : 'PIX Mercado Pago',
+        paymentIdMp: row.payment_id_mp ? String(row.payment_id_mp) : undefined,
+        planoNome: String(row.plano_nome || 'Assinatura Premium'),
+        cicloNome: String(row.ciclo_nome || 'Mensal'),
+        codigoFiscalSerie: `NFS-PIX-${mesAno.replace('-', '')}`,
+        regimeTributarioSaaS: 'Serviço de Software SaaS (ISS / PIX)'
+      };
+    });
+}
+
+/**
+ * Exclui uma fatura gerada que ainda NÃO foi paga.
+ * Faturas com status 'paga' são bloqueadas tanto na camada de aplicação quanto via RLS.
+ */
+export async function excluirFaturaNaoPaga(
+  faturaId: string,
+  empresaId: string
+): Promise<{ ok: boolean; erro?: string }> {
+  const { data: atual, error: erroConsulta } = await supabase
+    .from('faturas_assinatura')
+    .select('id, status')
+    .eq('id', faturaId)
+    .eq('empresa_id', empresaId)
+    .maybeSingle();
+
+  if (erroConsulta) {
+    return { ok: false, erro: erroConsulta.message || 'Não foi possível validar a fatura.' };
+  }
+
+  if (!atual) {
+    return { ok: false, erro: 'Fatura não encontrada no banco de dados.' };
+  }
+
+  if (atual.status === 'paga') {
+    return {
+      ok: false,
+      erro: 'Faturas já pagas não podem ser excluídas pelo painel. Remoção permitida apenas diretamente no banco de dados.'
+    };
+  }
+
+  const { data: removidas, error: erroDelete } = await supabase
+    .from('faturas_assinatura')
+    .delete()
+    .eq('id', faturaId)
+    .eq('empresa_id', empresaId)
+    .neq('status', 'paga')
+    .select('id');
+
+  if (erroDelete) {
+    return { ok: false, erro: erroDelete.message || 'Erro ao excluir fatura.' };
+  }
+
+  if (!removidas || removidas.length === 0) {
+    return {
+      ok: false,
+      erro: 'Exclusão bloqueada: verifique se a fatura já foi paga ou se você possui permissão.'
+    };
+  }
+
+  const cacheAtual = obterFaturasCache(empresaId);
+  if (cacheAtual.length > 0) {
+    salvarFaturasCache(
+      empresaId,
+      cacheAtual.filter((f) => f.id !== faturaId)
+    );
+  }
+
+  return { ok: true };
+}

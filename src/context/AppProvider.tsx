@@ -71,6 +71,7 @@ interface DBUsuario {
   email?: string;
   status?: StatusUsuario;
   empresa_id?: string;
+  telefone?: string;
 }
 
 interface DBHistorico {
@@ -115,8 +116,103 @@ function mapearUsuarioDB(perfil: DBUsuario): Garcom {
     cargo: perfil.cargo,
     email: perfil.email || '',
     status: perfil.status || 'ativo',
-    empresaId: perfil.empresa_id
+    empresaId: perfil.empresa_id,
+    telefone: perfil.telefone || ''
   };
+}
+
+type TabelaSync = 'mesas' | 'produtos' | 'vendas' | 'categorias' | 'historico_estoque' | 'empresas';
+
+function mapearMesaDB(m: DBMesa): Mesa {
+  return {
+    id: m.id,
+    numero: m.numero,
+    status: m.status,
+    garcomId: m.garcom_id,
+    garcomNome: m.garcom_nome,
+    nomeCliente: m.nome_cliente || '',
+    itens: m.itens || []
+  };
+}
+
+function mapearProdutoDB(p: DBProduto): Produto {
+  return {
+    id: p.id,
+    nome: p.nome,
+    categoria: p.categoria,
+    subcategoria: p.subcategoria,
+    imagem_url: p.imagem_url,
+    preco: Number(p.preco),
+    precoCusto: Number(p.preco_custo),
+    estoque: p.estoque,
+    ativo: p.ativo
+  };
+}
+
+function mapearCategoriaDB(c: DBCategoria): Categoria {
+  return {
+    id: c.id,
+    nome: c.nome,
+    icone: c.icone,
+    ativo: c.ativo,
+    ordem: c.ordem
+  };
+}
+
+function mapearVendaDB(v: DBVenda): VendaFechada {
+  return {
+    id: v.id,
+    numeroMesa: v.numero_mesa,
+    total: Number(v.total),
+    pagamentos: v.pagamentos || [],
+    itens: v.itens || [],
+    garcomNome: v.garcom_nome,
+    nomeCliente: v.nome_cliente || '',
+    status: (v.status === 'fechada' ? 'concluida' : v.status) as 'concluida' | 'cancelada',
+    dataFechamento: v.data_fechamento,
+    canceladoPor: v.cancelado_por,
+    motivoCancelamento: v.motivo_cancelamento,
+    dataCancelamento: v.data_cancelamento
+  };
+}
+
+function mapearHistoricoDB(h: DBHistorico): MovimentacaoEstoque {
+  return {
+    id: h.id,
+    produtoId: h.produto_id,
+    produtoNome: h.produto_nome,
+    tipo: h.tipo as 'entrada' | 'inventario' | 'estorno',
+    quantidade: h.quantidade,
+    precoCusto: Number(h.preco_custo),
+    usuarioNome: h.usuario_nome,
+    data: h.data
+  };
+}
+
+function garantirSucesso(error: { message?: string } | null, mensagemPadrao: string) {
+  if (error) {
+    throw new Error(error.message || mensagemPadrao);
+  }
+}
+
+function salvarCacheLocal(eid: string, parte: { mesas?: Mesa[]; produtos?: Produto[]; categorias?: Categoria[] }) {
+  try {
+    const chave = `tsystem_cache_${eid}`;
+    const atualRaw = localStorage.getItem(chave);
+    const atual = atualRaw ? JSON.parse(atualRaw) : {};
+    localStorage.setItem(chave, JSON.stringify({ ...atual, ...parte }));
+  } catch {
+    // Ignora erro de quota ou storage indisponível
+  }
+}
+
+function lerCacheLocal(eid: string): { mesas?: Mesa[]; produtos?: Produto[]; categorias?: Categoria[] } | null {
+  try {
+    const raw = localStorage.getItem(`tsystem_cache_${eid}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -160,7 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ): Promise<DBUsuario | null> => {
     let { data: perfil } = await supabase
       .from('usuarios')
-      .select('id, nome, avatar, cargo, empresa_id, email, status')
+      .select('id, nome, avatar, cargo, empresa_id, email, status, telefone')
       .eq('id', userId)
       .maybeSingle();
 
@@ -168,7 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const emailLimpoFallback = emailUsuario.trim().toLowerCase();
       const resPorEmail = await supabase
         .from('usuarios')
-        .select('id, nome, avatar, cargo, empresa_id, email, status')
+        .select('id, nome, avatar, cargo, empresa_id, email, status, telefone')
         .eq('email', emailLimpoFallback)
         .maybeSingle();
       perfil = resPorEmail.data;
@@ -182,7 +278,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           cargo: 'super_admin',
           email: 'ancorazero85@gmail.com',
           status: 'ativo',
-          empresa_id: '887a56e0-9151-493f-9801-732245b535f3'
+          empresa_id: '887a56e0-9151-493f-9801-732245b535f3',
+          telefone: ''
         };
       }
     }
@@ -208,7 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (rpcError) {
           const { data: perfilExistente } = await supabase
             .from('usuarios')
-            .select('id, nome, avatar, cargo, empresa_id, email, status')
+            .select('id, nome, avatar, cargo, empresa_id, email, status, telefone')
             .or(`id.eq.${userId},email.eq.${emailLimpo}`)
             .maybeSingle();
 
@@ -250,7 +347,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!perfil) {
           const resNovoPerfil = await supabase
             .from('usuarios')
-            .select('id, nome, avatar, cargo, empresa_id, email, status')
+            .select('id, nome, avatar, cargo, empresa_id, email, status, telefone')
             .eq('id', userId)
             .maybeSingle();
           perfil = resNovoPerfil.data;
@@ -429,7 +526,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (perfilReal.cargo === 'super_admin' && impersonatedUserId) {
         const { data: perfilImpersonado } = await supabase
           .from('usuarios')
-          .select('id, nome, avatar, cargo, empresa_id, email, status')
+          .select('id, nome, avatar, cargo, empresa_id, email, status, telefone')
           .eq('id', impersonatedUserId)
           .maybeSingle();
 
@@ -543,6 +640,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!eid) return;
 
     if (!silencioso) {
+      // Hidratação imediata via cache local para abertura rápida em 3G/4G oscilante
+      const cache = lerCacheLocal(eid);
+      if (cache) {
+        if (cache.mesas?.length) setMesas(cache.mesas);
+        if (cache.produtos?.length) setProdutos(cache.produtos);
+        if (cache.categorias?.length) setCategorias(cache.categorias);
+      }
       setCarregandoContexto(true);
     }
 
@@ -551,7 +655,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('mesas').select('*').eq('empresa_id', eid).is('deletado_em', null).order('numero'),
         supabase.from('produtos').select('*').eq('empresa_id', eid).is('deletado_em', null).order('id'),
         supabase.from('vendas').select('*').eq('empresa_id', eid).order('data_fechamento', { ascending: false }).limit(500),
-        supabase.from('usuarios').select('id, nome, avatar, cargo, empresa_id, email, status').eq('empresa_id', eid).is('deletado_em', null),
+        supabase.from('usuarios').select('id, nome, avatar, cargo, empresa_id, email, status, telefone').eq('empresa_id', eid).is('deletado_em', null),
         supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }).limit(300),
         supabase.from('categorias').select('*').eq('empresa_id', eid).is('deletado_em', null).order('ordem', { ascending: true }),
         supabase.from('pagamentos_garcons').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_pagamento', { ascending: false }).limit(200),
@@ -569,57 +673,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (dadosMesas) {
-        setMesas(dadosMesas.map((m: DBMesa) => ({
-          id: m.id,
-          numero: m.numero,
-          status: m.status,
-          garcomId: m.garcom_id,
-          garcomNome: m.garcom_nome,
-          nomeCliente: m.nome_cliente || '',
-          itens: m.itens || []
-        })));
-      }
+      const mesasMapeadas = dadosMesas ? dadosMesas.map(mapearMesaDB) : undefined;
+      const prodsMapeados = resProds.data ? (resProds.data as DBProduto[]).map(mapearProdutoDB) : undefined;
+      const catsMapeadas = resCats.data ? (resCats.data as DBCategoria[]).map(mapearCategoriaDB) : undefined;
 
-      if (resProds.data) {
-        setProdutos((resProds.data as DBProduto[]).map((p: DBProduto) => ({
-          id: p.id,
-          nome: p.nome,
-          categoria: p.categoria,
-          subcategoria: p.subcategoria,
-          imagem_url: p.imagem_url,
-          preco: Number(p.preco),
-          precoCusto: Number(p.preco_custo),
-          estoque: p.estoque,
-          ativo: p.ativo
-        })));
-      }
+      if (mesasMapeadas) setMesas(mesasMapeadas);
+      if (prodsMapeados) setProdutos(prodsMapeados);
+      if (catsMapeadas) setCategorias(catsMapeadas);
 
-      if (resCats.data) {
-        setCategorias((resCats.data as DBCategoria[]).map((c: DBCategoria) => ({
-          id: c.id,
-          nome: c.nome,
-          icone: c.icone,
-          ativo: c.ativo,
-          ordem: c.ordem
-        })));
+      if (mesasMapeadas || prodsMapeados || catsMapeadas) {
+        salvarCacheLocal(eid, {
+          ...(mesasMapeadas ? { mesas: mesasMapeadas } : {}),
+          ...(prodsMapeados ? { produtos: prodsMapeados } : {}),
+          ...(catsMapeadas ? { categorias: catsMapeadas } : {})
+        });
       }
 
       if (resVendas.data) {
-        setHistoricoVendas((resVendas.data as DBVenda[]).map((v: DBVenda) => ({
-          id: v.id,
-          numeroMesa: v.numero_mesa,
-          total: Number(v.total),
-          pagamentos: v.pagamentos || [],
-          itens: v.itens || [],
-          garcomNome: v.garcom_nome,
-          nomeCliente: v.nome_cliente || '',
-          status: (v.status === 'fechada' ? 'concluida' : v.status) as 'concluida' | 'cancelada',
-          dataFechamento: v.data_fechamento,
-          canceladoPor: v.cancelado_por,
-          motivoCancelamento: v.motivo_cancelamento,
-          dataCancelamento: v.data_cancelamento
-        })));
+        setHistoricoVendas((resVendas.data as DBVenda[]).map(mapearVendaDB));
       }
 
       if (resUsers.data) {
@@ -627,16 +698,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (resHist.data) {
-        setHistoricoEstoque((resHist.data as DBHistorico[]).map((h: DBHistorico) => ({
-          id: h.id,
-          produtoId: h.produto_id,
-          produtoNome: h.produto_nome,
-          tipo: h.tipo as 'entrada' | 'inventario' | 'estorno',
-          quantidade: h.quantidade,
-          precoCusto: Number(h.preco_custo),
-          usuarioNome: h.usuario_nome,
-          data: h.data
-        })));
+        setHistoricoEstoque((resHist.data as DBHistorico[]).map(mapearHistoricoDB));
       }
 
       if (resPagamentos.data) {
@@ -660,7 +722,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           valorAlvo: Number(resMeta.data.valor_alvo),
           status: 'ativa'
         });
-      } else {
+      } else if (!resMeta.error) {
         setMetaAtiva(null);
       }
 
@@ -680,14 +742,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
           nome_exibicao: resEmpresa.data.nome_exibicao || '',
           email_contato: resEmpresa.data.email_contato || ''
         });
-      } else {
+      } else if (!silencioso && !resEmpresa.error) {
         setDadosEmpresa(null);
       }
     } catch (err) {
       console.error('Erro ao carregar dados do Supabase:', err);
-      setDadosEmpresa(null);
+      // Em oscilações de internet, preserva o estado/cache atual sem derrubar a tela
     } finally {
       setCarregandoContexto(false);
+    }
+  }, [obterEmpresaId]);
+
+  const recarregarTabela = useCallback(async (tabela: TabelaSync) => {
+    const eid = obterEmpresaId();
+    if (!eid) return;
+
+    try {
+      if (tabela === 'mesas') {
+        const { data } = await supabase.from('mesas').select('*').eq('empresa_id', eid).is('deletado_em', null).order('numero');
+        if (data) {
+          const mapeadas = (data as DBMesa[]).map(mapearMesaDB);
+          setMesas(mapeadas);
+          salvarCacheLocal(eid, { mesas: mapeadas });
+        }
+      } else if (tabela === 'produtos') {
+        const { data } = await supabase.from('produtos').select('*').eq('empresa_id', eid).is('deletado_em', null).order('id');
+        if (data) {
+          const mapeados = (data as DBProduto[]).map(mapearProdutoDB);
+          setProdutos(mapeados);
+          salvarCacheLocal(eid, { produtos: mapeados });
+        }
+      } else if (tabela === 'categorias') {
+        const { data } = await supabase.from('categorias').select('*').eq('empresa_id', eid).is('deletado_em', null).order('ordem', { ascending: true });
+        if (data) {
+          const mapeadas = (data as DBCategoria[]).map(mapearCategoriaDB);
+          setCategorias(mapeadas);
+          salvarCacheLocal(eid, { categorias: mapeadas });
+        }
+      } else if (tabela === 'vendas') {
+        const { data } = await supabase.from('vendas').select('*').eq('empresa_id', eid).order('data_fechamento', { ascending: false }).limit(500);
+        if (data) setHistoricoVendas((data as DBVenda[]).map(mapearVendaDB));
+      } else if (tabela === 'historico_estoque') {
+        const { data } = await supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }).limit(300);
+        if (data) setHistoricoEstoque((data as DBHistorico[]).map(mapearHistoricoDB));
+      } else if (tabela === 'empresas') {
+        const { data } = await supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle();
+        if (data) {
+          setDadosEmpresa({
+            id: data.id,
+            nome_fantasia: data.nome_fantasia,
+            status_assinatura: String(data.status_assinatura || 'pendente'),
+            data_vencimento: data.data_vencimento || '',
+            valor_mensalidade: Number(data.valor_mensalidade ?? 149.90),
+            plano_nome: data.plano_nome || 'Assinatura Premium',
+            ciclo_cobranca: data.ciclo_cobranca || 'semestral',
+            documento: data.documento || '',
+            telefone: data.telefone || '',
+            nome_exibicao: data.nome_exibicao || '',
+            email_contato: data.email_contato || ''
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`Falha ao sincronizar tabela ${tabela}:`, err);
     }
   }, [obterEmpresaId]);
 
@@ -798,7 +915,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [garcomLogado, setGarcomLogado]);
 
-  // Carregamento inicial da empresa + WebSocket Realtime quando um pedido/mesa é alterado por outro aparelho
+  // Carregamento inicial da empresa + WebSocket Realtime seletivo + ressincronização ao voltar sinal
   useEffect(() => {
     const eid = obterEmpresaId();
     if (!eid) return;
@@ -807,28 +924,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       void carregarDados(false);
     }, 0);
 
-    const agendarAtualizacaoSilenciosa = () => {
+    const tabelasPendentes = new Set<TabelaSync>();
+
+    const agendarAtualizacaoSeletiva = (tabela: TabelaSync) => {
+      tabelasPendentes.add(tabela);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       realtimeDebounceRef.current = setTimeout(() => {
-        void carregarDados(true);
+        const lote = Array.from(tabelasPendentes);
+        tabelasPendentes.clear();
+        void Promise.all(lote.map((t) => recarregarTabela(t)));
       }, 300);
     };
 
+    const aoVoltarOnline = () => {
+      void carregarDados(true);
+    };
+    window.addEventListener('online', aoVoltarOnline);
+
     const channel = supabase
       .channel(`tenant-sync-${eid}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas', filter: `empresa_id=eq.${eid}` }, agendarAtualizacaoSilenciosa)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: `empresa_id=eq.${eid}` }, agendarAtualizacaoSilenciosa)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `empresa_id=eq.${eid}` }, agendarAtualizacaoSilenciosa)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categorias', filter: `empresa_id=eq.${eid}` }, agendarAtualizacaoSilenciosa)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'empresas', filter: `id=eq.${eid}` }, agendarAtualizacaoSilenciosa)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('mesas'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('produtos'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('vendas'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categorias', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('categorias'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'historico_estoque', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('historico_estoque'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'empresas', filter: `id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('empresas'))
       .subscribe();
 
     return () => {
       clearTimeout(timer);
+      window.removeEventListener('online', aoVoltarOnline);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [carregarDados, obterEmpresaId]);
+  }, [carregarDados, recarregarTabela, obterEmpresaId]);
 
   const autenticarUsuario = async (email: string, senha: string): Promise<boolean> => {
     isFluxoConfirmacaoEmailRef.current = false;
@@ -985,16 +1114,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const avatarFinal = dados.avatar.trim() || '👤';
 
-    const { error: dbError } = await supabase
-      .from('usuarios')
-      .update({
-        nome: nomeLimpo,
-        avatar: avatarFinal
-      })
-      .eq('id', garcomLogado.id);
+    // 1. Atualização atômica no banco (public.usuarios + auth.users metadata)
+    const { error: rpcError } = await supabase.rpc('perfil_atualizar_dados_cadastrais', {
+      p_usuario_id: garcomLogado.id,
+      p_nome: nomeLimpo,
+      p_avatar: avatarFinal,
+      p_telefone: dados.telefone ? dados.telefone.trim() : null,
+      p_emoji: dados.emojiPreferido ? dados.emojiPreferido.trim() : null
+    });
 
-    if (dbError) {
-      throw new Error('Não foi possível atualizar os dados do perfil.');
+    if (rpcError) {
+      console.warn('Fallback para update direto de usuarios:', rpcError.message);
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({
+          nome: nomeLimpo,
+          avatar: avatarFinal,
+          telefone: dados.telefone ? dados.telefone.trim() : null
+        })
+        .eq('id', garcomLogado.id);
+
+      if (dbError) {
+        throw new Error('Não foi possível atualizar os dados do perfil.');
+      }
     }
 
     if (dados.emojiPreferido) {
@@ -1016,8 +1158,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }).catch(() => null);
     }
 
-    setGarcomLogadoState(prev => prev ? { ...prev, nome: nomeLimpo, avatar: avatarFinal } : prev);
-    setUsuarios(prev => prev.map(u => u.id === garcomLogado.id ? { ...u, nome: nomeLimpo, avatar: avatarFinal } : u));
+    setGarcomLogadoState(prev => prev ? { ...prev, nome: nomeLimpo, avatar: avatarFinal, telefone: dados.telefone } : prev);
+    setUsuarios(prev => prev.map(u => u.id === garcomLogado.id ? { ...u, nome: nomeLimpo, avatar: avatarFinal, telefone: dados.telefone } : u));
     await registrarAuditoria('EDICAO', 'PERFIL', `Usuário '${nomeLimpo}' atualizou seu próprio perfil.`);
   };
 
@@ -1027,101 +1169,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!emailLimpo || !emailLimpo.includes('@')) {
       throw new Error('Informe um endereço de e-mail válido.');
     }
+    if (!senhaAtual) {
+      throw new Error('Digite sua senha atual para confirmar a alteração.');
+    }
+
+    // Atualização atômica em auth.users, auth.identities e public.usuarios
+    // Funciona tanto para o próprio usuário logado quanto para Super Admin em 'Assumir Identidade'
+    const { error: rpcError } = await supabase.rpc('perfil_atualizar_email', {
+      p_usuario_id: garcomLogado.id,
+      p_novo_email: emailLimpo,
+      p_senha_atual: senhaAtual
+    });
+
+    if (rpcError) {
+      console.error('Erro na RPC perfil_atualizar_email:', rpcError);
+      throw new Error(rpcError.message || 'Não foi possível atualizar o e-mail de acesso.');
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user || session.user.id !== garcomLogado.id || !session.user.email) {
-      throw new Error('Para alterar dados de acesso, acesse diretamente com sua conta.');
+    if (session?.user && session.user.id === garcomLogado.id) {
+      localStorage.setItem('tsystem_saved_email', emailLimpo);
     }
 
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: session.user.email,
-      password: senhaAtual
-    });
-    if (reauthError) {
-      throw new Error('A senha atual informada está incorreta.');
-    }
-
-    const { error: authUpdateErr } = await supabase.auth.updateUser({ email: emailLimpo });
-    if (authUpdateErr) {
-      throw new Error(
-        authUpdateErr.message.toLowerCase().includes('already')
-          ? 'Este e-mail já está em uso por outra conta.'
-          : 'Não foi possível atualizar o e-mail de acesso.'
-      );
-    }
-
-    await supabase.from('usuarios').update({ email: emailLimpo }).eq('id', garcomLogado.id);
-    await supabase.functions.invoke('admin-auth', {
-      body: { userId: garcomLogado.id, newEmail: emailLimpo }
-    }).catch(() => null);
-
-    localStorage.setItem('tsystem_saved_email', emailLimpo);
     setGarcomLogadoState(prev => prev ? { ...prev, email: emailLimpo } : prev);
     setUsuarios(prev => prev.map(u => u.id === garcomLogado.id ? { ...u, email: emailLimpo } : u));
+    await registrarAuditoria('EDICAO', 'PERFIL', `E-mail de acesso de '${garcomLogado.nome}' atualizado para '${emailLimpo}'.`);
   };
 
   const alterarMinhaSenha = async (senhaAtual: string, novaSenha: string) => {
     if (!garcomLogado) throw new Error('Nenhum usuário autenticado.');
+    if (!senhaAtual) {
+      throw new Error('Digite sua senha atual.');
+    }
     if (novaSenha.length < 6) {
       throw new Error('A nova senha deve ter no mínimo 6 caracteres.');
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user || session.user.id !== garcomLogado.id || !session.user.email) {
-      throw new Error('Para alterar sua senha, acesse diretamente com sua conta.');
-    }
-
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: session.user.email,
-      password: senhaAtual
+    // Atualização atômica em auth.users com bcrypt seguro e validação de credencial
+    const { error: rpcError } = await supabase.rpc('perfil_atualizar_senha', {
+      p_usuario_id: garcomLogado.id,
+      p_senha_atual: senhaAtual,
+      p_nova_senha: novaSenha
     });
-    if (reauthError) {
-      throw new Error('A senha atual informada está incorreta.');
+
+    if (rpcError) {
+      console.error('Erro na RPC perfil_atualizar_senha:', rpcError);
+      throw new Error(rpcError.message || 'Não foi possível atualizar a senha.');
     }
 
-    const { error } = await supabase.auth.updateUser({ password: novaSenha });
-    if (error) {
-      throw new Error(
-        error.message.toLowerCase().includes('different')
-          ? 'A nova senha deve ser diferente da senha atual.'
-          : 'Não foi possível atualizar a senha. Tente novamente.'
-      );
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user && session.user.id === garcomLogado.id) {
+      await supabase.auth.updateUser({ password: novaSenha }).catch(() => null);
     }
+
+    await registrarAuditoria('SEGURANCA', 'SENHA', `Senha de acesso do usuário '${garcomLogado.nome}' atualizada com sucesso.`);
   };
 
   const adicionarCategoria = async (nome: string, icone: string) => {
     const eid = obterEmpresaId();
     const novaOrdem = categorias.length;
-    await supabase.from('categorias').insert([{ nome, icone, ativo: true, ordem: novaOrdem, empresa_id: eid }]);
+    const { error } = await supabase.from('categorias').insert([{ nome, icone, ativo: true, ordem: novaOrdem, empresa_id: eid }]);
+    garantirSucesso(error, 'Erro ao criar categoria. Verifique sua conexão.');
     await registrarAuditoria('CRIACAO', 'CATEGORIA', `Categoria '${nome}' criada.`);
-    await carregarDados(true);
+    await recarregarTabela('categorias');
   };
 
   const editarCategoria = async (id: number, nome: string, icone: string) => {
     const eid = obterEmpresaId();
-    await supabase.from('categorias').update({ nome, icone }).eq('id', id).eq('empresa_id', eid);
-    await carregarDados(true);
+    const catAntiga = categorias.find(c => c.id === id);
+    const { error } = await supabase.from('categorias').update({ nome, icone }).eq('id', id).eq('empresa_id', eid);
+    garantirSucesso(error, 'Erro ao atualizar categoria. Verifique sua conexão.');
+    if (catAntiga && catAntiga.nome !== nome) {
+      const { error: errProd } = await supabase
+        .from('produtos')
+        .update({ categoria: nome })
+        .eq('categoria', catAntiga.nome)
+        .eq('empresa_id', eid);
+      garantirSucesso(errProd, 'Erro ao atualizar categoria nos produtos.');
+      await Promise.all([recarregarTabela('categorias'), recarregarTabela('produtos')]);
+      return;
+    }
+    await recarregarTabela('categorias');
   };
 
   const excluirCategoria = async (id: number) => {
     const eid = obterEmpresaId();
     const cat = categorias.find(c => c.id === id);
-    await supabase.from('categorias').update({ deletado_em: new Date().toISOString(), ativo: false }).eq('id', id).eq('empresa_id', eid);
+    const { error } = await supabase.from('categorias').update({ deletado_em: new Date().toISOString(), ativo: false }).eq('id', id).eq('empresa_id', eid);
+    garantirSucesso(error, 'Erro ao excluir categoria. Verifique sua conexão.');
     await registrarAuditoria('EXCLUSAO', 'CATEGORIA', `Categoria '${cat?.nome}' movida para lixeira oculta.`);
-    await carregarDados(true);
+    await recarregarTabela('categorias');
   };
 
   const reordenarCategorias = async (categoriasReordenadas: Categoria[]) => {
     const eid = obterEmpresaId();
     setCategorias(categoriasReordenadas);
     for (const cat of categoriasReordenadas) {
-      await supabase.from('categorias').update({ ordem: cat.ordem }).eq('id', cat.id).eq('empresa_id', eid);
+      const { error } = await supabase.from('categorias').update({ ordem: cat.ordem }).eq('id', cat.id).eq('empresa_id', eid);
+      garantirSucesso(error, 'Erro ao reordenar categorias.');
     }
   };
 
   const adicionarProduto = async (novo: Omit<Produto, 'id'>) => {
     const eid = obterEmpresaId();
-    await supabase.from('produtos').insert([{
+    const { error } = await supabase.from('produtos').insert([{
       nome: novo.nome,
       categoria: novo.categoria,
       subcategoria: novo.subcategoria,
@@ -1132,13 +1283,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ativo: true,
       empresa_id: eid
     }]);
+    garantirSucesso(error, 'Erro ao cadastrar produto. Verifique sua conexão.');
     await registrarAuditoria('CRIACAO', 'PRODUTO', `Produto '${novo.nome}' adicionado ao catálogo.`);
-    await carregarDados(true);
+    await recarregarTabela('produtos');
   };
 
   const editarProduto = async (id: number, atualizacao: Partial<Produto>) => {
     const eid = obterEmpresaId();
-    await supabase.from('produtos').update({
+    const { error } = await supabase.from('produtos').update({
       nome: atualizacao.nome,
       categoria: atualizacao.categoria,
       subcategoria: atualizacao.subcategoria,
@@ -1147,29 +1299,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       preco_custo: atualizacao.precoCusto,
       ativo: atualizacao.ativo
     }).eq('id', id).eq('empresa_id', eid);
-    await carregarDados(true);
+    garantirSucesso(error, 'Erro ao atualizar produto. Verifique sua conexão.');
+    await recarregarTabela('produtos');
   };
 
   const excluirProduto = async (id: number) => {
     const eid = obterEmpresaId();
     const p = produtos.find(x => x.id === id);
-    await supabase.from('produtos').update({ deletado_em: new Date().toISOString(), ativo: false }).eq('id', id).eq('empresa_id', eid);
+    const { error } = await supabase.from('produtos').update({ deletado_em: new Date().toISOString(), ativo: false }).eq('id', id).eq('empresa_id', eid);
+    garantirSucesso(error, 'Erro ao excluir produto. Verifique sua conexão.');
     await registrarAuditoria('EXCLUSAO', 'PRODUTO', `Produto '${p?.nome}' movido para lixeira oculta.`);
-    await carregarDados(true);
+    await recarregarTabela('produtos');
   };
 
   const alternarStatusProduto = async (id: number) => {
     const eid = obterEmpresaId();
     const p = produtos.find(x => x.id === id);
     if (p) {
-      await supabase.from('produtos').update({ ativo: !p.ativo }).eq('id', id).eq('empresa_id', eid);
-      await carregarDados(true);
+      const { error } = await supabase.from('produtos').update({ ativo: !p.ativo }).eq('id', id).eq('empresa_id', eid);
+      garantirSucesso(error, 'Erro ao alterar status do produto. Verifique sua conexão.');
+      await recarregarTabela('produtos');
     }
   };
 
   const registrarLogEstoque = async (produtoId: number, nome: string, qtd: number, custo: number, usuario: string, tipo: string) => {
     const eid = obterEmpresaId();
-    await supabase.from('historico_estoque').insert([{
+    const { error } = await supabase.from('historico_estoque').insert([{
       produto_id: produtoId,
       produto_nome: nome,
       tipo,
@@ -1178,16 +1333,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       usuario_nome: usuario,
       empresa_id: eid
     }]);
+    garantirSucesso(error, 'Erro ao registrar histórico de estoque.');
   };
 
   const darEntradaEstoque = async (idProduto: number, qtdAdicionada: number, precoCusto: number, usuario: string) => {
     const eid = obterEmpresaId();
     const p = produtos.find(x => x.id === idProduto);
     if (p) {
-      await supabase.from('produtos').update({ estoque: (p.estoque || 0) + qtdAdicionada, preco_custo: precoCusto }).eq('id', idProduto).eq('empresa_id', eid);
+      const { error } = await supabase.from('produtos').update({ estoque: (p.estoque || 0) + qtdAdicionada, preco_custo: precoCusto }).eq('id', idProduto).eq('empresa_id', eid);
+      garantirSucesso(error, 'Erro ao dar entrada no estoque. Verifique sua conexão.');
       await registrarLogEstoque(idProduto, p.nome, qtdAdicionada, precoCusto, usuario, 'entrada');
       await registrarAuditoria('EDICAO', 'ESTOQUE', `Entrada de ${qtdAdicionada}x no produto '${p.nome}'.`);
-      await carregarDados(true);
+      await Promise.all([recarregarTabela('produtos'), recarregarTabela('historico_estoque')]);
     }
   };
 
@@ -1196,13 +1353,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const p = produtos.find(x => x.id === idProduto);
     if (p) {
       const diff = qtdFisicaReal - (p.estoque || 0);
-      await supabase.from('produtos').update({ estoque: qtdFisicaReal }).eq('id', idProduto).eq('empresa_id', eid);
+      const { error } = await supabase.from('produtos').update({ estoque: qtdFisicaReal }).eq('id', idProduto).eq('empresa_id', eid);
+      garantirSucesso(error, 'Erro ao ajustar inventário. Verifique sua conexão.');
       if (diff !== 0) {
         await registrarLogEstoque(idProduto, p.nome, diff, p.precoCusto || 0, usuario, 'inventario');
         await registrarAuditoria('EDICAO', 'ESTOQUE', `Inventário ajustado para ${qtdFisicaReal} no produto '${p.nome}'.`);
       }
-      await carregarDados(true);
+      await Promise.all([recarregarTabela('produtos'), recarregarTabela('historico_estoque')]);
     }
+  };
+
+  const excluirMovimentacaoEstoque = async (idMovimentacao: string) => {
+    const eid = obterEmpresaId();
+    const isAdmin = garcomLogado?.cargo === 'admin' || garcomLogado?.cargo === 'super_admin';
+    if (!eid || !isAdmin) {
+      throw new Error('Apenas administradores podem desfazer lançamentos de estoque.');
+    }
+
+    const log = historicoEstoque.find(h => h.id === idMovimentacao);
+    if (!log) {
+      throw new Error('Movimentação não encontrada.');
+    }
+
+    const { error: rpcErr } = await supabase.rpc('desfazer_movimentacao_estoque', {
+      p_historico_id: idMovimentacao
+    });
+
+    if (rpcErr) {
+      const p = produtos.find(x => x.id === log.produtoId);
+      if (p && p.estoque !== undefined) {
+        const novoEstoque = Math.max(0, (p.estoque || 0) - log.quantidade);
+        const { error: prodErr } = await supabase
+          .from('produtos')
+          .update({ estoque: novoEstoque })
+          .eq('id', p.id)
+          .eq('empresa_id', eid);
+        if (prodErr) throw prodErr;
+      }
+
+      const { error: delErr } = await supabase
+        .from('historico_estoque')
+        .delete()
+        .eq('id', idMovimentacao)
+        .eq('empresa_id', eid);
+      if (delErr) throw delErr;
+    }
+
+    setHistoricoEstoque(prev => prev.filter(h => h.id !== idMovimentacao));
+    await registrarAuditoria(
+      'EXCLUSAO',
+      'ESTOQUE',
+      `Movimentação (${log.tipo}) de ${log.quantidade > 0 ? `+${log.quantidade}` : log.quantidade}x em '${log.produtoNome}' desfeita/excluída.`
+    );
+    await Promise.all([recarregarTabela('produtos'), recarregarTabela('historico_estoque')]);
   };
 
   const adicionarUsuario = async (novoUsuario: Garcom) => {
@@ -1222,24 +1425,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const editarUsuario = async (id: string, dadosAtualizados: Partial<Garcom>) => {
     const eid = obterEmpresaId();
-    const { error: dbError } = await supabase.from('usuarios').update({ ...dadosAtualizados }).eq('id', id).eq('empresa_id', eid);
-    if (dbError) throw dbError;
-    if (dadosAtualizados.email !== undefined || dadosAtualizados.status !== undefined) {
-      await supabase.functions.invoke('admin-auth', {
-        body: { userId: id, newEmail: dadosAtualizados.email, status: dadosAtualizados.status }
-      }).catch(e => console.error(e));
+    if (!eid) throw new Error('Estabelecimento não identificado na sessão.');
+
+    // 1. Executa a RPC atômica que sincroniza tanto auth.users quanto public.usuarios
+    const { error: rpcError } = await supabase.rpc('admin_atualizar_usuario_estabelecimento', {
+      p_usuario_id: id,
+      p_nome: dadosAtualizados.nome ? dadosAtualizados.nome.trim() : null,
+      p_email: dadosAtualizados.email ? dadosAtualizados.email.trim().toLowerCase() : null,
+      p_cargo: dadosAtualizados.cargo ?? null,
+      p_avatar: dadosAtualizados.avatar ?? null,
+      p_status: dadosAtualizados.status ?? null
+    });
+
+    if (rpcError) {
+      console.error('Erro na RPC admin_atualizar_usuario_estabelecimento:', rpcError);
+      throw new Error(rpcError.message || 'Falha ao sincronizar dados e credenciais do usuário.');
     }
+
+    setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ...dadosAtualizados } : u));
     await carregarDados(true);
   };
 
   const removerUsuario = async (id: string) => {
     const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado na sessão.');
     const u = usuarios.find(x => x.id === id);
-    await supabase.from('usuarios').update({ deletado_em: new Date().toISOString(), status: 'bloqueado' }).eq('id', id).eq('empresa_id', eid);
-    await supabase.functions.invoke('admin-auth', {
-      body: { action: 'deleteUser', userId: id }
-    }).catch(() => null);
-    await registrarAuditoria('EXCLUSAO', 'USUARIO', `Colaborador '${u?.nome}' bloqueado e movido para lixeira oculta.`);
+
+    // 1. Tenta a RPC atômica que bane do auth.users e aplica soft-delete no banco
+    const { error: rpcError } = await supabase.rpc('admin_excluir_usuario_estabelecimento', {
+      p_usuario_id: id
+    });
+
+    if (rpcError) {
+      await supabase
+        .from('usuarios')
+        .update({ deletado_em: new Date().toISOString(), status: 'bloqueado' })
+        .eq('id', id)
+        .eq('empresa_id', eid);
+
+      await supabase.functions.invoke('admin-auth', {
+        body: { action: 'deleteUser', userId: id }
+      }).catch(() => null);
+    }
+
+    setUsuarios(prev => prev.filter(item => item.id !== id));
+    await registrarAuditoria('EXCLUSAO', 'USUARIO', `Colaborador '${u?.nome}' bloqueado e removido.`);
     await carregarDados(true);
   };
 
@@ -1393,13 +1623,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } : m));
 
     // 2. Persistência no Supabase
-    await supabase.from('mesas').update({
+    const { error: errMesa } = await supabase.from('mesas').update({
       status: novoStatus,
       itens: itensFinaisParaMesa,
       nome_cliente: clienteLimpo,
       garcom_id: donoId,
       garcom_nome: donoNome
     }).eq('numero', numero).eq('empresa_id', eid);
+    if (errMesa) {
+      await recarregarTabela('mesas');
+      throw new Error(errMesa.message || 'Falha de conexão ao salvar pedido na mesa.');
+    }
 
     // 3. Atualização de Estoque
     for (const [id, diff] of diferencasEstoque) {
@@ -1411,13 +1645,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           p_delta: -diff
         });
         if (rpcEstErr) {
-          await supabase.from('produtos').update({ estoque: Math.max(0, p.estoque - diff) }).eq('id', id).eq('empresa_id', eid);
+          console.warn('Erro ao ajustar estoque atômico:', rpcEstErr.message);
         }
       }
     }
 
-    // 4. Sincronização final com o banco
-    await carregarDados(true);
+    // 4. Sincronização seletiva com o banco
+    await Promise.all([recarregarTabela('mesas'), recarregarTabela('produtos')]);
   };
 
   const finalizarMesa = async (numero: number, valorTaxa = 0, pagamentosRealizados: Pagamento[] = [], valorDesconto = 0) => {
@@ -1448,7 +1682,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      await supabase.from('vendas').insert([{
+      const { error: errVenda } = await supabase.from('vendas').insert([{
         numero_mesa: mesa.numero,
         nome_cliente: mesa.nomeCliente || '',
         garcom_nome: garcomLogado?.nome || 'Sistema',
@@ -1458,16 +1692,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         status: 'fechada',
         empresa_id: eid
       }]);
+      garantirSucesso(errVenda, 'Não foi possível registrar o fechamento. Verifique sua internet.');
 
-      await supabase.from('mesas').update({
+      const { error: errMesa } = await supabase.from('mesas').update({
         status: 'livre',
         itens: [],
         garcom_id: null,
         garcom_nome: null,
         nome_cliente: null
       }).eq('numero', numero).eq('empresa_id', eid);
+      garantirSucesso(errMesa, 'Venda salva, mas houve falha ao liberar a mesa. Atualize a tela.');
 
-      await carregarDados(true);
+      await Promise.all([recarregarTabela('mesas'), recarregarTabela('vendas')]);
     }
   };
 
@@ -1476,12 +1712,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const venda = historicoVendas.find(v => v.id === idVenda);
     if (!venda || venda.status === 'cancelada' || !eid) return;
 
-    await supabase.from('vendas').update({
+    const { error: errCanc } = await supabase.from('vendas').update({
       status: 'cancelada',
       cancelado_por: adminNome,
       motivo_cancelamento: motivo,
       data_cancelamento: new Date().toISOString()
     }).eq('id', idVenda).eq('empresa_id', eid);
+    garantirSucesso(errCanc, 'Não foi possível cancelar a venda. Verifique sua conexão.');
 
     for (const item of venda.itens) {
       if (item.produto.id !== 999 && item.produto.id !== 998) {
@@ -1612,6 +1849,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reordenarCategorias,
       darEntradaEstoque,
       registrarInventario,
+      excluirMovimentacaoEstoque,
       adicionarUsuario,
       removerUsuario,
       editarUsuario,
