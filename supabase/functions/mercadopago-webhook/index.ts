@@ -73,6 +73,20 @@ serve(async (req: Request) => {
 
     let mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
     if (!mpAccessToken) {
+      try {
+        const { data: configPriv } = await supabaseAdmin
+          .from('configuracoes_saas_privadas')
+          .select('mp_access_token')
+          .eq('id', 'global')
+          .maybeSingle()
+        if (typeof configPriv?.mp_access_token === 'string') {
+          mpAccessToken = configPriv.mp_access_token.trim()
+        }
+      } catch {
+        // Fallback para ambientes antes da migration
+      }
+    }
+    if (!mpAccessToken) {
       const { data: configRow } = await supabaseAdmin
         .from('configuracoes_saas')
         .select('dados')

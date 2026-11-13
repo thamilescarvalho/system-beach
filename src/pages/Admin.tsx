@@ -316,7 +316,7 @@ export function Admin() {
   const previewPersonalizado = nomeExibicao.trim().length > 0;
 
   return (
-    <div className="min-h-screen bg-white font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800">
       {/* HEADER GLOBAL */}
       <Header />
 

@@ -18,10 +18,13 @@ import {
   carregarConfiguracaoGlobalSaaS,
   salvarConfiguracaoGlobalSaaS,
   ehPublicKeyMercadoPago,
-  requisitarApiMercadoPago,
+  obterStatusIntegracaoMercadoPago,
+  salvarETestarTokenMercadoPago,
+  testarConexaoMercadoPagoServidor,
   CONFIGURACAO_SAAS_PADRAO,
   type ConfiguracaoGlobalSaaS,
-  type IdCicloCobranca
+  type IdCicloCobranca,
+  type StatusIntegracaoMercadoPago
 } from '../utils/configuracoesSaaS';
 import { ModalConfirmacao, type TipoModalConfirmacao } from '../components/ModalConfirmacao';
 import { AvatarUsuario } from '../components/AvatarUsuario';
@@ -56,12 +59,6 @@ interface DBUsuario {
   empresa_id: string;
 }
 
-interface RespostaUsuarioMP {
-  id?: number;
-  nickname?: string;
-  email?: string;
-  site_id?: string;
-}
 
 interface DBCategoriaClone {
   id: number;
@@ -262,7 +259,9 @@ export function SuperAdminDashboard() {
   // Estado Global de Planos, Promoções, Mercado Pago e Textos (CMS)
   const [configSaaS, setConfigSaaS] = useState<ConfiguracaoGlobalSaaS>(() => obterConfiguracaoGlobalLocal());
   const [salvandoConfig, setSalvandoConfig] = useState<boolean>(false);
+  const [novoTokenMP, setNovoTokenMP] = useState<string>('');
   const [mostrarTokenMP, setMostrarTokenMP] = useState<boolean>(false);
+  const [statusIntegracaoMP, setStatusIntegracaoMP] = useState<StatusIntegracaoMercadoPago | null>(null);
   const [testandoMP, setTestandoMP] = useState<boolean>(false);
   const [statusTesteMP, setStatusTesteMP] = useState<{ ok: boolean; msg: string } | null>(null);
   const [novoRecursoTexto, setNovoRecursoTexto] = useState<string>('');
@@ -317,7 +316,7 @@ export function SuperAdminDashboard() {
     };
   }, [menuAberto]);
 
-  const EMAIL_SUPER_ADMIN_OFICIAL = 'ancorazero85@gmail.com';
+  const ehUsuarioSuperAdmin = (u: { cargo?: string | null }) => u.cargo === 'super_admin';
   const cargoLogado = contexto?.garcomLogado?.cargo;
   const empresaIdLogado = contexto?.garcomLogado?.empresaId;
 
@@ -345,8 +344,7 @@ export function SuperAdminDashboard() {
         if (usersData) {
           for (const u of usersData) {
             if (!u.empresa_id) continue;
-            const emailUser = (u.email || '').trim().toLowerCase();
-            if (u.cargo === 'super_admin' || emailUser === EMAIL_SUPER_ADMIN_OFICIAL) {
+            if (ehUsuarioSuperAdmin(u)) {
               idsSuper.add(u.empresa_id);
             }
           }
@@ -385,8 +383,7 @@ export function SuperAdminDashboard() {
       for (const u of listaUsuarios) {
         if (!u.empresa_id) continue;
         mapaContagem[u.empresa_id] = (mapaContagem[u.empresa_id] || 0) + 1;
-        const emailUser = (u.email || '').trim().toLowerCase();
-        if (u.cargo === 'super_admin' || emailUser === EMAIL_SUPER_ADMIN_OFICIAL) {
+        if (ehUsuarioSuperAdmin(u)) {
           idsSuper.add(u.empresa_id);
         }
       }
@@ -412,6 +409,11 @@ export function SuperAdminDashboard() {
     carregarConfiguracaoGlobalSaaS().then((cfg) => {
       setConfigSaaS(cfg);
     });
+    obterStatusIntegracaoMercadoPago()
+      .then((status) => {
+        setStatusIntegracaoMP(status);
+      })
+      .catch(() => null);
     return () => clearTimeout(timer);
   }, [carregarEmpresas]);
 
@@ -496,10 +498,8 @@ export function SuperAdminDashboard() {
         .eq('empresa_id', empresa.id)
         .is('deletado_em', null);
 
-      const contemSuperAdminReal = (usuariosVinculados || []).some(
-        (u) =>
-          u.cargo === 'super_admin' ||
-          (u.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN_OFICIAL
+      const contemSuperAdminReal = (usuariosVinculados || []).some((u) =>
+        ehUsuarioSuperAdmin(u)
       );
 
       if (contemSuperAdminReal) {
@@ -545,7 +545,7 @@ export function SuperAdminDashboard() {
     // Verifica pelo vínculo real do ID do estabelecimento com a conta Super Admin (e nunca apenas pelo texto do nome)
     if (empresaIdsComSuperAdmin.has(empresa.id)) {
       mostrarToast(
-        'Proteção ativa: Este estabelecimento contém a conta Super Admin (ancorazero85@gmail.com) e não pode ser excluído.',
+        'Proteção ativa: Este estabelecimento contém uma conta Super Admin e não pode ser excluído.',
         'erro'
       );
       return;
@@ -585,12 +585,9 @@ export function SuperAdminDashboard() {
 
   const handleExcluirUsuario = (usuario: Garcom) => {
     if (!empresaSelecionada) return;
-    if (
-      usuario.cargo === 'super_admin' ||
-      (usuario.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN_OFICIAL
-    ) {
+    if (ehUsuarioSuperAdmin(usuario)) {
       mostrarToast(
-        'A conta Super Admin (ancorazero85@gmail.com) é protegida e não pode ser excluída.',
+        'Contas Super Admin são protegidas e não podem ser excluídas.',
         'erro'
       );
       return;
@@ -611,13 +608,12 @@ export function SuperAdminDashboard() {
   };
 
   const abrirModalEditUsuario = (usuario: Garcom) => {
-    const isSuperAdminOficial =
-      (usuario.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN_OFICIAL;
+    const isSuperAdminAccount = ehUsuarioSuperAdmin(usuario);
     setUsuarioEdicao(usuario);
     setEditUserNome(usuario.nome);
     setEditUserEmail(usuario.email || '');
     setEditUserCargo(
-      isSuperAdminOficial
+      isSuperAdminAccount
         ? 'super_admin'
         : usuario.cargo === 'admin'
           ? 'admin'
@@ -630,21 +626,19 @@ export function SuperAdminDashboard() {
     e.preventDefault();
     if (!usuarioEdicao || !empresaSelecionada) return;
 
-    const emailOriginal = (usuarioEdicao.email || '').trim().toLowerCase();
     const emailFinal = editUserEmail.trim().toLowerCase();
-    const isSuperAdminOficial =
-      emailOriginal === EMAIL_SUPER_ADMIN_OFICIAL || emailFinal === EMAIL_SUPER_ADMIN_OFICIAL;
+    const isSuperAdminAccount = ehUsuarioSuperAdmin(usuarioEdicao);
 
-    // Trava estrita: somente ancorazero85@gmail.com pode ter o cargo super_admin
-    if (editUserCargo === 'super_admin' && !isSuperAdminOficial) {
+    // Promoção a Super Admin só ocorre diretamente no banco de dados
+    if (editUserCargo === 'super_admin' && !isSuperAdminAccount) {
       mostrarToast(
-        'Segurança: Somente o usuário oficial (ancorazero85@gmail.com) pode ter o cargo Super Admin.',
+        'Segurança: Promoção a Super Admin não é permitida pela interface.',
         'erro'
       );
       return;
     }
 
-    const cargoValidado: 'admin' | 'garcom' | 'super_admin' = isSuperAdminOficial
+    const cargoValidado: 'admin' | 'garcom' | 'super_admin' = isSuperAdminAccount
       ? 'super_admin'
       : editUserCargo === 'admin'
         ? 'admin'
@@ -652,7 +646,7 @@ export function SuperAdminDashboard() {
 
     setLoadingEditUser(true);
     try {
-      const emailAlvo = isSuperAdminOficial ? EMAIL_SUPER_ADMIN_OFICIAL : emailFinal;
+      const emailAlvo = emailFinal;
 
       // 1. Executa a RPC atômica que sincroniza auth.users e public.usuarios
       const { error: rpcError } = await supabase.rpc('admin_atualizar_usuario_estabelecimento', {
@@ -1135,16 +1129,9 @@ export function SuperAdminDashboard() {
   };
 
   const handleTestarConexaoMercadoPago = async () => {
-    const token = configSaaS.mpAccessToken.trim();
-    if (!token) {
-      setStatusTesteMP({
-        ok: false,
-        msg: 'Insira o seu Access Token (2º campo em Credenciais do Mercado Pago) no campo acima para testar.'
-      });
-      return;
-    }
+    const token = novoTokenMP.trim();
 
-    if (ehPublicKeyMercadoPago(token)) {
+    if (token && ehPublicKeyMercadoPago(token)) {
       setStatusTesteMP({
         ok: false,
         msg: 'Atenção: você colou a "Public Key" (1º campo curto em formato UUID). Volte no painel do Mercado Pago e copie o 2º campo chamado "Access Token" (ele fica logo abaixo da Public Key e é um código mais longo terminado em números).'
@@ -1155,33 +1142,54 @@ export function SuperAdminDashboard() {
     setTestandoMP(true);
     setStatusTesteMP(null);
     try {
-      const res = await requisitarApiMercadoPago('/users/me', {
-        headers: {
-          Authorization: `Bearer ${token}`
+      if (token) {
+        const resp = await salvarETestarTokenMercadoPago(token);
+        if (!resp.ok) {
+          setStatusTesteMP({
+            ok: false,
+            msg:
+              resp.error ||
+              'Access Token inválido ou expirado. Certifique-se de copiar o 2º campo "Access Token" em Mercado Pago Developers → Credenciais.'
+          });
+          return;
         }
-      });
 
-      if (!res.ok) {
-        setStatusTesteMP({
-          ok: false,
-          msg: 'Access Token inválido ou expirado. Certifique-se de copiar o 2º campo "Access Token" em Mercado Pago Developers → Credenciais.'
+        setNovoTokenMP('');
+        setStatusIntegracaoMP({
+          configured: true,
+          source: 'vault',
+          maskedPreview: resp.maskedPreview || ''
         });
-        return;
-      }
+        setStatusTesteMP({
+          ok: true,
+          msg: `Conectado e salvo com segurança no servidor! Conta Mercado Pago: ${resp.accountLabel || 'Validada'}`
+        });
+      } else {
+        const resp = await testarConexaoMercadoPagoServidor();
+        if (!resp.ok) {
+          setStatusTesteMP({
+            ok: false,
+            msg:
+              resp.error ||
+              'Nenhum token ativo configurado no servidor ou credencial expirada. Cole um novo Access Token acima e clique em Salvar e Testar.'
+          });
+          return;
+        }
 
-      const dadosConta = (await res.json()) as RespostaUsuarioMP;
-      await salvarConfiguracaoGlobalSaaS({
-        ...configSaaS,
-        mpAccessToken: token
-      });
-      setStatusTesteMP({
-        ok: true,
-        msg: `Conectado e salvo com sucesso! Conta Mercado Pago: ${dadosConta.nickname || dadosConta.email || dadosConta.id}`
-      });
+        setStatusIntegracaoMP((prev) => ({
+          configured: true,
+          source: prev?.source && prev.source !== 'none' ? prev.source : 'vault',
+          maskedPreview: resp.maskedPreview || prev?.maskedPreview || ''
+        }));
+        setStatusTesteMP({
+          ok: true,
+          msg: `Conexão com o servidor validada! Conta Mercado Pago: ${resp.accountLabel || 'Ativa'}`
+        });
+      }
     } catch {
       setStatusTesteMP({
         ok: false,
-        msg: 'Não foi possível validar o token agora. Verifique se copiou o campo "Access Token" completo.'
+        msg: 'Não foi possível validar o token no servidor agora. Tente novamente em instantes.'
       });
     } finally {
       setTestandoMP(false);
@@ -1508,7 +1516,7 @@ export function SuperAdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans gap-4">
+      <div className="min-h-dvh bg-slate-50 flex flex-col items-center justify-center font-sans gap-4 pt-safe pb-safe">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-fuchsia-800 rounded-full animate-spin" />
         <p className="text-xs font-medium text-slate-500 animate-pulse">
           Carregando Command Center...
@@ -1518,10 +1526,10 @@ export function SuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-100/70 text-slate-900 font-sans pb-24 relative overflow-x-hidden selection:bg-slate-900 selection:text-white">
+    <div className="min-h-dvh w-full bg-slate-100/70 text-slate-900 font-sans pb-safe-24 relative overflow-x-hidden selection:bg-slate-900 selection:text-white">
       {/* TOAST FLUTUANTE */}
       {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300 px-4 w-full max-w-md">
+        <div className="fixed top-safe-5 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300 px-4 w-full max-w-md">
           <div
             className={`px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-medium tracking-tight border backdrop-blur-md ${
               toast.tipo === 'sucesso'
@@ -1559,7 +1567,7 @@ export function SuperAdminDashboard() {
             className="relative w-full max-w-sm sm:max-w-md bg-slate-50 border-r border-slate-200/80 shadow-2xl z-50 flex flex-col justify-between overflow-hidden animate-in slide-in-from-left duration-300"
           >
             {/* Cabeçalho do Menu */}
-            <div className="p-4 sm:p-5 border-b border-slate-200/70 bg-white/70 backdrop-blur-md flex items-center justify-between gap-3">
+            <div className="p-4 sm:p-5 pt-safe-4 sm:pt-safe-5 border-b border-slate-200/70 bg-white/70 backdrop-blur-md flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <AvatarUsuario
                   avatar="👑"
@@ -1575,7 +1583,7 @@ export function SuperAdminDashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 truncate">
-                    {contexto?.garcomLogado?.email || 'ancorazero85@gmail.com'}
+                    {contexto?.garcomLogado?.email || 'Super Admin'}
                   </p>
                 </div>
               </div>
@@ -1764,7 +1772,7 @@ export function SuperAdminDashboard() {
       )}
 
       {/* HEADER SUPER ADMIN COMMAND CENTER */}
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 pt-safe z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
           {/* Lado Esquerdo: Botão Menu + Identidade Command Center */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -2214,9 +2222,12 @@ export function SuperAdminDashboard() {
                       >
                         <div className="flex items-center justify-between gap-2.5">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 bg-linear-to-b from-white to-slate-100/80 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-center text-lg shrink-0">
-                              {u.avatar}
-                            </div>
+                            <AvatarUsuario
+                              avatar={u.avatar}
+                              nome={u.nome}
+                              className="w-10 h-10 bg-linear-to-b from-white to-slate-100/80 rounded-2xl border border-slate-200/80 shadow-2xs shrink-0"
+                              emojiClassName="text-lg"
+                            />
                             <div className="min-w-0">
                               <h4 className="text-sm font-medium text-slate-900 truncate">
                                 {u.nome}
@@ -2699,28 +2710,46 @@ export function SuperAdminDashboard() {
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 pl-1">
                   <label className="text-xs font-medium text-slate-600 block">
-                    Access Token do Mercado Pago (2º campo em Credenciais — NÃO é a Public Key)
+                    Novo Access Token do Mercado Pago (armazenado com segurança apenas no servidor)
                   </label>
-                  {ehPublicKeyMercadoPago(configSaaS.mpAccessToken) && (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-lg">
-                      <LucideIcons.AlertTriangle size={13} />
-                      Isso é uma Public Key! Copie o 2º campo (Access Token)
-                    </span>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {statusIntegracaoMP && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-lg border ${
+                          statusIntegracaoMP.configured
+                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            : 'text-amber-700 bg-amber-50 border-amber-200'
+                        }`}
+                      >
+                        <LucideIcons.ShieldCheck size={13} />
+                        {statusIntegracaoMP.configured
+                          ? `Ativo (${statusIntegracaoMP.maskedPreview || statusIntegracaoMP.source})`
+                          : 'Não configurado no servidor'}
+                      </span>
+                    )}
+                    {ehPublicKeyMercadoPago(novoTokenMP) && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-lg">
+                        <LucideIcons.AlertTriangle size={13} />
+                        Isso é uma Public Key! Copie o 2º campo (Access Token)
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2.5">
                   <div className="relative flex-1">
                     <input
                       type={mostrarTokenMP ? 'text' : 'password'}
-                      value={configSaaS.mpAccessToken}
-                      onChange={(e) =>
-                        setConfigSaaS((prev) => ({ ...prev, mpAccessToken: e.target.value }))
+                      value={novoTokenMP}
+                      onChange={(e) => setNovoTokenMP(e.target.value)}
+                      placeholder={
+                        statusIntegracaoMP?.configured
+                          ? `Token ativo: ${statusIntegracaoMP.maskedPreview || '••••'} (cole apenas para substituir)`
+                          : 'APP_USR-0000000000000000-000000-00000000000000000000000000000000-000000000'
                       }
-                      placeholder="APP_USR-0000000000000000-000000-00000000000000000000000000000000-000000000"
-                      className="w-full h-11 bg-slate-50 border border-slate-200 rounded-2xl pl-4 pr-11 text-xs font-mono text-slate-900 focus:bg-white focus:border-slate-900 outline-none"
+                      className="w-full h-11 bg-slate-50 border border-slate-200 rounded-2xl pl-4 pr-11 text-base sm:text-xs font-mono text-slate-900 focus:bg-white focus:border-slate-900 outline-none"
                     />
                     <button
                       type="button"
@@ -2742,7 +2771,9 @@ export function SuperAdminDashboard() {
                     ) : (
                       <LucideIcons.PlugZap size={15} />
                     )}
-                    <span>Testar Conexão Mercado Pago</span>
+                    <span>
+                      {novoTokenMP.trim() ? 'Salvar e Testar Token' : 'Testar Conexão Servidor'}
+                    </span>
                   </button>
                 </div>
 
@@ -3277,7 +3308,7 @@ export function SuperAdminDashboard() {
                   <label className="text-xs font-medium text-slate-500 pl-1">
                     Cargo
                   </label>
-                  {(usuarioEdicao.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN_OFICIAL ? (
+                  {ehUsuarioSuperAdmin(usuarioEdicao) ? (
                     <div className="w-full bg-indigo-50 border border-indigo-200 text-indigo-800 h-11 px-3 rounded-2xl flex items-center gap-1.5 text-xs font-medium">
                       <LucideIcons.ShieldCheck size={15} className="shrink-0" />
                       <span>Super Admin</span>
@@ -4372,7 +4403,7 @@ export function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* MODAL DE CONFIRMAÇÃO STANDARDIZADO (PADRÃO IFOOD / CLEAN COM CANTOS 3XL) */}
+      {/* MODAL DE CONFIRMAÇÃO STANDARDIZADO */}
       <ModalConfirmacao
         aberto={modalConfirmacao.aberto}
         titulo={modalConfirmacao.titulo}

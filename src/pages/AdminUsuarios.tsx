@@ -25,9 +25,11 @@ const SeletorAvatarDropdown = ({ avatarAtual, setAvatar, opcoes }: SeletorAvatar
         onClick={() => setAberto(!aberto)}
         className="flex items-center gap-1.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-2 rounded-full transition-all duration-200 group active:scale-95 cursor-pointer"
       >
-        <div className="w-9 h-9 bg-white shadow-xs border border-slate-100 rounded-full flex items-center justify-center text-xl group-hover:scale-105 transition-transform">
-          {avatarAtual}
-        </div>
+        <AvatarUsuario
+          avatar={avatarAtual}
+          className="w-9 h-9 bg-white shadow-xs border border-slate-100 rounded-full group-hover:scale-105 transition-transform"
+          emojiClassName="text-xl"
+        />
         <LucideIcons.ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} />
       </button>
 
@@ -393,7 +395,7 @@ export function AdminUsuarios() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 selection:bg-indigo-200 selection:text-indigo-900 text-slate-800 flex flex-col relative pt-20 md:pt-24 md:pl-18 pb-28 font-sans">
+    <div className="min-h-dvh w-full bg-slate-50 selection:bg-indigo-200 selection:text-indigo-900 text-slate-800 flex flex-col relative pt-20 md:pt-24 md:pl-18 pb-28 font-sans">
       {/* NOTIFICAÇÃO FLUTUANTE */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 w-11/12 max-w-sm flex justify-center">

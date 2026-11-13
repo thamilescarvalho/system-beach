@@ -1,6 +1,5 @@
 // src/utils/configuracoesSaaS.ts
 import { supabase } from '../lib/supabase';
-import { registrarFaturaPaga } from './faturasSaaS';
 
 export type IdCicloCobranca = 'mensal' | 'trimestral' | 'semestral' | 'anual';
 
@@ -32,7 +31,6 @@ export interface ConfiguracaoGlobalSaaS {
   promocaoTextoBanner: string;
   textoBotaoTesteGratis: string;
   recursosPlano: string[];
-  mpAccessToken: string;
   ciclos: Record<IdCicloCobranca, CicloAssinaturaConfig>;
 }
 
@@ -47,26 +45,10 @@ export interface DadosPixMercadoPago {
   criadoEm: string;
 }
 
-interface RespostaCriacaoPixMP {
-  id?: number | string;
-  status?: string;
-  status_detail?: string;
-  message?: string;
-  cause?: Array<{ code?: number | string; description?: string }>;
-  point_of_interaction?: {
-    transaction_data?: {
-      qr_code?: string;
-      qr_code_base64?: string;
-      ticket_url?: string;
-    };
-  };
-}
-
-interface RespostaConsultaPagamentoMP {
-  id?: number | string;
-  status?: string;
-  status_detail?: string;
-  external_reference?: string;
+export interface StatusIntegracaoMercadoPago {
+  configured: boolean;
+  source: 'env' | 'vault' | 'legacy' | 'none';
+  maskedPreview: string;
 }
 
 const STORAGE_CONFIG_KEY = 'tsystem_saas_global_config_v1';
@@ -121,7 +103,6 @@ export const CONFIGURACAO_SAAS_PADRAO: ConfiguracaoGlobalSaaS = {
     'Gestão de Caixa, Estoque, Equipe e Metas Financeiras',
     'Impressão térmica Bluetooth/USB e Suporte dedicado'
   ],
-  mpAccessToken: '',
   ciclos: {
     mensal: {
       id: 'mensal',
@@ -178,19 +159,23 @@ export const CONFIGURACAO_SAAS_PADRAO: ConfiguracaoGlobalSaaS = {
   }
 };
 
-function mesclarConfiguracao(parcial?: Partial<ConfiguracaoGlobalSaaS> | null): ConfiguracaoGlobalSaaS {
+function mesclarConfiguracao(parcial?: (Partial<ConfiguracaoGlobalSaaS> & { mpAccessToken?: unknown }) | null): ConfiguracaoGlobalSaaS {
   if (!parcial || typeof parcial !== 'object') {
     return CONFIGURACAO_SAAS_PADRAO;
   }
 
-  const ciclosParciais = parcial.ciclos || ({} as Partial<Record<IdCicloCobranca, CicloAssinaturaConfig>>);
+  // Garante que nenhuma credencial sensível legada permaneça no objeto público/cache
+  const restante = { ...parcial };
+  delete restante.mpAccessToken;
+
+  const ciclosParciais = restante.ciclos || ({} as Partial<Record<IdCicloCobranca, CicloAssinaturaConfig>>);
 
   return {
     ...CONFIGURACAO_SAAS_PADRAO,
-    ...parcial,
+    ...restante,
     recursosPlano:
-      Array.isArray(parcial.recursosPlano) && parcial.recursosPlano.length > 0
-        ? parcial.recursosPlano
+      Array.isArray(restante.recursosPlano) && restante.recursosPlano.length > 0
+        ? restante.recursosPlano
         : CONFIGURACAO_SAAS_PADRAO.recursosPlano,
     ciclos: {
       mensal: { ...CONFIGURACAO_SAAS_PADRAO.ciclos.mensal, ...(ciclosParciais.mensal || {}) },
@@ -206,8 +191,12 @@ export function obterConfiguracaoGlobalLocal(): ConfiguracaoGlobalSaaS {
   try {
     const salvo = localStorage.getItem(STORAGE_CONFIG_KEY);
     if (!salvo) return CONFIGURACAO_SAAS_PADRAO;
-    const parsed = JSON.parse(salvo) as Partial<ConfiguracaoGlobalSaaS>;
-    return mesclarConfiguracao(parsed);
+    const parsed = JSON.parse(salvo) as Partial<ConfiguracaoGlobalSaaS> & { mpAccessToken?: unknown };
+    const limpo = mesclarConfiguracao(parsed);
+    if ('mpAccessToken' in parsed) {
+      localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(limpo));
+    }
+    return limpo;
   } catch {
     return CONFIGURACAO_SAAS_PADRAO;
   }
@@ -223,14 +212,14 @@ export async function carregarConfiguracaoGlobalSaaS(): Promise<ConfiguracaoGlob
       .maybeSingle();
 
     if (!error && data?.dados && typeof data.dados === 'object') {
-      const mesclado = mesclarConfiguracao(data.dados as Partial<ConfiguracaoGlobalSaaS>);
+      const mesclado = mesclarConfiguracao(data.dados as Partial<ConfiguracaoGlobalSaaS> & { mpAccessToken?: unknown });
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(mesclado));
       }
       return mesclado;
     }
   } catch {
-    // Se a tabela configuracoes_saas ainda não existir no banco, utiliza o cache local perfeitamente
+    // Se a tabela configuracoes_saas ainda não existir no banco, utiliza o cache local
   }
   return local;
 }
@@ -273,249 +262,166 @@ export function ehPublicKeyMercadoPago(chave: string): boolean {
 }
 
 /**
- * Retorna o Access Token do Mercado Pago configurado no banco/painel Super Admin ou na variável de ambiente VITE_MP_ACCESS_TOKEN.
- */
-export function obterAccessTokenMercadoPago(configSaaS?: ConfiguracaoGlobalSaaS): string {
-  const tokenPainel = configSaaS?.mpAccessToken?.trim() || '';
-  if (tokenPainel) return tokenPainel;
-  const tokenEnv = ((import.meta.env.VITE_MP_ACCESS_TOKEN as string | undefined) || '').trim();
-  return tokenEnv;
-}
-
-/**
- * Realiza chamadas à API oficial do Mercado Pago contornando bloqueios de CORS do navegador
- * (usa a rota proxy /api-mp configurada no Vite/Vercel e faz fallback direto para api.mercadopago.com).
- */
-export async function requisitarApiMercadoPago(
-  caminho: string,
-  init: RequestInit
-): Promise<Response> {
-  const caminhoNormalizado = caminho.startsWith('/') ? caminho : `/${caminho}`;
-
-  try {
-    const resProxy = await fetch(`/api-mp${caminhoNormalizado}`, init);
-    const contentType = resProxy.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      return resProxy;
-    }
-  } catch {
-    // Segue para chamada direta
-  }
-
-  return fetch(`https://api.mercadopago.com${caminhoNormalizado}`, init);
-}
-
-/**
- * Gera uma cobrança PIX instantânea diretamente na API v1/payments do Mercado Pago (compatível com conta Pessoa Física e Jurídica).
- * Retorna o QR Code em Base64 e o código PIX Copia e Cola.
+ * Gera uma cobrança PIX instantânea exclusivamente via Edge Function no servidor (Zero-Trust).
  */
 export async function gerarPagamentoPixMercadoPago(params: {
-  valor: number;
-  descricao: string;
-  emailPagador?: string;
-  nomePagador?: string;
-  documentoPagador?: string;
-  externalReference: string;
   cicloId: IdCicloCobranca;
-  tokenMP: string;
+  faturaId?: string;
 }): Promise<DadosPixMercadoPago> {
-  const tokenLimpo = params.tokenMP.trim();
+  const { data, error } = await supabase.functions.invoke<DadosPixMercadoPago & { error?: string }>(
+    'mercadopago-checkout',
+    {
+      body: {
+        action: 'createPix',
+        cicloId: params.cicloId,
+        faturaId: params.faturaId
+      }
+    }
+  );
 
-  if (!tokenLimpo) {
+  if (error || !data?.qrCodeCopiaECola) {
     throw new Error(
-      'Access Token do Mercado Pago não configurado. Adicione VITE_MP_ACCESS_TOKEN no arquivo .env ou configure no painel Super Admin (/master).'
+      data?.error ||
+        error?.message ||
+        'Não foi possível gerar o QR Code PIX no servidor. Tente novamente em instantes.'
     );
   }
 
-  if (ehPublicKeyMercadoPago(tokenLimpo)) {
-    throw new Error(
-      'A chave configurada é uma Public Key (formato curto). Para gerar PIX, utilize o Access Token de Produção (APP_USR-...) do Mercado Pago.'
-    );
-  }
-
-  const valorNumerico = Number(params.valor.toFixed(2));
-  if (Number.isNaN(valorNumerico) || valorNumerico <= 0) {
-    throw new Error('O valor da cobrança PIX deve ser maior que zero.');
-  }
-
-  const emailValido =
-    params.emailPagador && params.emailPagador.includes('@')
-      ? params.emailPagador.trim().toLowerCase()
-      : 'assinatura@tsystembeach.com.br';
-
-  const nomePartes = (params.nomePagador || 'Cliente Estabelecimento').trim().split(/\s+/);
-  const primeiroNome = nomePartes[0] || 'Cliente';
-  const sobrenome = nomePartes.slice(1).join(' ') || 'Estabelecimento';
-
-  const docDigitos = (params.documentoPagador || '').replace(/\D/g, '');
-  const identificacaoValida =
-    docDigitos.length === 11
-      ? { type: 'CPF', number: docDigitos }
-      : docDigitos.length === 14
-        ? { type: 'CNPJ', number: docDigitos }
-        : undefined;
-
-  const idempotencyKey =
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `pix_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-  const supabaseUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) || '').trim().replace(/\/$/, '');
-  const webhookUrl = supabaseUrl.startsWith('https://')
-    ? `${supabaseUrl}/functions/v1/mercadopago-webhook`
-    : undefined;
-
-  const payload: Record<string, unknown> = {
-    transaction_amount: valorNumerico,
-    description: params.descricao,
-    payment_method_id: 'pix',
-    external_reference: params.externalReference,
-    ...(webhookUrl ? { notification_url: webhookUrl } : {}),
-    payer: {
-      email: emailValido,
-      first_name: primeiroNome,
-      last_name: sobrenome,
-      ...(identificacaoValida ? { identification: identificacaoValida } : {})
-    }
-  };
-
-  const response = await requisitarApiMercadoPago('/v1/payments', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${tokenLimpo}`,
-      'Content-Type': 'application/json',
-      'X-Idempotency-Key': idempotencyKey
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = (await response.json()) as RespostaCriacaoPixMP;
-
-  if (!response.ok) {
-    const detalheCausa = data.cause?.[0]?.description || data.message || '';
-    if (
-      detalheCausa.toLowerCase().includes('collector') ||
-      detalheCausa.toLowerCase().includes('key') ||
-      detalheCausa.toLowerCase().includes('pix')
-    ) {
-      throw new Error(
-        `Mercado Pago recusou a geração do PIX (${detalheCausa}). Certifique-se de que sua conta Mercado Pago possui pelo menos uma Chave PIX cadastrada e ativa.`
-      );
-    }
-    if (response.status === 401) {
-      throw new Error(
-        'Access Token inválido ou expirado (401 Unauthorized). Verifique seu Access Token de Produção no painel do Mercado Pago Developers.'
-      );
-    }
-    throw new Error(
-      detalheCausa
-        ? `Erro Mercado Pago: ${detalheCausa}`
-        : 'Não foi possível gerar o QR Code PIX no Mercado Pago.'
-    );
-  }
-
-  const txData = data.point_of_interaction?.transaction_data;
-  const qrCodeCopiaECola = txData?.qr_code || '';
-  const qrCodeBase64 = txData?.qr_code_base64 || '';
-
-  if (!qrCodeCopiaECola) {
-    throw new Error('O Mercado Pago não retornou o código PIX Copia e Cola para esta transação.');
-  }
-
-  return {
-    paymentId: String(data.id || ''),
-    status: String(data.status || 'pending'),
-    qrCodeCopiaECola,
-    qrCodeBase64,
-    ticketUrl: txData?.ticket_url || '',
-    valor: valorNumerico,
-    cicloId: params.cicloId,
-    criadoEm: new Date().toISOString()
-  };
+  return data;
 }
 
 /**
- * Consulta o status em tempo real de um pagamento PIX ou Checkout no Mercado Pago.
+ * Cria uma preferência de Checkout Pro exclusivamente via Edge Function no servidor.
+ */
+export async function criarCheckoutMercadoPago(params: {
+  cicloId: IdCicloCobranca;
+  redirectPath: '/assinatura-pendente' | '/admin/assinatura';
+}): Promise<{ init_point: string }> {
+  const originUrl = obterUrlBaseSistema();
+
+  const { data, error } = await supabase.functions.invoke<{ init_point?: string; error?: string }>(
+    'mercadopago-checkout',
+    {
+      body: {
+        action: 'createPreference',
+        cicloId: params.cicloId,
+        origin: originUrl,
+        redirectPath: params.redirectPath
+      }
+    }
+  );
+
+  if (error || !data?.init_point) {
+    throw new Error(
+      data?.error ||
+        error?.message ||
+        'Não foi possível iniciar o Checkout Pro do Mercado Pago.'
+    );
+  }
+
+  return { init_point: data.init_point };
+}
+
+/**
+ * Consulta o status em tempo real de um pagamento PIX ou Checkout via Edge Function.
+ * Quando aprovado, o próprio servidor ativa/renova a assinatura e registra as faturas.
  */
 export async function consultarStatusPagamentoMercadoPago(
-  paymentId: string,
-  tokenMP: string
+  paymentId: string
 ): Promise<{ approved: boolean; status: string; externalReference?: string }> {
-  const tokenLimpo = tokenMP.trim();
-  if (!paymentId || !tokenLimpo || ehPublicKeyMercadoPago(tokenLimpo)) {
+  if (!paymentId) {
     return { approved: false, status: 'unknown' };
   }
 
-  const res = await requisitarApiMercadoPago(`/v1/payments/${encodeURIComponent(paymentId)}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${tokenLimpo}`,
-      'Content-Type': 'application/json'
+  const { data, error } = await supabase.functions.invoke<{
+    approved?: boolean;
+    status?: string;
+    externalReference?: string;
+  }>('mercadopago-checkout', {
+    body: {
+      action: 'verifyPayment',
+      paymentId
     }
   });
 
-  if (!res.ok) {
+  if (error || !data) {
     return { approved: false, status: 'error' };
   }
 
-  const data = (await res.json()) as RespostaConsultaPagamentoMP;
-  const status = String(data.status || 'pending');
   return {
-    approved: status === 'approved',
-    status,
-    externalReference: data.external_reference
+    approved: Boolean(data.approved),
+    status: String(data.status || 'pending'),
+    externalReference: data.externalReference
   };
 }
 
-/**
- * Ativa ou renova a assinatura do estabelecimento no Supabase após confirmação de pagamento aprovado no Mercado Pago.
- * Caso o estabelecimento já possua dias restantes vigentes, soma os novos dias ao vencimento atual.
- */
-export async function ativarOuRenovarAssinaturaAposPagamento(params: {
-  empresaId: string;
-  dataVencimentoAtual?: string;
-  statusAssinaturaAtual?: string;
-  planoNome: string;
-  ciclo: CicloAssinaturaConfig;
-  paymentId: string;
-}): Promise<string> {
-  const agora = new Date();
-  let baseData = agora;
-
-  if (params.dataVencimentoAtual && params.statusAssinaturaAtual === 'ativa') {
-    const atualParsed = new Date(params.dataVencimentoAtual);
-    if (!Number.isNaN(atualParsed.getTime()) && atualParsed.getTime() > agora.getTime()) {
-      baseData = atualParsed;
+export async function obterStatusIntegracaoMercadoPago(): Promise<StatusIntegracaoMercadoPago> {
+  const { data, error } = await supabase.functions.invoke<StatusIntegracaoMercadoPago>(
+    'mercadopago-checkout',
+    {
+      body: { action: 'getIntegrationStatus' }
     }
+  );
+
+  if (error || !data) {
+    return { configured: false, source: 'none', maskedPreview: '' };
+  }
+  return data;
+}
+
+export async function salvarETestarTokenMercadoPago(token: string): Promise<{
+  ok: boolean;
+  accountLabel?: string;
+  maskedPreview?: string;
+  error?: string;
+}> {
+  const { data, error } = await supabase.functions.invoke<{
+    ok?: boolean;
+    accountLabel?: string;
+    maskedPreview?: string;
+    error?: string;
+  }>('mercadopago-checkout', {
+    body: {
+      action: 'saveAndTestToken',
+      token
+    }
+  });
+
+  if (error && !data) {
+    return { ok: false, error: error.message || 'Falha ao validar token no servidor.' };
   }
 
-  const novoVencimento = new Date(baseData.getTime());
-  novoVencimento.setDate(novoVencimento.getDate() + (params.ciclo.diasVigencia || 30));
-  const novoVencimentoIso = novoVencimento.toISOString();
+  return {
+    ok: Boolean(data?.ok),
+    accountLabel: data?.accountLabel,
+    maskedPreview: data?.maskedPreview,
+    error: data?.error
+  };
+}
 
-  await supabase
-    .from('empresas')
-    .update({
-      status_assinatura: 'ativa',
-      plano_nome: params.planoNome,
-      ciclo_cobranca: params.ciclo.id,
-      valor_mensalidade: params.ciclo.valorMensalEquivalente,
-      data_vencimento: novoVencimentoIso
-    })
-    .eq('id', params.empresaId);
+export async function testarConexaoMercadoPagoServidor(): Promise<{
+  ok: boolean;
+  accountLabel?: string;
+  maskedPreview?: string;
+  error?: string;
+}> {
+  const { data, error } = await supabase.functions.invoke<{
+    ok?: boolean;
+    accountLabel?: string;
+    maskedPreview?: string;
+    error?: string;
+  }>('mercadopago-checkout', {
+    body: { action: 'testConnection' }
+  });
 
-  // Registra formalmente a(s) fatura(s) correspondente(s) como Paga(s) no histórico
-  await registrarFaturaPaga({
-    empresaId: params.empresaId,
-    valor: params.ciclo.valorTotalCiclo,
-    valorMensalEquivalente: params.ciclo.valorMensalEquivalente,
-    mesesCiclo: params.ciclo.meses,
-    planoNome: params.planoNome,
-    cicloNome: params.ciclo.nome,
-    paymentIdMp: params.paymentId,
-    formaPagamento: 'PIX Mercado Pago',
-    dataVencimento: novoVencimentoIso
-  }).catch(() => null);
+  if (error && !data) {
+    return { ok: false, error: error.message || 'Falha ao testar conexão no servidor.' };
+  }
 
-  return novoVencimentoIso;
+  return {
+    ok: Boolean(data?.ok),
+    accountLabel: data?.accountLabel,
+    maskedPreview: data?.maskedPreview,
+    error: data?.error
+  };
 }

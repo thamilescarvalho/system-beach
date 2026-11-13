@@ -2,12 +2,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 
+const ORIGENS_OFICIAIS = [
+  'https://www.t-systembeach.com.br',
+  'https://t-systembeach.com.br',
+]
+
 function getCorsHeaders(req: Request) {
-  const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || req.headers.get('Origin') || '*'
+  const origin = (req.headers.get('Origin') || '').trim().replace(/\/$/, '')
+  const allowedEnv = (Deno.env.get('ALLOWED_ORIGIN') || '')
+    .split(',')
+    .map((item) => item.trim().replace(/\/$/, ''))
+    .filter(Boolean)
+
+  let allowedOrigin = allowedEnv[0] || ORIGENS_OFICIAIS[0]
+  if (origin) {
+    if (ORIGENS_OFICIAIS.includes(origin) || allowedEnv.includes(origin)) {
+      allowedOrigin = origin
+    } else if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      allowedOrigin = origin
+    }
+  }
+
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
   }
 }
 
@@ -57,15 +77,13 @@ serve(async (req: Request) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const isSuperAdminEmail = user.email?.toLowerCase() === 'ancorazero85@gmail.com'
-
     const { data: perfil } = await supabaseAdmin
       .from('usuarios')
       .select('cargo, empresa_id, status')
       .eq('id', user.id)
       .maybeSingle()
 
-    const isSuperAdmin = isSuperAdminEmail || perfil?.cargo === 'super_admin'
+    const isSuperAdmin = perfil?.cargo === 'super_admin' || user.app_metadata?.cargo === 'super_admin'
     const isAdmin = isSuperAdmin || perfil?.cargo === 'admin'
 
     if (!isAdmin || (perfil && perfil.status === 'bloqueado')) {
@@ -155,7 +173,7 @@ serve(async (req: Request) => {
         .eq('empresa_id', empresaId)
 
       const possuiSuperAdmin = (usuariosEmpresa || []).some(
-        (u) => u.cargo === 'super_admin' || (u.email || '').trim().toLowerCase() === 'ancorazero85@gmail.com'
+        (u) => u.cargo === 'super_admin'
       )
 
       if (possuiSuperAdmin) {

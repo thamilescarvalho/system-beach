@@ -438,7 +438,7 @@ export function AdminFinanceiro() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-800 pb-24 md:pb-8 relative overflow-x-hidden print:bg-white print:pb-0">
+    <div className="min-h-dvh bg-slate-50/50 font-sans text-slate-800 pb-24 md:pb-8 relative overflow-x-hidden print:bg-white print:pb-0">
       {/* TOAST */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none px-4 w-full max-w-md flex justify-center">
@@ -472,8 +472,14 @@ export function AdminFinanceiro() {
 
         {/* DASHBOARD HEADER */}
         <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white rounded-b-4xl pt-20 md:pt-24 md:pl-24 pb-12 relative overflow-hidden shadow-2xl shadow-emerald-900/20">
-          <div className="absolute -right-20 -top-20 w-64 h-80 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-10 bottom-0 w-40 h-40 bg-teal-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div
+            className="absolute -right-20 -top-20 w-72 h-80 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%)' }}
+          />
+          <div
+            className="absolute -left-10 bottom-0 w-44 h-44 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(20, 184, 166, 0.22) 0%, transparent 70%)' }}
+          />
 
           <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 flex flex-col">
             <div className="flex items-start justify-between gap-4 w-full mb-6">

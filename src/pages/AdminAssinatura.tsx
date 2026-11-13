@@ -70,7 +70,7 @@ export function AdminAssinatura() {
   const emTeste = infoVencimento.status === 'degustacao' && !infoVencimento.vencida;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800">
       <Header />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">

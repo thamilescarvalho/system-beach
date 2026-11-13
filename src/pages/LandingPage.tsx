@@ -279,10 +279,10 @@ export function LandingPage() {
   const activeScene = BEACH_SCENES[activeSceneIndex];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-700 font-sans selection:bg-slate-200 selection:text-slate-800 overflow-x-hidden">
+    <div className="min-h-dvh bg-slate-50/50 text-slate-700 font-sans selection:bg-slate-200 selection:text-slate-800 overflow-x-clip">
       {/* BARRA SUPERIOR */}
-      <header className="sticky top-0 z-50 h-16 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 transition-all">
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 pt-safe bg-white/85 backdrop-blur-xl border-b border-slate-200/80 transition-all">
+        <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
           {/* Logo  */}
           <button
             type="button"
@@ -448,8 +448,16 @@ export function LandingPage() {
 
       {/* HERO SECTION: PRIMEIRO CARD EM FORMATO IPHONE MODERNO */}
       <section id="inicio" className="relative py-12 lg:py-20 overflow-hidden bg-white">
-        <div className="pointer-events-none absolute -top-24 right-1/4 w-96 h-96 rounded-full bg-slate-100/80 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-10 w-80 h-80 rounded-full bg-amber-100/40 blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 right-1/4 w-96 h-96 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(241, 245, 249, 0.85) 0%, rgba(241, 245, 249, 0) 70%)' }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 left-10 w-80 h-80 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(254, 243, 199, 0.5) 0%, rgba(254, 243, 199, 0) 70%)' }}
+        />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
@@ -1825,7 +1833,7 @@ export function LandingPage() {
             <div
               onMouseEnter={() => setActiveDevice('notebook')}
               className={`lg:col-span-6 flex flex-col items-center transition-all duration-500 ${
-                activeDevice === 'notebook' ? 'scale-105 z-20' : 'opacity-90 hover:opacity-100'
+                activeDevice === 'notebook' ? 'md:scale-105 z-20' : 'opacity-90 hover:opacity-100'
               }`}
             >
               <div className="w-full max-w-xl bg-slate-700 rounded-t-2xl p-2.5 pb-2 border-2 border-b-0 border-slate-600 shadow-2xl relative">
@@ -2419,11 +2427,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* RODAPÉ MINIMALISTA */}
-      <footer className="bg-white border-t border-slate-200/80 py-8">
-        <div className="max-w-7xl mx-auto px-4 tracking-normal sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      {/* RODAPÉ */}
+      <footer className="bg-white border-t border-slate-200/80 py-8 pb-safe-8">
+        <div className="max-w-7xl mx-auto px-4 tracking-normal sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
           <span>Desenvolvido por Âncora Dev • Plataforma Digital de Atendimento e Gestão na Praia</span>
-          <div className="flex items-center gap-6 font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium">
             <a href="#inicio" className="hover:text-slate-800 transition-colors">
               Início
             </a>
@@ -2449,7 +2457,7 @@ export function LandingPage() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Conversar no WhatsApp"
-        className="fixed bottom-5 right-5 z-50 w-13 h-13 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105"
+        className="fixed bottom-safe-5 right-5 z-50 w-13 h-13 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105"
       >
         <LucideIcons.MessageCircle className="w-6 h-6" />
       </a>

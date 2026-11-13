@@ -347,7 +347,7 @@ export function Comanda() {
   }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pt-20 md:pt-24 md:pl-18 pb-36 lg:pb-28 relative overflow-hidden select-none">
+    <div className="min-h-dvh bg-slate-50 font-sans pt-20 md:pt-24 md:pl-18 pb-36 lg:pb-28 relative overflow-hidden select-none">
       
       {/* TOAST DE NOTIFICAÇÃO */}
       {mensagemToast && (
@@ -360,8 +360,16 @@ export function Comanda() {
       )}
 
       {/* FUNDO */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-teal-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 bg-indigo-400/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      <div
+        aria-hidden="true"
+        className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(45, 212, 191, 0.14) 0%, rgba(45, 212, 191, 0) 70%)' }}
+      />
+      <div
+        aria-hidden="true"
+        className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(129, 140, 248, 0.14) 0%, rgba(129, 140, 248, 0) 70%)' }}
+      />
 
       <Header />
 

@@ -1,6 +1,37 @@
 /* No seu index.css */
 @import "tailwindcss";
 
+/* ==============================================================================
+   SAFE AREA UTILITIES (iOS Notch / Dynamic Island / Home Indicator)
+   ============================================================================== */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility h-safe-top {
+  height: env(safe-area-inset-top, 0px);
+}
+
+@utility pt-safe-* {
+  padding-top: calc(--spacing(--value(integer)) + env(safe-area-inset-top, 0px));
+}
+
+@utility pb-safe-* {
+  padding-bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom, 0px));
+}
+
+@utility top-safe-* {
+  top: calc(--spacing(--value(integer)) + env(safe-area-inset-top, 0px));
+}
+
+@utility bottom-safe-* {
+  bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom, 0px));
+}
+
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -47,6 +78,15 @@ body {
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Garante no mínimo 16px em controles de entrada no mobile para evitar zoom automático no iOS */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([readonly]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Utilitário opcional caso queira esconder a barra apenas em carrosséis horizontais de chips */

@@ -670,7 +670,7 @@ export function Header() {
       </aside>
 
       {/* Header Superior Fixo (com BannerDegustacao integrado quando ativo) */}
-      <header className="fixed top-0 right-0 left-0 md:left-18 bg-white/80 backdrop-blur-md border-b border-slate-300 flex flex-col z-40">
+      <header className="fixed top-0 right-0 left-0 md:left-18 bg-white/80 backdrop-blur-md border-b border-slate-300 flex flex-col pt-safe z-40">
         <BannerDegustacao />
         <div className="h-16 flex items-center justify-between px-4 lg:px-6 w-full relative">
           <div className="flex items-center gap-2.5 sm:gap-3 z-10 min-w-0">
@@ -974,7 +974,8 @@ export function Header() {
         </div>
       </header>
 
-      {/* Espaçador automático da página quando o BannerDegustacao está visível */}
+      {/* Espaçadores automáticos da página (safe-area iOS + BannerDegustacao) */}
+      <div className="h-safe-top w-full shrink-0" aria-hidden="true" />
       {emPeriodoDeTeste && <div className="h-9 sm:h-10 w-full shrink-0" aria-hidden="true" />}
 
       {/* Header Inferior Mobile  */}
@@ -986,8 +987,9 @@ export function Header() {
           onTouchEnd={handleDockTouchEnd}
           onTouchCancel={handleDockTouchCancel}
           onMouseLeave={() => setDockHoverIndex(null)}
-          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 flex md:hidden items-center justify-around h-16 pb-safe z-50 shadow-2xl shadow-slate-900/15 select-none px-2"
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 md:hidden pb-safe z-50 shadow-2xl shadow-slate-900/15 select-none"
         >
+          <div className="flex items-center justify-around h-16 px-2 w-full">
           {navItems.map((item, index) => {
             const isSelected = activeDockIndex === index;
             const isAdjacent = activeDockIndex !== null && Math.abs(activeDockIndex - index) === 1;
@@ -1050,6 +1052,7 @@ export function Header() {
               </button>
             );
           })}
+          </div>
         </nav>
       )}
     </Fragment>

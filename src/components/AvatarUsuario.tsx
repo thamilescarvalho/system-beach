@@ -1,11 +1,6 @@
 // src/components/AvatarUsuario.tsx
-import { useState, useEffect } from 'react';
-
-export function isAvatarImagem(valor?: string | null): boolean {
-  if (!valor) return false;
-  const v = valor.trim();
-  return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:image/');
-}
+import { useState } from 'react';
+import { isAvatarImagem } from '../utils/avatar';
 
 interface AvatarUsuarioProps {
   avatar?: string | null;
@@ -22,28 +17,25 @@ export function AvatarUsuario({
   emojiClassName = 'text-lg',
   fallbackEmoji = '👤'
 }: AvatarUsuarioProps) {
-  const [erroImagem, setErroImagem] = useState(false);
+  const [urlComErro, setUrlComErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    setErroImagem(false);
-  }, [avatar]);
-
-  const mostrarFoto = isAvatarImagem(avatar) && !erroImagem;
-  const emojiExibido = avatar && !isAvatarImagem(avatar) ? avatar : fallbackEmoji;
+  const ehImagem = isAvatarImagem(avatar);
+  const mostrarFoto = ehImagem && urlComErro !== avatar;
+  const emojiExibido = avatar && !ehImagem ? avatar : fallbackEmoji;
 
   return (
     <span
       className={`relative inline-flex items-center justify-center overflow-hidden shrink-0 select-none ${className}`}
     >
-      {mostrarFoto ? (
+      {mostrarFoto && avatar ? (
         <img
-          src={avatar!}
+          src={avatar}
           alt={nome ? `Foto de ${nome}` : 'Foto de perfil'}
           className="w-full h-full object-cover"
           loading="lazy"
           decoding="async"
           draggable={false}
-          onError={() => setErroImagem(true)}
+          onError={() => setUrlComErro(avatar)}
         />
       ) : (
         <span className={`leading-none ${emojiClassName}`} aria-hidden="true">

@@ -34,9 +34,8 @@ export function Home() {
     [mesas]
   );
 
-  // Métricas de Pedidos em Preparo e Pedidos Prontos no Bar
+  // Métricas
   const {
-    totalPedidosEmPreparo,
     totalPedidosProntos,
     listaMesasComPedidosProntos
   } = useMemo(() => {
@@ -103,8 +102,12 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/80 font-sans flex flex-col justify-between relative antialiased text-slate-800 overflow-x-hidden">
-      <div className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-linear-to-b from-slate-200/50 via-transparent to-transparent blur-2xl" />
+    <div className="min-h-dvh bg-slate-100/80 font-sans flex flex-col justify-between relative antialiased text-slate-800 overflow-x-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64"
+        style={{ background: 'radial-gradient(ellipse at top, rgba(226, 232, 240, 0.55) 0%, rgba(226, 232, 240, 0) 70%)' }}
+      />
 
       {/* HEADER */}
       <Header />
@@ -215,33 +218,7 @@ export function Home() {
                   </div>
                 </button>
 
-                {/* 3. Pedidos em Preparo */}
-                <button
-                  type="button"
-                  onClick={() => navigate('/cozinha')}
-                  className="group w-full flex items-center justify-between px-3.5 py-2.5 rounded-4xl bg-white hover:bg-white border border-slate-200/60 hover:border-slate-300/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-slate-50 border border-slate-200/80 text-slate-600 shadow-2xs flex items-center justify-center shrink-0">
-                      <LucideIcons.UtensilsCrossed size={17} strokeWidth={1.9} />
-                    </div>
-                    <p className="text-[14px] tracking-wider font-sans text-slate-800 truncate uppercase">
-                      {totalPedidosEmPreparo === 1
-                        ? '1 pedido em preparo'
-                        : `${totalPedidosEmPreparo} pedidos em preparo`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 pl-2">
-                    <span className="text-xs text-slate-400 hidden sm:inline">Bar e Cozinha</span>
-                    <LucideIcons.ChevronRight
-                      size={16}
-                      strokeWidth={1.8}
-                      className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                    />
-                  </div>
-                </button>
-
-                {/* 4. Pedidos Prontos */}
+                {/* 3. Pedidos Prontos */}
                 <button
                   type="button"
                   onClick={handleClickPedidosProntos}

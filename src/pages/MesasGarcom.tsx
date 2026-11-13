@@ -124,7 +124,7 @@ export function MesasGarcom() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-200/50 font-sans text-slate-900 relative">
+    <div className="min-h-dvh bg-slate-200/50 font-sans text-slate-900 relative">
       <Header />
 
       {/* Modal de Alerta / Acesso Negado */}
@@ -298,7 +298,7 @@ export function MesasGarcom() {
         <button
           type="button"
           onClick={abrirModalCriar}
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-8 w-12 h-12 bg-linear-to-br from-slate-700 to-slate-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-slate-900/25 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl active:scale-90 z-40 border border-white/20"
+          className="fixed bottom-safe-20 md:bottom-6 right-4 md:right-8 w-12 h-12 bg-linear-to-br from-slate-700 to-slate-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-slate-900/25 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl active:scale-90 z-40 border border-white/20"
           title="Novo Guarda-Sol"
           aria-label="Novo Guarda-Sol"
         >

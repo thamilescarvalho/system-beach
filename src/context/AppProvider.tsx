@@ -229,15 +229,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [garcomLogado, setGarcomLogadoState] = useState<Garcom | null>(null);
 
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFluxoRecuperacaoSenhaRef = useRef<boolean>(
+  const isRecuperacaoInicial =
     typeof window !== 'undefined' &&
-      (window.location.hash.includes('type=recovery') ||
-        window.location.search.includes('type=recovery') ||
-        window.location.search.includes('modo=redefinir-senha'))
-  );
+    (window.location.hash.includes('type=recovery') ||
+      window.location.search.includes('type=recovery') ||
+      window.location.search.includes('modo=redefinir-senha'));
+  const isFluxoRecuperacaoSenhaRef = useRef<boolean>(isRecuperacaoInicial);
   const isFluxoConfirmacaoEmailRef = useRef<boolean>(
     typeof window !== 'undefined' &&
-      !isFluxoRecuperacaoSenhaRef.current &&
+      !isRecuperacaoInicial &&
       (window.location.hash.includes('type=signup') ||
         window.location.hash.includes('access_token=') ||
         window.location.search.includes('confirmado=sucesso') ||
@@ -268,20 +268,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .eq('email', emailLimpoFallback)
         .maybeSingle();
       perfil = resPorEmail.data;
-
-      // Salvaguarda Zero-Lockout para a conta Super Admin oficial já autenticada pelo Supabase Auth
-      if (!perfil && emailLimpoFallback === 'ancorazero85@gmail.com') {
-        perfil = {
-          id: userId,
-          nome: 'THAMILES DEV',
-          avatar: '👑',
-          cargo: 'super_admin',
-          email: 'ancorazero85@gmail.com',
-          status: 'ativo',
-          empresa_id: '887a56e0-9151-493f-9801-732245b535f3',
-          telefone: ''
-        };
-      }
     }
 
     if (!perfil && metadata) {
@@ -290,9 +276,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const documento = typeof metadata.documento === 'string' ? metadata.documento : null;
       const telefone = typeof metadata.telefone === 'string' ? metadata.telefone : null;
       const emailLimpo = (emailUsuario || '').trim().toLowerCase();
-      const isSuperAdminEmail = emailLimpo === 'ancorazero85@gmail.com';
 
-      if (nomeEmpresa && nomeUsuario && !isSuperAdminEmail) {
+      if (nomeEmpresa && nomeUsuario) {
         const { error: rpcError } = await supabase.rpc('criar_workspace_onboarding', {
           p_nome_empresa: nomeEmpresa,
           p_nome_usuario: nomeUsuario,

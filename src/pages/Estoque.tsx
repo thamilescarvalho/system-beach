@@ -634,7 +634,7 @@ export function Estoque() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans pt-20 md:pt-24 md:pl-18 pb-28 md:pb-14 relative overflow-x-hidden select-none text-slate-800">
+    <div className="min-h-dvh bg-slate-100 font-sans pt-20 md:pt-24 md:pl-18 pb-28 md:pb-14 relative overflow-x-hidden select-none text-slate-800">
       {/* TOAST FLUTUANTE */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300 w-11/12 max-w-sm flex justify-center pointer-events-none">
@@ -656,8 +656,16 @@ export function Estoque() {
       )}
 
       {/* ELEMENTOS DE FUNDO SUAVES */}
-      <div className="fixed -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed -bottom-24 -right-24 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div
+        aria-hidden="true"
+        className="fixed -top-24 -left-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%)' }}
+      />
+      <div
+        aria-hidden="true"
+        className="fixed -bottom-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 70%)' }}
+      />
 
       <Header />
 

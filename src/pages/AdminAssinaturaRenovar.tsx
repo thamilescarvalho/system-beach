@@ -6,13 +6,9 @@ import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import {
   obterConfiguracaoGlobalLocal,
   carregarConfiguracaoGlobalSaaS,
-  obterAccessTokenMercadoPago,
-  ehPublicKeyMercadoPago,
   gerarPagamentoPixMercadoPago,
   consultarStatusPagamentoMercadoPago,
-  ativarOuRenovarAssinaturaAposPagamento,
-  requisitarApiMercadoPago,
-  obterUrlBaseSistema,
+  criarCheckoutMercadoPago,
   type ConfiguracaoGlobalSaaS,
   type IdCicloCobranca,
   type CicloAssinaturaConfig,
@@ -27,17 +23,10 @@ import {
   type StatusFatura
 } from '../utils/faturasSaaS';
 
-interface RespostaPreferenciaMP {
-  id?: string;
-  init_point?: string;
-  sandbox_init_point?: string;
-  message?: string;
-}
-
 const ORDEM_CICLOS: IdCicloCobranca[] = ['mensal', 'trimestral', 'semestral', 'anual'];
 
 export function AdminAssinaturaRenovar() {
-  const { dadosEmpresa, garcomLogado, carregarDados } = useAppContext();
+  const { dadosEmpresa, carregarDados } = useAppContext();
 
   const [configSaaS, setConfigSaaS] = useState<ConfiguracaoGlobalSaaS>(() =>
     obterConfiguracaoGlobalLocal()
@@ -82,11 +71,6 @@ export function AdminAssinaturaRenovar() {
       ativo = false;
     };
   }, []);
-
-  const tokenMPAtivo = useMemo(
-    () => obterAccessTokenMercadoPago(configSaaS),
-    [configSaaS]
-  );
 
   // Carrega e sincroniza o histórico de faturas
   const atualizarHistoricoFaturas = useCallback(async () => {
@@ -262,27 +246,18 @@ export function AdminAssinaturaRenovar() {
   const formatarMoeda = (valor: number) =>
     valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  // Verifica se o PIX gerado foi pago
+  // Verifica se o PIX gerado foi pago (via servidor / Edge Function)
   const verificarStatusPix = useCallback(
     async (silencioso = false) => {
-      if (!dadosPix?.paymentId || !tokenMPAtivo || !dadosEmpresa?.id || pagamentoConfirmado) return;
+      if (!dadosPix?.paymentId || !dadosEmpresa?.id || pagamentoConfirmado) return;
 
       if (!silencioso) setVerificandoPagamento(true);
       try {
-        const res = await consultarStatusPagamentoMercadoPago(dadosPix.paymentId, tokenMPAtivo);
+        const res = await consultarStatusPagamentoMercadoPago(dadosPix.paymentId);
         if (res.approved) {
           setPagamentoConfirmado(true);
           const cicloPago =
             listaCiclosCalculados.find((c) => c.id === dadosPix.cicloId) || cicloSelecionado;
-
-          await ativarOuRenovarAssinaturaAposPagamento({
-            empresaId: dadosEmpresa.id,
-            dataVencimentoAtual: dadosEmpresa.data_vencimento,
-            statusAssinaturaAtual: dadosEmpresa.status_assinatura,
-            planoNome: configSaaS.planoNome,
-            ciclo: cicloPago,
-            paymentId: dadosPix.paymentId
-          });
 
           await carregarDados(true);
           await atualizarHistoricoFaturas();
@@ -310,13 +285,11 @@ export function AdminAssinaturaRenovar() {
     },
     [
       carregarDados,
-      configSaaS.planoNome,
       cicloSelecionado,
       dadosEmpresa,
       dadosPix,
       listaCiclosCalculados,
       pagamentoConfirmado,
-      tokenMPAtivo,
       atualizarHistoricoFaturas
     ]
   );
@@ -338,33 +311,9 @@ export function AdminAssinaturaRenovar() {
     setFaturaAlvoPix(faturaEspecifica || null);
 
     try {
-      if (!tokenMPAtivo) {
-        throw new Error(
-          'Credencial do Mercado Pago não configurada no servidor. Entre em contato com o suporte.'
-        );
-      }
-
-      const nomeEstab = dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA;
-      const emailPagador =
-        dadosEmpresa?.email_contato || garcomLogado?.email || 'cliente@tsystembeach.com.br';
-
-      const valorCobranca = faturaEspecifica
-        ? faturaEspecifica.valor
-        : cicloSelecionado.valorTotalCiclo;
-
-      const descricaoCobranca = faturaEspecifica
-        ? `${configSaaS.nomeSistema} • Fatura ${faturaEspecifica.competencia} (${cicloSelecionado.nome}) - ${nomeEstab}`
-        : `${configSaaS.nomeSistema} - ${configSaaS.planoNome} (${cicloSelecionado.nome}) - ${nomeEstab}`;
-
       const pixGerado = await gerarPagamentoPixMercadoPago({
-        valor: valorCobranca,
-        descricao: descricaoCobranca,
-        emailPagador,
-        nomePagador: garcomLogado?.nome || nomeEstab,
-        documentoPagador: dadosEmpresa?.documento,
-        externalReference: `${dadosEmpresa?.id || 'empresa'}|${cicloSelecionado.id}|${faturaEspecifica?.id || 'ciclo'}`,
         cicloId: cicloSelecionado.id,
-        tokenMP: tokenMPAtivo
+        faturaId: faturaEspecifica?.id
       });
 
       setDadosPix(pixGerado);
@@ -401,65 +350,11 @@ export function AdminAssinaturaRenovar() {
     setMensagemFeedback(null);
 
     try {
-      if (!tokenMPAtivo) {
-        throw new Error(
-          'Credencial do Mercado Pago não configurada no servidor. Entre em contato com o suporte.'
-        );
-      }
-
-      if (ehPublicKeyMercadoPago(tokenMPAtivo)) {
-        throw new Error(
-          'Credencial inválida no servidor. Entre em contato com o suporte.'
-        );
-      }
-
-      const originUrl = obterUrlBaseSistema();
-      const nomeEstab = dadosEmpresa?.nome_fantasia || NOME_PADRAO_SISTEMA;
-      const supabaseUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) || '').replace(/\/$/, '');
-      const webhookUrl = supabaseUrl ? `${supabaseUrl}/functions/v1/mercadopago-webhook` : undefined;
-
-      const prefPayload: Record<string, unknown> = {
-        items: [
-          {
-            id: `plano_${cicloSelecionado.id}`,
-            title: `${configSaaS.nomeSistema} • ${configSaaS.planoNome} (${cicloSelecionado.nome})`,
-            description: `Assinatura ${cicloSelecionado.nome} para ${nomeEstab}`,
-            category_id: 'services',
-            quantity: 1,
-            currency_id: 'BRL',
-            unit_price: Number(cicloSelecionado.valorTotalCiclo)
-          }
-        ],
-        payer: {
-          email: dadosEmpresa?.email_contato || garcomLogado?.email || undefined
-        },
-        external_reference: `${dadosEmpresa?.id || 'estabelecimento'}|${cicloSelecionado.id}`,
-        back_urls: {
-          success: `${originUrl}/admin/assinatura?retorno_mp=aprovado&ciclo=${cicloSelecionado.id}`,
-          pending: `${originUrl}/admin/assinatura?retorno_mp=pendente&ciclo=${cicloSelecionado.id}`,
-          failure: `${originUrl}/admin/assinatura?retorno_mp=falha&ciclo=${cicloSelecionado.id}`
-        },
-        auto_return: 'approved',
-        notification_url: webhookUrl,
-        statement_descriptor: 'TSYSTEMBEACH'
-      };
-
-      const mpRes = await requisitarApiMercadoPago('/checkout/preferences', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokenMPAtivo}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(prefPayload)
+      const { init_point } = await criarCheckoutMercadoPago({
+        cicloId: cicloSelecionado.id,
+        redirectPath: '/admin/assinatura'
       });
-
-      const prefData = (await mpRes.json()) as RespostaPreferenciaMP;
-      if (mpRes.ok && prefData.init_point) {
-        window.location.assign(prefData.init_point);
-        return;
-      }
-
-      throw new Error(prefData.message || 'Não foi possível abrir o Checkout Pro do Mercado Pago.');
+      window.location.assign(init_point);
     } catch (err: unknown) {
       setMensagemFeedback({
         tipo: 'erro',
@@ -471,7 +366,7 @@ export function AdminAssinaturaRenovar() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800">
       <Header />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-14 md:pl-24">

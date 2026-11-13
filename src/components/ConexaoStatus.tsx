@@ -40,7 +40,7 @@ export function ConexaoStatus() {
   }
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-4 w-full max-w-sm flex justify-center">
+    <div className="fixed top-safe-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-4 w-full max-w-sm flex justify-center">
       {!online ? (
         <div className="bg-amber-600 text-white px-4 py-2 rounded-full shadow-lg border border-amber-500 flex items-center gap-2 text-xs font-medium">
           <WifiOff size={14} className="shrink-0" />

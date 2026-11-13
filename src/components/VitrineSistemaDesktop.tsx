@@ -48,7 +48,11 @@ export function VitrineSistemaDesktop() {
     <div className="hidden lg:flex lg:col-span-7 flex-col justify-between bg-slate-200/60 border border-slate-200/90 rounded-4xl p-2 shadow-inner">
       <div className="w-full h-full bg-white border border-slate-200/80 rounded-4xl p-8 xl:p-10 shadow-lg shadow-slate-300/40 flex flex-col justify-between relative overflow-hidden">
         {/* Luz sutil de profundidade */}
-        <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-slate-100 blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(241, 245, 249, 0.9) 0%, rgba(241, 245, 249, 0) 70%)' }}
+        />
 
         {/* TOPO DA VITRINE */}
         <div className="relative z-10 flex items-center justify-between gap-4">

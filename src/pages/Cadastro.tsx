@@ -211,8 +211,8 @@ export function Cadastro() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-slate-100/70 font-sans text-slate-900 selection:bg-slate-900 selection:text-white relative overflow-y-auto">
-      <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-stretch justify-center p-4 sm:p-6 lg:p-10 gap-8 relative z-10 min-h-screen lg:min-h-0 lg:my-auto">
+    <div className="min-h-dvh w-full flex bg-slate-100/70 font-sans text-slate-900 selection:bg-slate-900 selection:text-white relative overflow-y-auto pt-safe pb-safe">
+      <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-stretch justify-center p-4 sm:p-6 lg:p-10 gap-8 relative z-10 min-h-dvh lg:min-h-0 lg:my-auto">
         {/* COLUNA ESQUERDA: VITRINE INTERATIVA DO SISTEMA (DESKTOP) */}
         <VitrineSistemaDesktop />
 

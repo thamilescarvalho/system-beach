@@ -29,7 +29,7 @@ export function Cozinha() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-700 antialiased selection:bg-emerald-600 selection:text-white">
+    <div className="min-h-dvh bg-slate-100 font-sans text-slate-700 antialiased selection:bg-emerald-600 selection:text-white">
       <Header />
 
       <div className="pt-20 md:pt-24 pb-28 md:pb-20 md:pl-20 flex flex-col items-center w-full">

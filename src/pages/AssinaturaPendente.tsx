@@ -8,13 +8,9 @@ import { BotaoWhatsappFlutuante } from '../components/BotaoWhatsappFlutuante';
 import {
   obterConfiguracaoGlobalLocal,
   carregarConfiguracaoGlobalSaaS,
-  obterAccessTokenMercadoPago,
-  ehPublicKeyMercadoPago,
   gerarPagamentoPixMercadoPago,
   consultarStatusPagamentoMercadoPago,
-  ativarOuRenovarAssinaturaAposPagamento,
-  requisitarApiMercadoPago,
-  obterUrlBaseSistema,
+  criarCheckoutMercadoPago,
   type ConfiguracaoGlobalSaaS,
   type IdCicloCobranca,
   type CicloAssinaturaConfig,
@@ -27,19 +23,6 @@ interface RespostaCheckoutMP {
   approved?: boolean;
   status?: string;
   error?: string;
-}
-
-interface RespostaPreferenciaDiretaMP {
-  id?: string;
-  init_point?: string;
-  sandbox_init_point?: string;
-  message?: string;
-}
-
-interface RespostaPagamentoDiretoMP {
-  id?: number;
-  status?: string;
-  external_reference?: string;
 }
 
 const ORDEM_CICLOS: IdCicloCobranca[] = ['mensal', 'trimestral', 'semestral', 'anual'];
@@ -74,11 +57,6 @@ export function AssinaturaPendente() {
       ativo = false;
     };
   }, []);
-
-  const tokenMPAtivo = useMemo(
-    () => obterAccessTokenMercadoPago(configSaaS),
-    [configSaaS]
-  );
 
   // Verifica se o Super Admin definiu um valor mensal personalizado para este cliente específico
   const valorMensalPadraoGlobal = configSaaS.ciclos.mensal.valorMensalEquivalente || 149.90;
@@ -147,7 +125,6 @@ export function AssinaturaPendente() {
     const params = new URLSearchParams(window.location.search);
     const paymentId = params.get('payment_id') || params.get('collection_id');
     const statusUrl = params.get('status') || params.get('collection_status') || params.get('retorno_mp');
-    const cicloRetorno = (params.get('ciclo') as IdCicloCobranca | null) || 'semestral';
 
     if (!paymentId && !statusUrl) return;
 
@@ -165,31 +142,6 @@ export function AssinaturaPendente() {
 
         if (data?.approved) {
           aprovadoConfirmado = true;
-        } else if (tokenMPAtivo && !ehPublicKeyMercadoPago(tokenMPAtivo)) {
-          const mpRes = await requisitarApiMercadoPago(
-            `/v1/payments/${encodeURIComponent(paymentId)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${tokenMPAtivo}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-          if (mpRes.ok) {
-            const payData = (await mpRes.json()) as RespostaPagamentoDiretoMP;
-            if (payData.status === 'approved') {
-              aprovadoConfirmado = true;
-              const cicloCfg = configSaaS.ciclos[cicloRetorno] || configSaaS.ciclos.mensal;
-              await ativarOuRenovarAssinaturaAposPagamento({
-                empresaId: empresa.id,
-                dataVencimentoAtual: empresa.data_vencimento,
-                statusAssinaturaAtual: empresa.status_assinatura,
-                planoNome: configSaaS.planoNome,
-                ciclo: cicloCfg,
-                paymentId: String(payData.id || paymentId)
-              });
-            }
-          }
         }
       }
 
@@ -212,7 +164,7 @@ export function AssinaturaPendente() {
     } finally {
       setSincronizandoAcesso(false);
     }
-  }, [configSaaS, contexto, empresa, tokenMPAtivo]);
+  }, [contexto, empresa]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -233,19 +185,9 @@ export function AssinaturaPendente() {
       setAvisoCheckout(null);
     }
     try {
-      if (dadosPix?.paymentId && tokenMPAtivo && empresa?.id) {
-        const resPix = await consultarStatusPagamentoMercadoPago(dadosPix.paymentId, tokenMPAtivo);
+      if (dadosPix?.paymentId && empresa?.id) {
+        const resPix = await consultarStatusPagamentoMercadoPago(dadosPix.paymentId);
         if (resPix.approved) {
-          const cicloPago =
-            listaCiclosCalculados.find((c) => c.id === dadosPix.cicloId) || cicloAtual;
-          await ativarOuRenovarAssinaturaAposPagamento({
-            empresaId: empresa.id,
-            dataVencimentoAtual: empresa.data_vencimento,
-            statusAssinaturaAtual: empresa.status_assinatura,
-            planoNome: configSaaS.planoNome,
-            ciclo: cicloPago,
-            paymentId: dadosPix.paymentId
-          });
           setAvisoCheckout({
             tipo: 'sucesso',
             texto: 'Pagamento PIX confirmado! Liberando seu acesso...'
@@ -264,14 +206,10 @@ export function AssinaturaPendente() {
       if (!silencioso) setSincronizandoAcesso(false);
     }
   }, [
-    cicloAtual,
-    configSaaS.planoNome,
     contexto,
     dadosPix,
     empresa,
-    listaCiclosCalculados,
-    sincronizandoAcesso,
-    tokenMPAtivo
+    sincronizandoAcesso
   ]);
 
   // Polling automático a cada 5s quando o QR Code PIX está visível na tela
@@ -322,14 +260,7 @@ export function AssinaturaPendente() {
 
     try {
       const pix = await gerarPagamentoPixMercadoPago({
-        valor: cicloAtual.valorTotalCiclo,
-        descricao: `${configSaaS.nomeSistema} • ${configSaaS.planoNome} (${cicloAtual.nome}) - ${nomeEstabelecimento}`,
-        emailPagador: empresa?.email_contato || emailResponsavel || 'assinatura@tsystembeach.com.br',
-        nomePagador: contexto?.garcomLogado?.nome || nomeEstabelecimento,
-        documentoPagador: empresa?.documento,
-        externalReference: `${empresa?.id || 'estabelecimento'}|${cicloAtual.id}`,
-        cicloId: cicloAtual.id,
-        tokenMP: tokenMPAtivo
+        cicloId: cicloAtual.id
       });
       setDadosPix(pix);
     } catch (err: unknown) {
@@ -362,77 +293,12 @@ export function AssinaturaPendente() {
     setAvisoCheckout(null);
 
     try {
-      const originUrl = obterUrlBaseSistema();
-
-      const { data, error } = await supabase.functions.invoke<RespostaCheckoutMP>('mercadopago-checkout', {
-        body: {
-          action: 'createPreference',
-          cicloId: cicloAtual.id,
-          origin: originUrl
-        }
+      const { init_point } = await criarCheckoutMercadoPago({
+        cicloId: cicloAtual.id,
+        redirectPath: '/assinatura-pendente'
       });
-
-      if (!error && data?.init_point) {
-        window.location.assign(data.init_point);
-        return;
-      }
-
-      if (tokenMPAtivo) {
-        if (ehPublicKeyMercadoPago(tokenMPAtivo)) {
-          setAvisoCheckout({
-            tipo: 'erro',
-            texto:
-              'Foi colada a "Public Key" no painel /master em vez do "Access Token". Acesse /master → Mercado Pago & Textos e cole o 2º campo (Access Token) do Mercado Pago.'
-          });
-          return;
-        }
-
-        const externalRef = `${empresa?.id || 'estabelecimento'}|${cicloAtual.id}`;
-        const supabaseUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) || '').replace(/\/$/, '');
-        const webhookUrl = supabaseUrl ? `${supabaseUrl}/functions/v1/mercadopago-webhook` : undefined;
-
-        const prefPayload: Record<string, unknown> = {
-          items: [
-            {
-              id: `plano_${cicloAtual.id}`,
-              title: `${configSaaS.nomeSistema} • ${configSaaS.planoNome} (${cicloAtual.nome})`,
-              description: `Assinatura ${cicloAtual.nome} para ${nomeEstabelecimento}`,
-              category_id: 'services',
-              quantity: 1,
-              currency_id: 'BRL',
-              unit_price: Number(cicloAtual.valorTotalCiclo)
-            }
-          ],
-          payer: {
-            email: emailResponsavel || undefined
-          },
-          external_reference: externalRef,
-          back_urls: {
-            success: `${originUrl}/assinatura-pendente?retorno_mp=aprovado&ciclo=${cicloAtual.id}`,
-            pending: `${originUrl}/assinatura-pendente?retorno_mp=pendente&ciclo=${cicloAtual.id}`,
-            failure: `${originUrl}/assinatura-pendente?retorno_mp=falha&ciclo=${cicloAtual.id}`
-          },
-          auto_return: 'approved',
-          notification_url: webhookUrl,
-          statement_descriptor: 'TSYSTEMBEACH'
-        };
-
-        const mpRes = await requisitarApiMercadoPago('/checkout/preferences', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${tokenMPAtivo}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(prefPayload)
-        });
-
-        const prefData = (await mpRes.json()) as RespostaPreferenciaDiretaMP;
-        if (mpRes.ok && prefData.init_point) {
-          window.location.assign(prefData.init_point);
-          return;
-        }
-      }
-
+      window.location.assign(init_point);
+    } catch (err: unknown) {
       const linkDiretoMP = obterLinkDiretoConfigurado(cicloAtual);
       if (linkDiretoMP) {
         const ref = `${empresa?.id || 'estabelecimento'}|${cicloAtual.id}`;
@@ -444,12 +310,9 @@ export function AssinaturaPendente() {
       setAvisoCheckout({
         tipo: 'erro',
         texto:
-          'Credencial do Mercado Pago pendente: adicione VITE_MP_ACCESS_TOKEN no arquivo frontend/.env ou acesse seu painel Super Admin (/master → Mercado Pago & Textos) e insira seu Access Token (APP_USR-...).'
-      });
-    } catch {
-      setAvisoCheckout({
-        tipo: 'erro',
-        texto: 'Não foi possível conectar ao servidor do Mercado Pago. Verifique sua conexão e tente novamente.'
+          err instanceof Error
+            ? err.message
+            : 'Não foi possível conectar ao servidor do Mercado Pago. Verifique sua conexão e tente novamente.'
       });
     } finally {
       setGerandoCheckout(false);
@@ -462,7 +325,7 @@ export function AssinaturaPendente() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100/70 flex flex-col items-center justify-center gap-3 font-sans p-4">
+      <div className="min-h-dvh bg-slate-100/70 flex flex-col items-center justify-center gap-3 font-sans p-4 pt-safe pb-safe">
         <div className="w-10 h-10 border-4 border-slate-200 border-t-yellow-500 rounded-full animate-spin" />
         <p className="text-xs font-medium text-slate-500 uppercase tracking-widest animate-pulse">
           Sincronizando Estabelecimento...
@@ -472,7 +335,7 @@ export function AssinaturaPendente() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-100/70 font-sans text-slate-900 selection:bg-slate-900 selection:text-white py-6 px-4 sm:px-6 lg:py-10 flex flex-col items-center justify-center relative overflow-y-auto">
+    <div className="min-h-dvh w-full bg-slate-100/70 font-sans text-slate-900 selection:bg-slate-900 selection:text-white py-6 px-4 sm:px-6 lg:py-10 pt-safe pb-safe flex flex-col items-center justify-center relative overflow-y-auto">
       <div className="w-full max-w-4xl mx-auto relative z-10 animate-in fade-in zoom-in-95 duration-300">
         {/* TOPO DA PÁGINA: IDENTIDADE E ESTABELECIMENTO LOGADO */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-3xl px-5 py-3.5 shadow-sm mb-5">

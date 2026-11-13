@@ -14,9 +14,15 @@ export function Setup() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans p-4 sm:p-6 relative overflow-hidden">
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+    <div className="min-h-dvh bg-slate-950 flex flex-col items-center justify-center font-sans p-4 sm:p-6 relative overflow-hidden pt-safe pb-safe">
+      <div
+        className="absolute -top-24 -left-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, transparent 70%)' }}
+      />
+      <div
+        className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, transparent 70%)' }}
+      />
 
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl p-6 sm:p-10 rounded-4xl shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-500 relative z-10 text-center">
         <div className="w-20 h-20 bg-linear-to-br from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-emerald-500/20">

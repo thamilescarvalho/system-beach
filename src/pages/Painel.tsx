@@ -250,7 +250,7 @@ export function Painel() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/80 font-sans flex flex-col relative antialiased text-slate-800 pb-24 md:pb-12">
+    <div className="min-h-dvh bg-slate-100/80 font-sans flex flex-col relative antialiased text-slate-800 pb-24 md:pb-12">
       <div className="print:hidden">
         <Header />
 
@@ -299,8 +299,14 @@ export function Painel() {
 
           {/* CARD: VENDAS CONCLUÍDAS*/}
           <div className="relative overflow-hidden rounded-3xl sm:rounded-4xl bg-linear-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-5 sm:p-6 shadow-lg shadow-emerald-950/15 border border-emerald-600/30 mb-4">
-            <div className="absolute -top-12 -right-12 w-60 h-60 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-10 w-48 h-48 bg-teal-400/10 rounded-full blur-2xl pointer-events-none" />
+            <div
+              className="absolute -top-12 -right-12 w-64 h-64 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(52, 211, 153, 0.18) 0%, transparent 70%)' }}
+            />
+            <div
+              className="absolute -bottom-12 -left-10 w-52 h-52 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(45, 212, 191, 0.14) 0%, transparent 70%)' }}
+            />
 
             <div className="relative z-10 flex flex-col justify-between gap-4">
               {/* Título VENDAS CONCLUÍDAS + Olho */}

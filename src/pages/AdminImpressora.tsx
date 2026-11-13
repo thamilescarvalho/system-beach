@@ -172,7 +172,7 @@ export function AdminImpressora() {
     NOME_PADRAO_SISTEMA;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pt-20 pb-28 md:pt-22 md:pb-12 md:pl-22 px-4 sm:px-6 relative select-none">
+    <div className="min-h-dvh bg-slate-50 font-sans pt-20 pb-28 md:pt-22 md:pb-12 md:pl-22 px-4 sm:px-6 relative select-none">
       <Header />
 
       {/* TOAST DE FEEDBACK */}

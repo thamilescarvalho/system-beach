@@ -82,7 +82,6 @@ export function Login() {
   useEffect(() => {
     if (detectarModoRecuperacaoInicial()) {
       sessionStorage.setItem(SESSION_PASSWORD_RECOVERY, 'true');
-      setModoTela('redefinir');
     }
 
     const {
@@ -332,10 +331,18 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center bg-slate-100 font-sans text-slate-900 antialiased selection:bg-slate-900 selection:text-white relative overflow-x-hidden">
+    <div className="min-h-dvh w-full flex flex-col justify-center pt-safe pb-safe bg-slate-100 font-sans text-slate-900 antialiased selection:bg-slate-900 selection:text-white relative overflow-x-hidden">
       {/* ILUMINAÇÃO ATMOSFÉRICA SUTIL DE FUNDO (EFEITO PROFUNDIDADE) */}
-      <div className="pointer-events-none fixed -top-32 left-1/4 w-96 h-96 rounded-full bg-slate-200/80 blur-3xl" />
-      <div className="pointer-events-none fixed -bottom-32 right-1/4 w-96 h-96 rounded-full bg-emerald-500/5 blur-3xl" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed -top-32 left-1/4 w-96 h-96 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(226, 232, 240, 0.85) 0%, rgba(226, 232, 240, 0) 70%)' }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed -bottom-32 right-1/4 w-96 h-96 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 70%)' }}
+      />
 
       {/* MODAL DE CONFIRMAÇÃO DE E-MAIL */}
       {confirmacaoEmailVisivel && (

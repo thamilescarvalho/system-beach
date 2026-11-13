@@ -39,7 +39,7 @@ export function BotaoWhatsappFlutuante({
       rel="noopener noreferrer"
       aria-label="Falar conosco pelo WhatsApp"
       title="Falar conosco pelo WhatsApp"
-      className={`fixed bottom-5 right-5 z-50 w-11 h-11 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/35 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border border-white/30 ${
+      className={`fixed bottom-safe-5 right-5 z-50 w-11 h-11 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/35 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border border-white/30 ${
         pulinhoAtivo ? 'animate-bounce' : ''
       }`}
     >

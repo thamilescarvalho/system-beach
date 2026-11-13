@@ -4,7 +4,8 @@ import type { FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Header } from '../components/Header';
-import { AvatarUsuario, isAvatarImagem } from '../components/AvatarUsuario';
+import { AvatarUsuario } from '../components/AvatarUsuario';
+import { isAvatarImagem } from '../utils/avatar';
 import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { formatarTelefoneBR, validarEmail } from '../utils/validadores';
@@ -44,8 +45,11 @@ export function MeuPerfil() {
   };
 
   // Estados de Identidade e Dados Cadastrais
+  const [usuarioSyncId, setUsuarioSyncId] = useState<string | null>(() => garcomLogado?.id ?? null);
   const [nome, setNome] = useState<string>(() => garcomLogado?.nome || '');
-  const [telefone, setTelefone] = useState<string>('');
+  const [telefone, setTelefone] = useState<string>(() =>
+    garcomLogado?.telefone ? formatarTelefoneBR(garcomLogado.telefone) : ''
+  );
   const [emojiSelecionado, setEmojiSelecionado] = useState<string>(() =>
     obterEmojiInicial(garcomLogado?.avatar, garcomLogado?.id)
   );
@@ -74,9 +78,8 @@ export function MeuPerfil() {
   const [salvandoSenha, setSalvandoSenha] = useState<boolean>(false);
   const [feedbackSenha, setFeedbackSenha] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
-  // Sincroniza metadados iniciais da sessão (telefone e emoji preferido)
-  useEffect(() => {
-    if (!garcomLogado) return;
+  if (garcomLogado && garcomLogado.id !== usuarioSyncId) {
+    setUsuarioSyncId(garcomLogado.id);
     setNome(garcomLogado.nome || '');
     setNovoEmail(garcomLogado.email || '');
     if (garcomLogado.telefone) {
@@ -86,6 +89,11 @@ export function MeuPerfil() {
     setFotoUrl(temFoto ? garcomLogado.avatar : null);
     setModoVisual(temFoto ? 'foto' : 'emoji');
     setEmojiSelecionado(obterEmojiInicial(garcomLogado.avatar, garcomLogado.id));
+  }
+
+  // Sincroniza metadados iniciais da sessão (telefone e emoji preferido)
+  useEffect(() => {
+    if (!garcomLogado) return;
 
     let ativo = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -276,7 +284,7 @@ export function MeuPerfil() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800">
       {/* HEADER GLOBAL */}
       <Header />
 
