@@ -29,11 +29,6 @@ export function Home() {
     [mesas]
   );
 
-  const mesasLivres = useMemo(
-    () => mesas.filter((m) => m.status === 'livre'),
-    [mesas]
-  );
-
   // Métricas
   const {
     totalPedidosProntos,
