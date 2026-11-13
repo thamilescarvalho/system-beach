@@ -139,8 +139,6 @@ export function Login() {
         navigate('/master', { replace: true });
       } else if (!contexto.verificarAcessoLiberado()) {
         navigate('/assinatura-pendente', { replace: true });
-      } else if (cargo === 'admin') {
-        navigate('/admin', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
