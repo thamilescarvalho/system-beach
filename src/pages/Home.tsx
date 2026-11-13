@@ -192,32 +192,6 @@ export function Home() {
                   </div>
                 </button>
 
-                {/* 2. Mesas Livres */}
-                <button
-                  type="button"
-                  onClick={() => navigate('/mesas')}
-                  className="group w-full flex items-center justify-between px-3.5 py-2.5 rounded-4xl bg-white hover:bg-white border border-slate-200/60 hover:border-slate-300/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-slate-50 border border-slate-200/80 text-slate-600 shadow-2xs flex items-center justify-center shrink-0">
-                      <LucideIcons.CheckCircle2 size={17} strokeWidth={1.9} />
-                    </div>
-                    <p className="text-[14px] tracking-wider font-sans text-slate-800 truncate uppercase">
-                      {mesasLivres.length === 1
-                        ? '1 mesa livre'
-                        : `${mesasLivres.length} livres`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 pl-2">
-                    <span className="text-xs text-slate-400 hidden sm:inline">Guarda-sóis</span>
-                    <LucideIcons.ChevronRight
-                      size={16}
-                      strokeWidth={1.8}
-                      className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
-                    />
-                  </div>
-                </button>
-
                 {/* 3. Pedidos Prontos */}
                 <button
                   type="button"

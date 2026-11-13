@@ -55,6 +55,7 @@ export interface VendaFechada {
   total: number;
   dataFechamento: string;
   pagamentos: Pagamento[];
+  contaId?: string | null;
   status?: 'concluida' | 'cancelada';
   canceladoPor?: string;
   dataCancelamento?: string;
@@ -84,6 +85,7 @@ export interface MovimentacaoEstoque {
   data: string;
   usuarioNome: string;
   tipo: 'entrada' | 'inventario' | 'estorno';
+  notaCompraId?: string;
 }
 
 // TIPOS FINANCEIROS (LEDGER GARÇONS)
@@ -99,6 +101,8 @@ export interface PagamentoGarcom {
   descricao: string;
   categoria: CategoriaPagamentoGarcom;
   status: StatusPagamentoGarcom;
+  contaId?: string | null;
+  metodoPagamento?: string;
 }
 
 export type NovoPagamentoGarcom = Omit<PagamentoGarcom, 'id'>;
@@ -112,6 +116,8 @@ export interface DBPagamentoGarcom {
   descricao: string;
   categoria: string;
   status: string;
+  conta_id?: string | null;
+  metodo_pagamento?: string | null;
   created_at?: string;
   empresa_id?: string;
 }
@@ -135,4 +141,159 @@ export interface DBMetaFinanceira {
   status: string;
   created_at?: string;
   empresa_id?: string;
+}
+
+// ==============================================================================
+// TIPOS FINTECH: CONTAS FINANCEIRAS, FLUXO DE CAIXA E NOTAS DE COMPRA (ESTOQUE)
+// ==============================================================================
+export type TipoContaFinanceira = 'dinheiro' | 'banco' | 'maquininha' | 'cofre';
+
+export interface ContaFinanceira {
+  id: string;
+  nome: string;
+  tipo: TipoContaFinanceira;
+  saldoInicial: number;
+  cor: string;
+  icone: string;
+  recebeDinheiroPdv: boolean;
+  recebeDigitalPdv: boolean;
+  ativo: boolean;
+  padrao: boolean;
+  createdAt?: string;
+}
+
+export type NovaContaFinanceira = Omit<ContaFinanceira, 'id' | 'createdAt' | 'padrao'> & {
+  padrao?: boolean;
+};
+
+export interface DBContaFinanceira {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  tipo: string;
+  saldo_inicial: number | string;
+  cor: string;
+  icone: string;
+  recebe_dinheiro_pdv: boolean;
+  recebe_digital_pdv: boolean;
+  ativo: boolean;
+  padrao: boolean;
+  deletado_em?: string | null;
+  created_at?: string;
+}
+
+export type TipoMovimentacaoCaixa = 'entrada' | 'saida' | 'transferencia';
+
+export interface MovimentacaoCaixa {
+  id: string;
+  contaId: string;
+  contaDestinoId?: string | null;
+  notaCompraId?: string | null;
+  tipo: TipoMovimentacaoCaixa;
+  categoria: string;
+  metodoPagamento: string;
+  valor: number;
+  dataMovimentacao: string;
+  descricao: string;
+  usuarioNome: string;
+  createdAt?: string;
+}
+
+export type NovaMovimentacaoCaixa = Omit<MovimentacaoCaixa, 'id' | 'createdAt' | 'notaCompraId'>;
+
+export interface DBMovimentacaoCaixa {
+  id: string;
+  empresa_id: string;
+  conta_id: string;
+  conta_destino_id?: string | null;
+  nota_compra_id?: string | null;
+  tipo: string;
+  categoria: string;
+  metodo_pagamento: string;
+  valor: number | string;
+  data_movimentacao: string;
+  descricao?: string | null;
+  usuario_nome: string;
+  deletado_em?: string | null;
+  created_at?: string;
+}
+
+export interface ItemNotaCompraInput {
+  produtoId: number;
+  produtoNome: string;
+  quantidade: number;
+  valorUnitario: number;
+}
+
+export interface ItemNotaCompra extends ItemNotaCompraInput {
+  id: string;
+  notaId: string;
+  valorTotalItem: number;
+}
+
+export interface DBItemNotaCompra {
+  id: string;
+  nota_id: string;
+  empresa_id: string;
+  produto_id: number;
+  produto_nome: string;
+  quantidade: number;
+  valor_unitario: number | string;
+  valor_total_item: number | string;
+}
+
+export interface NotaCompraEstoque {
+  id: string;
+  fornecedor: string;
+  numeroNota?: string;
+  dataCompra: string; // YYYY-MM-DD
+  valorItens: number;
+  valorExtras: number;
+  valorTotal: number;
+  formaPagamento: string;
+  contaId?: string | null;
+  lancarNoCaixa: boolean;
+  movimentacaoCaixaId?: string | null;
+  status: 'ativa' | 'estornada';
+  observacoes?: string;
+  usuarioNome: string;
+  canceladoPor?: string;
+  dataCancelamento?: string;
+  createdAt?: string;
+  itens: ItemNotaCompra[];
+}
+
+export interface NovaNotaCompraInput {
+  fornecedor: string;
+  numeroNota?: string;
+  dataCompra: string;
+  itens: ItemNotaCompraInput[];
+  valorExtras?: number;
+  formaPagamento: string;
+  contaId?: string | null;
+  lancarNoCaixa: boolean;
+  observacoes?: string;
+  usuarioNome?: string;
+}
+
+export interface DBNotaCompraEstoque {
+  id: string;
+  empresa_id: string;
+  fornecedor: string;
+  numero_nota?: string | null;
+  data_compra: string;
+  valor_itens: number | string;
+  valor_extras: number | string;
+  valor_total: number | string;
+  forma_pagamento: string;
+  conta_id?: string | null;
+  lancar_no_caixa: boolean;
+  movimentacao_caixa_id?: string | null;
+  status: string;
+  observacoes?: string | null;
+  usuario_nome: string;
+  cancelado_por?: string | null;
+  data_cancelamento?: string | null;
+  created_at?: string;
+  itens_nota_compra?: DBItemNotaCompra[];
 }

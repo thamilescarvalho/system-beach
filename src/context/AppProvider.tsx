@@ -20,7 +20,19 @@ import type {
   MetaFinanceira,
   NovaMetaFinanceira,
   CargoUsuario,
-  StatusUsuario
+  StatusUsuario,
+  ContaFinanceira,
+  NovaContaFinanceira,
+  DBContaFinanceira,
+  TipoContaFinanceira,
+  MovimentacaoCaixa,
+  NovaMovimentacaoCaixa,
+  DBMovimentacaoCaixa,
+  TipoMovimentacaoCaixa,
+  NotaCompraEstoque,
+  NovaNotaCompraInput,
+  DBNotaCompraEstoque,
+  DBItemNotaCompra
 } from '../types';
 
 interface DBMesa {
@@ -56,6 +68,7 @@ interface DBVenda {
   garcom_nome: string;
   nome_cliente?: string;
   status: string;
+  conta_id?: string | null;
   data_fechamento: string;
   cancelado_por?: string;
   motivo_cancelamento?: string;
@@ -83,6 +96,7 @@ interface DBHistorico {
   preco_custo: number;
   usuario_nome: string;
   data: string;
+  nota_compra_id?: string | null;
   empresa_id?: string;
 }
 
@@ -104,6 +118,8 @@ interface DBPagamentoGarcomRow {
   descricao: string;
   categoria: string;
   status: string;
+  conta_id?: string | null;
+  metodo_pagamento?: string | null;
 }
 
 const IMPERSONATION_STORAGE_KEY = 'tsystem_impersonated_user_id';
@@ -121,7 +137,16 @@ function mapearUsuarioDB(perfil: DBUsuario): Garcom {
   };
 }
 
-type TabelaSync = 'mesas' | 'produtos' | 'vendas' | 'categorias' | 'historico_estoque' | 'empresas';
+type TabelaSync =
+  | 'mesas'
+  | 'produtos'
+  | 'vendas'
+  | 'categorias'
+  | 'historico_estoque'
+  | 'empresas'
+  | 'contas_financeiras'
+  | 'movimentacoes_caixa'
+  | 'notas_compra_estoque';
 
 function mapearMesaDB(m: DBMesa): Mesa {
   return {
@@ -168,6 +193,7 @@ function mapearVendaDB(v: DBVenda): VendaFechada {
     itens: v.itens || [],
     garcomNome: v.garcom_nome,
     nomeCliente: v.nome_cliente || '',
+    contaId: v.conta_id ?? null,
     status: (v.status === 'fechada' ? 'concluida' : v.status) as 'concluida' | 'cancelada',
     dataFechamento: v.data_fechamento,
     canceladoPor: v.cancelado_por,
@@ -185,7 +211,75 @@ function mapearHistoricoDB(h: DBHistorico): MovimentacaoEstoque {
     quantidade: h.quantidade,
     precoCusto: Number(h.preco_custo),
     usuarioNome: h.usuario_nome,
-    data: h.data
+    data: h.data,
+    notaCompraId: h.nota_compra_id ?? undefined
+  };
+}
+
+function mapearContaFinanceiraDB(c: DBContaFinanceira): ContaFinanceira {
+  return {
+    id: c.id,
+    nome: c.nome,
+    tipo: (c.tipo || 'banco') as TipoContaFinanceira,
+    saldoInicial: Number(c.saldo_inicial ?? 0),
+    cor: c.cor || 'emerald',
+    icone: c.icone || 'wallet',
+    recebeDinheiroPdv: Boolean(c.recebe_dinheiro_pdv),
+    recebeDigitalPdv: Boolean(c.recebe_digital_pdv),
+    ativo: Boolean(c.ativo),
+    padrao: Boolean(c.padrao),
+    createdAt: c.created_at
+  };
+}
+
+function mapearMovimentacaoCaixaDB(m: DBMovimentacaoCaixa): MovimentacaoCaixa {
+  return {
+    id: m.id,
+    contaId: m.conta_id,
+    contaDestinoId: m.conta_destino_id ?? null,
+    notaCompraId: m.nota_compra_id ?? null,
+    tipo: m.tipo as TipoMovimentacaoCaixa,
+    categoria: m.categoria,
+    metodoPagamento: m.metodo_pagamento,
+    valor: Number(m.valor),
+    dataMovimentacao: m.data_movimentacao,
+    descricao: m.descricao || '',
+    usuarioNome: m.usuario_nome,
+    createdAt: m.created_at
+  };
+}
+
+function mapearNotaCompraDB(n: DBNotaCompraEstoque): NotaCompraEstoque {
+  const itens = Array.isArray(n.itens_nota_compra)
+    ? n.itens_nota_compra.map((item: DBItemNotaCompra) => ({
+        id: item.id,
+        notaId: item.nota_id,
+        produtoId: item.produto_id,
+        produtoNome: item.produto_nome,
+        quantidade: Number(item.quantidade),
+        valorUnitario: Number(item.valor_unitario),
+        valorTotalItem: Number(item.valor_total_item)
+      }))
+    : [];
+  return {
+    id: n.id,
+    fornecedor: n.fornecedor,
+    numeroNota: n.numero_nota ?? undefined,
+    dataCompra: n.data_compra,
+    valorItens: Number(n.valor_itens),
+    valorExtras: Number(n.valor_extras),
+    valorTotal: Number(n.valor_total),
+    formaPagamento: n.forma_pagamento,
+    contaId: n.conta_id ?? null,
+    lancarNoCaixa: Boolean(n.lancar_no_caixa),
+    movimentacaoCaixaId: n.movimentacao_caixa_id ?? null,
+    status: (n.status === 'estornada' ? 'estornada' : 'ativa'),
+    observacoes: n.observacoes ?? undefined,
+    usuarioNome: n.usuario_nome,
+    canceladoPor: n.cancelado_por ?? undefined,
+    dataCancelamento: n.data_cancelamento ?? undefined,
+    createdAt: n.created_at,
+    itens
   };
 }
 
@@ -225,8 +319,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [historicoEstoque, setHistoricoEstoque] = useState<MovimentacaoEstoque[]>([]);
   const [usuarios, setUsuarios] = useState<Garcom[]>([]);
   const [historicoPagamentos, setHistoricoPagamentos] = useState<PagamentoGarcom[]>([]);
+  const [contasFinanceiras, setContasFinanceiras] = useState<ContaFinanceira[]>([]);
+  const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<MovimentacaoCaixa[]>([]);
+  const [notasCompraEstoque, setNotasCompraEstoque] = useState<NotaCompraEstoque[]>([]);
   const [metaAtiva, setMetaAtiva] = useState<MetaFinanceira | null>(null);
   const [garcomLogado, setGarcomLogadoState] = useState<Garcom | null>(null);
+
+  const isAdminRef = useRef<boolean>(false);
+  useEffect(() => {
+    isAdminRef.current = garcomLogado?.cargo === 'admin' || garcomLogado?.cargo === 'super_admin';
+  }, [garcomLogado?.cargo]);
 
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecuperacaoInicial =
@@ -636,7 +738,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const [resMesas, resProds, resVendas, resUsers, resHist, resCats, resPagamentos, resMeta, resEmpresa] = await Promise.all([
+      const [
+        resMesas,
+        resProds,
+        resVendas,
+        resUsers,
+        resHist,
+        resCats,
+        resPagamentos,
+        resMeta,
+        resEmpresa,
+        resContas,
+        resMovCaixa,
+        resNotas
+      ] = await Promise.all([
         supabase.from('mesas').select('*').eq('empresa_id', eid).is('deletado_em', null).order('numero'),
         supabase.from('produtos').select('*').eq('empresa_id', eid).is('deletado_em', null).order('id'),
         supabase.from('vendas').select('*').eq('empresa_id', eid).order('data_fechamento', { ascending: false }).limit(500),
@@ -645,7 +760,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('categorias').select('*').eq('empresa_id', eid).is('deletado_em', null).order('ordem', { ascending: true }),
         supabase.from('pagamentos_garcons').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_pagamento', { ascending: false }).limit(200),
         supabase.from('metas_financeiras').select('*').eq('empresa_id', eid).eq('status', 'ativa').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle()
+        supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle(),
+        supabase.from('contas_financeiras').select('*').eq('empresa_id', eid).is('deletado_em', null).order('padrao', { ascending: false }).order('created_at', { ascending: true }),
+        supabase.from('movimentacoes_caixa').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_movimentacao', { ascending: false }).limit(500),
+        supabase.from('notas_compra_estoque').select('*, itens_nota_compra(*)').eq('empresa_id', eid).order('data_compra', { ascending: false }).order('created_at', { ascending: false }).limit(200)
       ]);
 
       let dadosMesas = resMesas.data as DBMesa[] | null;
@@ -695,8 +813,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           data: p.data_pagamento,
           descricao: p.descricao,
           categoria: p.categoria as CategoriaPagamentoGarcom,
-          status: p.status as StatusPagamentoGarcom
+          status: p.status as StatusPagamentoGarcom,
+          contaId: p.conta_id ?? null,
+          metodoPagamento: p.metodo_pagamento || 'Dinheiro'
         })));
+      }
+
+      if (resContas.data) {
+        const contasMapeadas = (resContas.data as DBContaFinanceira[]).map(mapearContaFinanceiraDB);
+        if (contasMapeadas.length === 0 && isAdminRef.current) {
+          const { data: contasProvisionadas, error: errProv } = await supabase.rpc('garantir_contas_financeiras_padrao', {
+            p_empresa_id: eid
+          });
+          if (!errProv && Array.isArray(contasProvisionadas)) {
+            setContasFinanceiras((contasProvisionadas as DBContaFinanceira[]).map(mapearContaFinanceiraDB));
+          } else {
+            setContasFinanceiras([]);
+          }
+        } else {
+          setContasFinanceiras(contasMapeadas);
+        }
+      }
+
+      if (resMovCaixa.data) {
+        setMovimentacoesCaixa((resMovCaixa.data as DBMovimentacaoCaixa[]).map(mapearMovimentacaoCaixaDB));
+      }
+
+      if (resNotas.data) {
+        setNotasCompraEstoque((resNotas.data as DBNotaCompraEstoque[]).map(mapearNotaCompraDB));
       }
 
       if (resMeta.data) {
@@ -770,6 +914,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else if (tabela === 'historico_estoque') {
         const { data } = await supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }).limit(300);
         if (data) setHistoricoEstoque((data as DBHistorico[]).map(mapearHistoricoDB));
+      } else if (tabela === 'contas_financeiras') {
+        const { data } = await supabase.from('contas_financeiras').select('*').eq('empresa_id', eid).is('deletado_em', null).order('padrao', { ascending: false }).order('created_at', { ascending: true });
+        if (data) setContasFinanceiras((data as DBContaFinanceira[]).map(mapearContaFinanceiraDB));
+      } else if (tabela === 'movimentacoes_caixa') {
+        const { data } = await supabase.from('movimentacoes_caixa').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_movimentacao', { ascending: false }).limit(500);
+        if (data) setMovimentacoesCaixa((data as DBMovimentacaoCaixa[]).map(mapearMovimentacaoCaixaDB));
+      } else if (tabela === 'notas_compra_estoque') {
+        const { data } = await supabase.from('notas_compra_estoque').select('*, itens_nota_compra(*)').eq('empresa_id', eid).order('data_compra', { ascending: false }).order('created_at', { ascending: false }).limit(200);
+        if (data) setNotasCompraEstoque((data as DBNotaCompraEstoque[]).map(mapearNotaCompraDB));
       } else if (tabela === 'empresas') {
         const { data } = await supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle();
         if (data) {
@@ -933,6 +1086,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('vendas'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categorias', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('categorias'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'historico_estoque', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('historico_estoque'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contas_financeiras', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('contas_financeiras'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes_caixa', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('movimentacoes_caixa'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notas_compra_estoque', filter: `empresa_id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('notas_compra_estoque'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'empresas', filter: `id=eq.${eid}` }, () => agendarAtualizacaoSeletiva('empresas'))
       .subscribe();
 
@@ -1359,6 +1515,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!log) {
       throw new Error('Movimentação não encontrada.');
     }
+    if (log.notaCompraId) {
+      throw new Error('Esta entrada pertence a uma Nota de Compra do Estoque. Estorne a Nota para manter estoque e financeiro sincronizados.');
+    }
 
     const { error: rpcErr } = await supabase.rpc('desfazer_movimentacao_estoque', {
       p_historico_id: idMovimentacao
@@ -1745,6 +1904,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       descricao: dados.descricao,
       categoria: dados.categoria,
       status: dados.status,
+      conta_id: dados.contaId || null,
+      metodo_pagamento: dados.metodoPagamento || 'Dinheiro',
       empresa_id: eid
     };
     const { data, error } = await supabase.from('pagamentos_garcons').insert([payload]).select('*').single();
@@ -1758,7 +1919,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         data: data.data_pagamento,
         descricao: data.descricao,
         categoria: data.categoria as CategoriaPagamentoGarcom,
-        status: data.status as StatusPagamentoGarcom
+        status: data.status as StatusPagamentoGarcom,
+        contaId: data.conta_id ?? null,
+        metodoPagamento: data.metodo_pagamento || 'Dinheiro'
       }, ...prev]);
     }
     await carregarDados(true);
@@ -1803,6 +1966,264 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await carregarDados(true);
   };
 
+  // ==============================================================================
+  // CONTAS FINANCEIRAS, MOVIMENTAÇÕES DE CAIXA E NOTAS DE COMPRA DO ESTOQUE
+  // ==============================================================================
+  const criarContaFinanceira = async (dados: NovaContaFinanceira): Promise<ContaFinanceira> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+    const nomeLimpo = dados.nome.trim();
+    if (!nomeLimpo) throw new Error('Informe o nome da conta.');
+
+    const { data, error } = await supabase
+      .from('contas_financeiras')
+      .insert([{
+        empresa_id: eid,
+        nome: nomeLimpo,
+        tipo: dados.tipo,
+        saldo_inicial: Number(dados.saldoInicial || 0),
+        cor: dados.cor || 'emerald',
+        icone: dados.icone || 'wallet',
+        recebe_dinheiro_pdv: Boolean(dados.recebeDinheiroPdv),
+        recebe_digital_pdv: Boolean(dados.recebeDigitalPdv),
+        ativo: dados.ativo ?? true,
+        padrao: false
+      }])
+      .select('*')
+      .single();
+
+    garantirSucesso(error, 'Não foi possível criar a conta financeira.');
+    const novaConta = mapearContaFinanceiraDB(data as DBContaFinanceira);
+    setContasFinanceiras((prev) => [...prev, novaConta]);
+    await registrarAuditoria('CRIACAO', 'FINANCEIRO', `Conta financeira '${novaConta.nome}' criada.`);
+    if (dados.padrao) {
+      await definirContaFinanceiraPadrao(novaConta.id);
+      return { ...novaConta, padrao: true, ativo: true };
+    }
+    return novaConta;
+  };
+
+  const definirContaFinanceiraPadrao = async (id: string): Promise<void> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+
+    const { data, error } = await supabase.rpc('definir_conta_financeira_padrao', {
+      p_conta_id: id
+    });
+    garantirSucesso(error, 'Não foi possível definir a conta padrão.');
+
+    const nomeAudit =
+      (data && typeof data === 'object' && 'nome' in data && typeof data.nome === 'string' && data.nome) ||
+      contasFinanceiras.find((c) => c.id === id)?.nome ||
+      id;
+    setContasFinanceiras((prev) =>
+      prev
+        .map((c) => ({
+          ...c,
+          padrao: c.id === id,
+          ativo: c.id === id ? true : c.ativo
+        }))
+        .sort((a, b) => Number(b.padrao) - Number(a.padrao))
+    );
+    await recarregarTabela('contas_financeiras');
+    await registrarAuditoria(
+      'EDICAO',
+      'FINANCEIRO',
+      `Conta padrão das mesas alterada para '${nomeAudit}'.`
+    );
+  };
+
+  const atualizarContaFinanceira = async (id: string, atualizacao: Partial<NovaContaFinanceira>): Promise<void> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+
+    const payload: Record<string, unknown> = {};
+    if (atualizacao.nome !== undefined) payload.nome = atualizacao.nome.trim();
+    if (atualizacao.tipo !== undefined) payload.tipo = atualizacao.tipo;
+    if (atualizacao.saldoInicial !== undefined) payload.saldo_inicial = Number(atualizacao.saldoInicial);
+    if (atualizacao.cor !== undefined) payload.cor = atualizacao.cor;
+    if (atualizacao.icone !== undefined) payload.icone = atualizacao.icone;
+    if (atualizacao.recebeDinheiroPdv !== undefined) payload.recebe_dinheiro_pdv = Boolean(atualizacao.recebeDinheiroPdv);
+    if (atualizacao.recebeDigitalPdv !== undefined) payload.recebe_digital_pdv = Boolean(atualizacao.recebeDigitalPdv);
+    if (atualizacao.ativo !== undefined) payload.ativo = Boolean(atualizacao.ativo);
+
+    if (Object.keys(payload).length > 0) {
+      const { error } = await supabase
+        .from('contas_financeiras')
+        .update(payload)
+        .eq('id', id)
+        .eq('empresa_id', eid);
+
+      garantirSucesso(error, 'Não foi possível atualizar a conta financeira.');
+    }
+
+    if (atualizacao.padrao) {
+      await definirContaFinanceiraPadrao(id);
+      return;
+    }
+
+    await recarregarTabela('contas_financeiras');
+  };
+
+  const excluirContaFinanceira = async (id: string): Promise<void> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+    if (contasFinanceiras.filter((c) => c.ativo).length <= 1) {
+      throw new Error('Mantenha pelo menos uma conta financeira ativa no estabelecimento.');
+    }
+
+    const alvo = contasFinanceiras.find((c) => c.id === id);
+    const proximaAtiva = contasFinanceiras.find((c) => c.id !== id && c.ativo);
+
+    const { error } = await supabase
+      .from('contas_financeiras')
+      .update({ deletado_em: new Date().toISOString(), ativo: false, padrao: false })
+      .eq('id', id)
+      .eq('empresa_id', eid);
+
+    garantirSucesso(error, 'Não foi possível excluir a conta financeira.');
+    setContasFinanceiras((prev) => prev.filter((c) => c.id !== id));
+
+    if (alvo?.padrao && proximaAtiva) {
+      await definirContaFinanceiraPadrao(proximaAtiva.id);
+    }
+
+    await registrarAuditoria('EXCLUSAO', 'FINANCEIRO', `Conta financeira removida (${id}).`);
+  };
+
+  const registrarMovimentacaoCaixa = async (dados: NovaMovimentacaoCaixa): Promise<MovimentacaoCaixa> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+    if (!(dados.valor > 0)) throw new Error('Informe um valor maior que zero.');
+    if (!dados.contaId) throw new Error('Selecione uma conta de origem.');
+    if (dados.tipo === 'transferencia' && (!dados.contaDestinoId || dados.contaDestinoId === dados.contaId)) {
+      throw new Error('Selecione uma conta de destino diferente da origem.');
+    }
+
+    const { data, error } = await supabase
+      .from('movimentacoes_caixa')
+      .insert([{
+        empresa_id: eid,
+        conta_id: dados.contaId,
+        conta_destino_id: dados.tipo === 'transferencia' ? dados.contaDestinoId : null,
+        tipo: dados.tipo,
+        categoria: dados.categoria || 'Outros',
+        metodo_pagamento: dados.metodoPagamento || 'PIX',
+        valor: Number(dados.valor),
+        data_movimentacao: dados.dataMovimentacao || new Date().toISOString(),
+        descricao: dados.descricao.trim(),
+        usuario_nome: dados.usuarioNome || garcomLogado?.nome || 'Administrador'
+      }])
+      .select('*')
+      .single();
+
+    garantirSucesso(error, 'Não foi possível lançar a movimentação no caixa.');
+    const novaMov = mapearMovimentacaoCaixaDB(data as DBMovimentacaoCaixa);
+    setMovimentacoesCaixa((prev) => [novaMov, ...prev]);
+    await registrarAuditoria(
+      'MOVIMENTACAO',
+      'FINANCEIRO',
+      `${dados.tipo.toUpperCase()} de R$ ${Number(dados.valor).toFixed(2)} (${dados.categoria}): ${dados.descricao || '-'}`
+    );
+    await recarregarTabela('movimentacoes_caixa');
+    return novaMov;
+  };
+
+  const excluirMovimentacaoCaixa = async (id: string): Promise<void> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+
+    const alvo = movimentacoesCaixa.find((m) => m.id === id);
+    if (alvo?.notaCompraId) {
+      throw new Error('Esta saída está vinculada a uma Nota de Compra do Estoque. Estorne a Nota de Compra para manter o estoque sincronizado.');
+    }
+
+    const { error } = await supabase
+      .from('movimentacoes_caixa')
+      .update({ deletado_em: new Date().toISOString() })
+      .eq('id', id)
+      .eq('empresa_id', eid);
+
+    garantirSucesso(error, 'Não foi possível excluir a movimentação.');
+    setMovimentacoesCaixa((prev) => prev.filter((m) => m.id !== id));
+    await registrarAuditoria('EXCLUSAO', 'FINANCEIRO', `Movimentação manual removida (${alvo?.descricao || id}).`);
+  };
+
+  const registrarNotaCompraEstoque = async (
+    dados: NovaNotaCompraInput
+  ): Promise<{ notaId: string; movimentacaoCaixaId?: string | null; valorTotal: number }> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+
+    const payloadItens = dados.itens.map((item) => ({
+      produto_id: item.produtoId,
+      quantidade: item.quantidade,
+      valor_unitario: item.valorUnitario
+    }));
+
+    const { data, error } = await supabase.rpc('registrar_nota_compra_estoque', {
+      p_empresa_id: eid,
+      p_fornecedor: dados.fornecedor.trim(),
+      p_numero_nota: dados.numeroNota?.trim() || null,
+      p_data_compra: dados.dataCompra,
+      p_itens: payloadItens,
+      p_valor_extras: Number(dados.valorExtras || 0),
+      p_forma_pagamento: dados.formaPagamento || 'PIX',
+      p_conta_id: dados.lancarNoCaixa ? (dados.contaId || null) : null,
+      p_lancar_no_caixa: Boolean(dados.lancarNoCaixa),
+      p_observacoes: dados.observacoes?.trim() || null,
+      p_usuario_nome: dados.usuarioNome || garcomLogado?.nome || 'Administrador'
+    });
+
+    garantirSucesso(error, 'Não foi possível registrar a nota de compra no estoque.');
+
+    const retorno = (data || {}) as {
+      nota_id?: string;
+      movimentacao_caixa_id?: string | null;
+      valor_total?: number | string;
+    };
+    const valorTotal = Number(retorno.valor_total ?? 0);
+
+    await registrarAuditoria(
+      'COMPRA',
+      'ESTOQUE',
+      `Nota de compra '${dados.fornecedor.trim()}' (${dados.itens.length} itens, R$ ${valorTotal.toFixed(2)}) lançada no estoque.`
+    );
+
+    await Promise.all([
+      recarregarTabela('produtos'),
+      recarregarTabela('historico_estoque'),
+      recarregarTabela('notas_compra_estoque'),
+      recarregarTabela('movimentacoes_caixa')
+    ]);
+
+    return {
+      notaId: retorno.nota_id || '',
+      movimentacaoCaixaId: retorno.movimentacao_caixa_id ?? null,
+      valorTotal
+    };
+  };
+
+  const estornarNotaCompraEstoque = async (notaId: string): Promise<void> => {
+    const eid = obterEmpresaId();
+    if (!eid) throw new Error('Estabelecimento não identificado.');
+
+    const { error } = await supabase.rpc('estornar_nota_compra_estoque', {
+      p_nota_id: notaId,
+      p_usuario_nome: garcomLogado?.nome || 'Administrador'
+    });
+
+    garantirSucesso(error, 'Não foi possível estornar a nota de compra.');
+    await registrarAuditoria('ESTORNO', 'ESTOQUE', `Nota de compra estornada (${notaId}).`);
+
+    await Promise.all([
+      recarregarTabela('produtos'),
+      recarregarTabela('historico_estoque'),
+      recarregarTabela('notas_compra_estoque'),
+      recarregarTabela('movimentacoes_caixa')
+    ]);
+  };
+
   return (
     <AppContext.Provider value={{
       dadosEmpresa,
@@ -1821,6 +2242,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       categorias,
       historicoEstoque,
       historicoPagamentos,
+      contasFinanceiras,
+      movimentacoesCaixa,
+      notasCompraEstoque,
       metaAtiva,
       salvarMetaFinanceira,
       uploadImagemProduto,
@@ -1852,7 +2276,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       uploadFotoPerfil,
       atualizarMeuPerfil,
       alterarMeuEmail,
-      alterarMinhaSenha
+      alterarMinhaSenha,
+      criarContaFinanceira,
+      atualizarContaFinanceira,
+      definirContaFinanceiraPadrao,
+      excluirContaFinanceira,
+      registrarMovimentacaoCaixa,
+      excluirMovimentacaoCaixa,
+      registrarNotaCompraEstoque,
+      estornarNotaCompraEstoque
     }}>
       {children}
     </AppContext.Provider>

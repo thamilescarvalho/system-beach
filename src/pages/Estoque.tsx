@@ -7,6 +7,7 @@ import type { Produto, Categoria, MovimentacaoEstoque } from '../types';
 import imageCompression from 'browser-image-compression';
 import * as LucideIcons from 'lucide-react';
 import { ModalConfirmacao } from '../components/ModalConfirmacao';
+import { ModalNotaCompraEstoque } from '../components/financeiro/ModalNotaCompraEstoque';
 
 const OPCOES_ICONES = [
   'Beer', 'Martini', 'CupSoda', 'Coffee', 'Wine', 'WineGlass',
@@ -44,6 +45,7 @@ export function Estoque() {
   // ABAS, BUSCA E FILTROS
   const [busca, setBusca] = useState('');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
+  const [filtroStatusCategoria, setFiltroStatusCategoria] = useState<'todos' | 'repor'>('todos');
   const [abaAtiva, setAbaAtiva] = useState<'saldo' | 'categorias' | 'historico'>('saldo');
   const [modoGerenciarCategorias, setModoGerenciarCategorias] = useState(false);
   const [filtroMovimento, setFiltroMovimento] = useState<'todos' | 'entrada' | 'inventario' | 'estorno'>('todos');
@@ -55,6 +57,7 @@ export function Estoque() {
   const [modalInventarioAberto, setModalInventarioAberto] = useState(false);
   const [modalNovoProduto, setModalNovoProduto] = useState(false);
   const [modalNovaCategoriaAberto, setModalNovaCategoriaAberto] = useState(false);
+  const [modalNotaCompraAberto, setModalNotaCompraAberto] = useState(false);
   const [carregandoAcaoEstoque, setCarregandoAcaoEstoque] = useState(false);
 
   const [modalConfirmacao, setModalConfirmacao] = useState<{
@@ -142,7 +145,14 @@ export function Estoque() {
     return <IconeComponente className={classesCss} size={tamanho} strokeWidth={1.9} />;
   };
 
-  // FILTRO DE PRODUTOS (POR BUSCA OU CATEGORIA SELECIONADA)
+  // FILTRO DE PRODUTOS (POR BUSCA, CATEGORIA E STATUS)
+  const qtdCriticosCategoria = useMemo(() => {
+    if (!categoriaAtiva) return 0;
+    return produtosComEstoque.filter(
+      p => p.categoria === categoriaAtiva && p.ativo !== false && (p.estoque || 0) <= 10
+    ).length;
+  }, [produtosComEstoque, categoriaAtiva]);
+
   const produtosExibidos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return produtosComEstoque.filter(p => {
@@ -152,9 +162,13 @@ export function Estoque() {
         p.categoria.toLowerCase().includes(termo) ||
         (p.subcategoria && p.subcategoria.toLowerCase().includes(termo));
       const matchCategoria = !categoriaAtiva || p.categoria === categoriaAtiva;
-      return matchBusca && matchCategoria;
+      const matchStatus =
+        !categoriaAtiva ||
+        filtroStatusCategoria === 'todos' ||
+        (p.ativo !== false && (p.estoque || 0) <= 10);
+      return matchBusca && matchCategoria && matchStatus;
     });
-  }, [produtosComEstoque, busca, categoriaAtiva]);
+  }, [produtosComEstoque, busca, categoriaAtiva, filtroStatusCategoria]);
 
   // PRODUTOS EM NÍVEL CRÍTICO (URGENTE)
   const produtosEmCritico = useMemo(
@@ -539,62 +553,62 @@ export function Estoque() {
         key={produto.id}
         type="button"
         onClick={() => setProdutoDetalhe(produto)}
-        className={`w-full flex items-center justify-between gap-3.5 p-3.5 rounded-3xl border text-left transition-all duration-200 cursor-pointer active:scale-95 group ${
+        className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border text-left transition-all duration-150 cursor-pointer group ${
           ativo
-            ? 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-md shadow-xs'
-            : 'bg-slate-50 border-slate-200 opacity-65'
+            ? 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-sm shadow-2xs'
+            : 'bg-slate-50 border-slate-200/80 opacity-65'
         }`}
       >
-        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {produto.imagem_url ? (
             <img
               src={produto.imagem_url}
               alt={produto.nome}
-              className="w-14 h-14 rounded-2xl object-cover border border-slate-100 shrink-0 shadow-xs group-hover:scale-105 transition-transform"
+              className="w-12 h-12 rounded-xl object-cover border border-slate-100 bg-slate-50 shrink-0 group-hover:scale-105 transition-transform"
             />
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors">
-              {renderizarIconeDinamicamente(produto.categoria, '', 24)}
+            <div className="w-12 h-12 rounded-xl bg-slate-100/80 border border-slate-200/60 flex items-center justify-center shrink-0 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+              {renderizarIconeDinamicamente(produto.categoria, '', 20)}
             </div>
           )}
 
           <div className="min-w-0 flex-1">
             <h3
-              className={`text-sm font-semibold tracking-tight truncate uppercase ${
-                ativo ? 'text-slate-800' : 'text-slate-400 line-through'
+              className={`text-sm font-semibold truncate ${
+                ativo ? 'text-slate-900' : 'text-slate-400 line-through'
               }`}
             >
               {produto.nome}
             </h3>
 
-            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400 truncate">
-                {produto.categoria}
-              </span>
-              {produto.subcategoria && (
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 truncate">
-                  {produto.subcategoria}
-                </span>
-              )}
-            </div>
+            {(!categoriaAtiva || produto.subcategoria) && (
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                {!categoriaAtiva && (
+                  <span className="text-xs font-medium text-slate-400 truncate">
+                    {produto.categoria}
+                  </span>
+                )}
+                {produto.subcategoria && (
+                  <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md truncate">
+                    {produto.subcategoria}
+                  </span>
+                )}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold text-slate-700 tabular-nums">
-                {formatarMoeda(produto.preco)}
-              </span>
+            <div className="flex items-center gap-2 mt-1 text-xs tabular-nums">
+              <span className="font-semibold text-slate-800">{formatarMoeda(produto.preco)}</span>
               {typeof produto.precoCusto === 'number' && produto.precoCusto > 0 && (
-                <span className="text-xs text-slate-400 tabular-nums">
-                  Custo: {formatarMoeda(produto.precoCusto)}
-                </span>
+                <span className="text-slate-400">• Custo {formatarMoeda(produto.precoCusto)}</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="text-right pl-2 flex flex-col items-end shrink-0">
+        <div className="pl-2 flex flex-col items-end justify-center gap-1 shrink-0">
           <div className="flex items-baseline gap-1">
             <span
-              className={`text-xl font-bold leading-none tabular-nums ${
+              className={`text-lg font-bold leading-none tabular-nums ${
                 !ativo
                   ? 'text-slate-400'
                   : esgotado
@@ -606,26 +620,27 @@ export function Estoque() {
             >
               {estoqueAtual}
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              un
-            </span>
+            <span className="text-xs font-medium text-slate-400">un</span>
           </div>
 
           {!ativo ? (
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 mt-1.5">
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
               Oculto
             </span>
           ) : esgotado ? (
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 mt-1.5">
-              Esgotado
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+              <span>Esgotado</span>
             </span>
           ) : critico ? (
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 mt-1.5">
-              Baixo
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span>Baixo</span>
             </span>
           ) : (
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1.5">
-              Normal
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Normal</span>
             </span>
           )}
         </div>
@@ -634,7 +649,7 @@ export function Estoque() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-100 font-sans pt-20 md:pt-24 md:pl-18 pb-28 md:pb-14 relative overflow-x-hidden select-none text-slate-800">
+    <div className="min-h-dvh bg-slate-50 font-sans pt-20 md:pt-24 md:pl-18 pb-28 md:pb-14 relative overflow-x-hidden select-none text-slate-800">
       {/* TOAST FLUTUANTE */}
       {toast && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300 w-11/12 max-w-sm flex justify-center pointer-events-none">
@@ -655,34 +670,23 @@ export function Estoque() {
         </div>
       )}
 
-      {/* ELEMENTOS DE FUNDO SUAVES */}
-      <div
-        aria-hidden="true"
-        className="fixed -top-24 -left-24 w-96 h-96 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%)' }}
-      />
-      <div
-        aria-hidden="true"
-        className="fixed -bottom-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 70%)' }}
-      />
-
       <Header />
 
       {/* BARRA SUPERIOR: ABAS E BOTÃO DE AÇÃO */}
-      <div className="px-4 sm:px-6 md:px-8 mb-6 relative z-10 max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 mb-5 relative z-10 flex flex-col sm:flex-row justify-between items-center gap-3">
         {/* Menu de Abas */}
-        <div className="bg-white p-1 rounded-full border border-slate-200 shadow-xs flex w-full sm:w-auto sm:min-w-96 gap-1">
+        <div className="bg-slate-200/70 p-1 rounded-2xl flex w-full sm:w-auto sm:min-w-80 gap-1">
           <button
             type="button"
             onClick={() => {
               setAbaAtiva('saldo');
               setCategoriaAtiva(null);
+              setFiltroStatusCategoria('todos');
             }}
-            className={`flex-1 py-2 px-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-full cursor-pointer ${
+            className={`flex-1 py-2 px-4 text-xs font-semibold transition-all rounded-xl cursor-pointer ${
               abaAtiva === 'saldo'
-                ? 'bg-slate-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Estoque
@@ -693,10 +697,10 @@ export function Estoque() {
               setAbaAtiva('categorias');
               setBusca('');
             }}
-            className={`flex-1 py-2 px-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-full cursor-pointer ${
+            className={`flex-1 py-2 px-4 text-xs font-semibold transition-all rounded-xl cursor-pointer ${
               abaAtiva === 'categorias'
-                ? 'bg-slate-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Categorias
@@ -706,29 +710,30 @@ export function Estoque() {
             onClick={() => {
               setAbaAtiva('historico');
               setCategoriaAtiva(null);
+              setFiltroStatusCategoria('todos');
             }}
-            className={`flex-1 py-2 px-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-full cursor-pointer ${
+            className={`flex-1 py-2 px-4 text-xs font-semibold transition-all rounded-xl cursor-pointer ${
               abaAtiva === 'historico'
-                ? 'bg-slate-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Movimentos
           </button>
         </div>
 
-        {/* Botões Rápidos (+ Produto / + Categoria) */}
+        {/* Botões Rápidos */}
         <div className="w-full sm:w-auto flex items-center justify-end gap-2">
-          {abaAtiva === 'categorias' ? (
+          {abaAtiva === 'categorias' && !categoriaAtiva ? (
             <>
-              {categorias.length > 0 && !categoriaAtiva && (
+              {categorias.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setModoGerenciarCategorias(prev => !prev)}
-                  className={`h-9 px-4 rounded-full text-xs font-semibold uppercase tracking-widest border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                  className={`h-9 px-3.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer ${
                     modoGerenciarCategorias
                       ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 shadow-2xs'
                   }`}
                 >
                   <LucideIcons.SlidersHorizontal size={13} />
@@ -738,43 +743,53 @@ export function Estoque() {
               <button
                 type="button"
                 onClick={abrirModalNovaCategoria}
-                className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 bg-indigo-700 hover:bg-indigo-800 border border-indigo-800 shadow-sm px-5 h-9 rounded-full text-xs uppercase tracking-widest font-semibold text-white transition-all active:scale-95 cursor-pointer"
+                className="flex-1 sm:flex-none justify-center flex items-center gap-1 bg-slate-900 hover:bg-slate-800 shadow-xs px-4 h-9 rounded-full text-xs font-semibold text-white transition-all cursor-pointer whitespace-nowrap"
               >
                 <LucideIcons.Plus size={14} strokeWidth={2.5} />
                 <span>Categoria</span>
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={abrirModalNovoProduto}
-              className="w-full sm:w-auto justify-center flex items-center gap-1.5 bg-indigo-700 hover:bg-indigo-800 border border-indigo-800 shadow-sm px-5 h-9 rounded-full text-xs uppercase tracking-widest font-semibold text-white transition-all active:scale-95 cursor-pointer"
-            >
-              <LucideIcons.Plus size={14} strokeWidth={2.5} />
-              <span>Produto</span>
-            </button>
+            <>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setModalNotaCompraAberto(true)}
+                  className="flex-1 sm:flex-initial justify-center flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-800 shadow-xs px-4 h-9 rounded-full text-xs font-semibold text-white transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <LucideIcons.Plus size={14} strokeWidth={2.5} />
+                  <span>Compra</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={abrirModalNovoProduto}
+                className="flex-1 sm:flex-initial justify-center flex items-center gap-1.5 bg-slate-500 hover:bg-slate-800 shadow-xs px-4 h-9 rounded-full text-xs font-semibold text-white transition-all cursor-pointer whitespace-nowrap"
+              >
+                <LucideIcons.Plus size={14} strokeWidth={2.5} />
+                <span>Produto</span>
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {/* CONTEÚDO PRINCIPAL — DESKTOP PREENCHIDO (MAX-W-6XL) & 100% RESPONSIVO */}
-      <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 space-y-6 relative z-10">
-        {/* ========================================================= */}
-        {/* ABA 1: ESTOQUE (PESQUISA + VISÃO GERAL: URGENTE & POPULARES) */}
-        {/* ========================================================= */}
+      {/* CONTEÚDO PRINCIPAL */}
+      <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 space-y-5 relative z-10">
+        {/* ABA 1: ESTOQUE */}
         {abaAtiva === 'saldo' && (
-          <div className="animate-in fade-in duration-200 space-y-6">
+          <div className="animate-in fade-in duration-200 space-y-5">
             {/* BARRA DE PESQUISA */}
             <div className="relative max-w-2xl mx-auto">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                <LucideIcons.Search size={18} strokeWidth={2.2} />
+                <LucideIcons.Search size={17} strokeWidth={2} />
               </div>
               <input
                 type="text"
-                placeholder="PESQUISAR PRODUTO..."
+                placeholder="Buscar produto"
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
-                className="w-full pl-11 pr-11 h-11 bg-white border border-slate-200/90 rounded-full shadow-xs focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 font-medium text-xs sm:text-sm text-slate-800 transition-all uppercase placeholder:normal-case placeholder:font-medium placeholder:text-xs placeholder:tracking-wider placeholder:text-slate-400"
+                className="w-full pl-11 pr-11 h-11 bg-white border border-slate-200 rounded-full shadow-2xs focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 font-medium text-sm text-slate-800 transition-all placeholder:text-slate-400"
               />
               {busca !== '' && (
                 <button
@@ -782,37 +797,37 @@ export function Estoque() {
                   onClick={() => setBusca('')}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
                 >
-                  <LucideIcons.X size={18} strokeWidth={2.2} />
+                  <LucideIcons.X size={17} strokeWidth={2} />
                 </button>
               )}
             </div>
 
             {busca.trim() === '' ? (
-              /* VISÃO GERAL: URGENTE + POPULARES (APARECE DIRETO AO ENTRAR NA TELA DE ESTOQUE) */
+              /* VISÃO GERAL: URGENTE + POPULARES  */
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
-                  <h2 className="text-xs font-semibold text-slate-500 tracking-widest uppercase">
-                    Visão Geral
+                  <h2 className="text-xs font-semibold text-slate-500 tracking-wide uppercase">
+                    Visão geral
                   </h2>
                   <button
                     type="button"
                     onClick={() => setAbaAtiva('categorias')}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors cursor-pointer"
+                    className="text-xs font-medium text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors cursor-pointer"
                   >
-                    <span>Ver por categorias ({categorias.length})</span>
+                    <span>Ver categorias ({categorias.length})</span>
                     <LucideIcons.ChevronRight size={14} />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
-                  {/* CARD 1: URGENTE (ESTOQUE CRÍTICO / BAIXO) */}
-                  <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-xs border-t-4 border-rose-500 border-x border-b border-x-slate-200 border-b-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                        <span>Urgente</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                  {/* CARD 1: URGENTE */}
+                  <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <h3 className="text-xs font-medium text-slate-500 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                        <span>Reposição</span>
                       </h3>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-0.5 rounded-full">
+                      <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded-full">
                         {produtosEmCritico.length}{' '}
                         {produtosEmCritico.length === 1 ? 'alerta' : 'alertas'}
                       </span>
@@ -820,12 +835,9 @@ export function Estoque() {
 
                     {produtosEmCritico.length === 0 ? (
                       <div className="text-center py-8 px-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
                           <LucideIcons.ShieldCheck size={20} strokeWidth={2} />
                         </div>
-                        <p className="text-slate-700 font-semibold text-xs uppercase tracking-wider">
-                          Estoque Seguro
-                        </p>
                         <p className="text-xs text-slate-400">
                           Todos os itens ativos estão com mais de 10 unidades.
                         </p>
@@ -839,17 +851,17 @@ export function Estoque() {
                               key={p.id}
                               type="button"
                               onClick={() => setProdutoDetalhe(p)}
-                              className="w-full flex justify-between items-center bg-rose-50/50 hover:bg-rose-50 p-3 rounded-2xl border border-rose-100 transition-all text-left cursor-pointer active:scale-95 group"
+                              className="w-full flex justify-between items-center bg-slate-50/70 hover:bg-rose-50/50 p-3 rounded-2xl border border-slate-200/60 hover:border-rose-200 transition-all text-left cursor-pointer group"
                             >
                               <div className="flex items-center gap-3 min-w-0 pr-2">
-                                <div className="w-9 h-9 rounded-xl bg-white border border-rose-100 flex items-center justify-center text-rose-500 shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-rose-500 shrink-0">
                                   {renderizarIconeDinamicamente(p.categoria, '', 18)}
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="font-semibold text-slate-800 text-xs block truncate uppercase tracking-wide">
+                                  <span className="font-semibold text-slate-800 text-xs block truncate">
                                     {p.nome}
                                   </span>
-                                  <span className="text-xs text-slate-400 uppercase tracking-wider">
+                                  <span className="text-xs text-slate-400 truncate block">
                                     {p.categoria}
                                   </span>
                                 </div>
@@ -857,17 +869,17 @@ export function Estoque() {
 
                               <div className="flex items-center gap-2 shrink-0">
                                 <span
-                                  className={`font-bold text-xs uppercase tracking-widest px-2.5 py-1 rounded-lg border shadow-2xs ${
+                                  className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
                                     zerado
-                                      ? 'bg-rose-600 text-white border-rose-600'
-                                      : 'bg-white text-rose-600 border-rose-200'
+                                      ? 'bg-rose-50 text-rose-700'
+                                      : 'bg-amber-50 text-amber-700'
                                   }`}
                                 >
-                                  {zerado ? 'Esgotado' : `Resta ${p.estoque}`}
+                                  {zerado ? 'Esgotado' : `${p.estoque} un`}
                                 </span>
                                 <LucideIcons.ChevronRight
-                                  size={15}
-                                  className="text-rose-300 group-hover:text-rose-600 transition-colors"
+                                  size={14}
+                                  className="text-slate-300 group-hover:text-slate-600 transition-colors"
                                 />
                               </div>
                             </button>
@@ -877,28 +889,25 @@ export function Estoque() {
                     )}
                   </div>
 
-                  {/* CARD 2: POPULARES (MAIS VENDIDOS) */}
-                  <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-xs border-t-4 border-amber-400 border-x border-b border-x-slate-200 border-b-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                        <LucideIcons.Star size={16} className="text-amber-500 fill-amber-400" />
-                        <span>Populares</span>
+                  {/* CARD 2: POPULARES */}
+                  <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <h3 className="text-xs font-semibold text-slate-800 flex items-center gap-2">
+                        <LucideIcons.Star size={15} className="text-amber-500 fill-amber-400" />
+                        <span>Mais vendidos</span>
                       </h3>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                        Mais saídos
+                      <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded-full">
+                        Top
                       </span>
                     </div>
 
                     {maisVendidos.length === 0 ? (
                       <div className="text-center py-8 px-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 border border-amber-100 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center">
                           <LucideIcons.TrendingUp size={20} strokeWidth={2} />
                         </div>
-                        <p className="text-slate-700 font-semibold text-xs uppercase tracking-wider">
+                        <p className="text-slate-700 font-semibold text-xs">
                           Sem vendas registradas
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          Os itens mais vendidos nas comandas aparecerão aqui.
                         </p>
                       </div>
                     ) : (
@@ -908,28 +917,28 @@ export function Estoque() {
                             key={p.id}
                             type="button"
                             onClick={() => setProdutoDetalhe(p)}
-                            className="w-full flex justify-between items-center p-3 rounded-2xl bg-slate-50/70 hover:bg-amber-50/40 transition-all border border-slate-200/70 hover:border-amber-200 text-left cursor-pointer active:scale-95 group"
+                            className="w-full flex justify-between items-center p-3 rounded-2xl bg-slate-50/70 hover:bg-amber-50/40 transition-all border border-slate-200/60 hover:border-amber-200 text-left cursor-pointer group"
                           >
                             <div className="flex items-center gap-3 min-w-0 pr-2">
-                              <span className="w-8 h-8 shrink-0 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 flex items-center justify-center font-bold text-xs tabular-nums">
+                              <span className="w-8 h-8 shrink-0 rounded-4xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs tabular-nums">
                                 {index + 1}º
                               </span>
                               <div className="min-w-0">
-                                <span className="font-semibold text-slate-800 text-xs block truncate uppercase tracking-wide">
+                                <span className="font-semibold text-slate-700 text-xs block truncate">
                                   {p.nome}
                                 </span>
-                                <span className="text-xs text-slate-400 uppercase tracking-wider">
+                                <span className="text-xs text-slate-400">
                                   Saldo: {p.estoque || 0} un
                                 </span>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-amber-700 bg-white border border-amber-200 px-2.5 py-1 rounded-lg font-bold text-xs uppercase tracking-wider tabular-nums shadow-2xs">
+                              <span className="text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full font-semibold text-xs tabular-nums">
                                 {p.qtdVendida} vendidos
                               </span>
                               <LucideIcons.ChevronRight
-                                size={15}
+                                size={14}
                                 className="text-slate-300 group-hover:text-amber-600 transition-colors"
                               />
                             </div>
@@ -942,10 +951,10 @@ export function Estoque() {
               </div>
             ) : (
               /* RESULTADOS DA PESQUISA DIRETA NA ABA ESTOQUE */
-              <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="space-y-3.5 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between px-1">
-                  <h2 className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                    Resultados da Pesquisa ({produtosExibidos.length})
+                  <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    Resultados ({produtosExibidos.length})
                   </h2>
                   <button
                     type="button"
@@ -957,13 +966,13 @@ export function Estoque() {
                 </div>
 
                 {produtosExibidos.length === 0 ? (
-                  <div className="text-center py-14 bg-white rounded-3xl border border-dashed border-slate-300">
-                    <p className="text-slate-400 font-semibold text-xs uppercase tracking-widest">
+                  <div className="text-center py-14 bg-white rounded-3xl border border-dashed border-slate-200">
+                    <p className="text-slate-400 font-medium text-xs">
                       Nenhum produto encontrado para "{busca}".
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
                     {produtosExibidos.map(renderProdutoCard)}
                   </div>
                 )}
@@ -973,15 +982,15 @@ export function Estoque() {
         )}
 
         {/* ========================================================= */}
-        {/* ABA 2: CATEGORIAS (BOTÕES DE CATEGORIA IGUAL À IMAGEM)     */}
+        {/* ABA 2: CATEGORIAS E PRODUTOS DA CATEGORIA                 */}
         {/* ========================================================= */}
         {abaAtiva === 'categorias' && (
-          <div className="animate-in fade-in duration-200 space-y-6">
+          <div className="animate-in fade-in duration-200 space-y-5">
             {!categoriaAtiva ? (
               <>
                 <div className="flex items-center justify-between px-1">
-                  <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">
-                    {modoGerenciarCategorias ? 'Organizar e Editar Categorias' : 'Filtrar por Categoria'}
+                  <h2 className="text-xs font-semibold text-slate-500 tracking-wide uppercase">
+                    {modoGerenciarCategorias ? 'Organizar categorias' : 'Categorias do cardápio'}
                   </h2>
                   <span className="text-xs text-slate-400 font-medium">
                     {categorias.length} {categorias.length === 1 ? 'categoria' : 'categorias'}
@@ -989,21 +998,20 @@ export function Estoque() {
                 </div>
 
                 {categorias.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 shadow-xs">
-                    <p className="text-slate-400 font-semibold text-xs uppercase tracking-widest mb-4">
+                  <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 shadow-2xs">
+                    <p className="text-slate-400 font-medium text-xs mb-4">
                       Você ainda não criou nenhuma categoria.
                     </p>
                     <button
                       type="button"
                       onClick={abrirModalNovaCategoria}
-                      className="bg-indigo-50 text-indigo-600 font-semibold uppercase tracking-widest px-6 py-3 rounded-2xl text-xs border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-xs cursor-pointer"
+                      className="bg-emerald-50 text-emerald-800 font-semibold px-5 py-2.5 rounded-full text-xs border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
                     >
-                      Criar Primeira Categoria
+                      Criar primeira categoria
                     </button>
                   </div>
                 ) : !modoGerenciarCategorias ? (
-                  /* GRADE DE CARDS DE CATEGORIAS (EXATAMENTE COMO NA IMAGEM ANEXADA) */
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {categorias.map(cat => {
                       const itensNessaCat = produtosComEstoque.filter(
                         p => p.categoria === cat.nome
@@ -1012,27 +1020,25 @@ export function Estoque() {
                         <div key={cat.id} className="relative group">
                           <button
                             type="button"
-                            onClick={() => setCategoriaAtiva(cat.nome)}
-                            className="w-full bg-white border border-slate-200/90 p-5 rounded-3xl flex flex-col items-center justify-center gap-2.5 shadow-xs hover:border-indigo-300 hover:-translate-y-1 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+                            onClick={() => {
+                              setCategoriaAtiva(cat.nome);
+                              setFiltroStatusCategoria('todos');
+                            }}
+                            className="w-full bg-white border border-slate-200 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-2xs hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer"
                           >
-                            <div className="w-13 h-13 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:bg-indigo-50 transition-colors">
-                              {renderizarIconeDinamicamente(
-                                cat.icone,
-                                'text-slate-600 group-hover:text-indigo-600 transition-colors',
-                                26
-                              )}
+                            <div className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-600 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+                              {renderizarIconeDinamicamente(cat.icone, '', 22)}
                             </div>
                             <div className="text-center w-full mt-0.5">
-                              <span className="font-semibold text-slate-800 text-xs block truncate uppercase tracking-wider group-hover:text-indigo-700">
+                              <span className="font-semibold text-slate-800 text-xs block truncate group-hover:text-emerald-800">
                                 {cat.nome}
                               </span>
-                              <span className="text-xs text-slate-400 font-medium uppercase tracking-widest block mt-0.5">
-                                {itensNessaCat} {itensNessaCat === 1 ? 'Item' : 'Itens'}
+                              <span className="text-xs text-slate-400 font-medium block mt-0.5">
+                                {itensNessaCat} {itensNessaCat === 1 ? 'item' : 'itens'}
                               </span>
                             </div>
                           </button>
 
-                          {/* Atalho discreto para editar categoria direto no card */}
                           {isAdmin && (
                             <button
                               type="button"
@@ -1041,7 +1047,7 @@ export function Estoque() {
                                 abrirModalEditarCategoria(cat);
                               }}
                               title={`Editar ${cat.nome}`}
-                              className="opacity-0 group-hover:opacity-100 focus:opacity-100 absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 border border-slate-200 flex items-center justify-center transition-all cursor-pointer"
+                              className="opacity-0 group-hover:opacity-100 focus:opacity-100 absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200 flex items-center justify-center transition-all cursor-pointer"
                             >
                               <LucideIcons.Pencil size={12} strokeWidth={2.2} />
                             </button>
@@ -1051,7 +1057,7 @@ export function Estoque() {
                     })}
                   </div>
                 ) : (
-                  /* MODO ORGANIZAR (REORDENAR / EDITAR / EXCLUIR CATEGORIAS) */
+                  /* MODO ORGANIZAR */
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {categorias.map((cat, index) => {
                       const numProdutos = produtosComEstoque.filter(
@@ -1060,60 +1066,60 @@ export function Estoque() {
                       return (
                         <div
                           key={cat.id}
-                          className="bg-white border border-slate-200 rounded-3xl p-3.5 shadow-xs flex items-center justify-between hover:border-slate-300 transition-all"
+                          className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-2xs flex items-center justify-between hover:border-slate-300 transition-all"
                         >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="flex flex-col gap-0.5 pl-1">
                               <button
                                 type="button"
                                 disabled={index === 0}
                                 onClick={() => moverCategoria(index, 'sobe')}
-                                className="text-slate-400 hover:text-indigo-600 disabled:opacity-25 transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-emerald-700 disabled:opacity-25 transition-colors cursor-pointer"
                                 title="Mover para cima"
                               >
-                                <LucideIcons.ChevronUp size={20} strokeWidth={2.5} />
+                                <LucideIcons.ChevronUp size={18} strokeWidth={2.4} />
                               </button>
                               <button
                                 type="button"
                                 disabled={index === categorias.length - 1}
                                 onClick={() => moverCategoria(index, 'desce')}
-                                className="text-slate-400 hover:text-indigo-600 disabled:opacity-25 transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-emerald-700 disabled:opacity-25 transition-colors cursor-pointer"
                                 title="Mover para baixo"
                               >
-                                <LucideIcons.ChevronDown size={20} strokeWidth={2.5} />
+                                <LucideIcons.ChevronDown size={18} strokeWidth={2.4} />
                               </button>
                             </div>
 
-                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shrink-0">
-                              {renderizarIconeDinamicamente(cat.icone, 'text-indigo-600', 22)}
+                            <div className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shrink-0 text-emerald-700">
+                              {renderizarIconeDinamicamente(cat.icone, '', 20)}
                             </div>
 
                             <div className="min-w-0 flex-1 pr-2">
-                              <h4 className="font-semibold text-slate-800 tracking-tight uppercase text-xs sm:text-sm truncate">
+                              <h4 className="font-semibold text-slate-800 text-xs sm:text-sm truncate">
                                 {cat.nome}
                               </h4>
-                              <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">
-                                {numProdutos} {numProdutos === 1 ? 'Item' : 'Itens'}
+                              <span className="text-xs font-medium text-slate-400">
+                                {numProdutos} {numProdutos === 1 ? 'item' : 'itens'}
                               </span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 pr-1">
+                          <div className="flex items-center gap-1.5 pr-1">
                             <button
                               type="button"
                               onClick={() => abrirModalEditarCategoria(cat)}
-                              className="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200/80 hover:border-indigo-200 transition-colors cursor-pointer active:scale-95"
+                              className="w-8 h-8 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition-colors cursor-pointer"
                               title="Editar categoria"
                             >
-                              <LucideIcons.Pencil size={16} strokeWidth={2} />
+                              <LucideIcons.Pencil size={15} strokeWidth={2} />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleExcluirCategoria(cat)}
-                              className="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200 transition-colors cursor-pointer active:scale-95"
+                              className="w-8 h-8 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-colors cursor-pointer"
                               title="Excluir categoria"
                             >
-                              <LucideIcons.Trash2 size={16} strokeWidth={2} />
+                              <LucideIcons.Trash2 size={15} strokeWidth={2} />
                             </button>
                           </div>
                         </div>
@@ -1124,70 +1130,126 @@ export function Estoque() {
               </>
             ) : (
               /* PRODUTOS DA CATEGORIA SELECIONADA */
-              <div className="space-y-5 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
-                  <div className="flex items-center gap-3">
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => {
                         setCategoriaAtiva(null);
+                        setFiltroStatusCategoria('todos');
                         setBusca('');
                       }}
-                      className="w-10 h-10 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-100 transition-colors active:scale-95 cursor-pointer shrink-0"
+                      aria-label="Voltar para categorias"
+                      className="w-9 h-9 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-full text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     >
-                      <LucideIcons.ArrowLeft size={18} strokeWidth={2.2} />
+                      <LucideIcons.ArrowLeft size={16} strokeWidth={2.2} />
                     </button>
-                    <div>
-                      <h2 className="text-sm font-bold tracking-tight text-slate-800 uppercase">
+
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                      {renderizarIconeDinamicamente(categoriaAtiva, '', 18)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
                         {categoriaAtiva}
                       </h2>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-400 truncate">
                         {produtosExibidos.length}{' '}
-                        {produtosExibidos.length === 1 ? 'produto cadastrado' : 'produtos cadastrados'}
+                        {produtosExibidos.length === 1 ? 'produto' : 'produtos'}
+                        {qtdCriticosCategoria > 0 && filtroStatusCategoria === 'todos' && (
+                          <span className="text-rose-600 font-medium">
+                            {' '}
+                            • {qtdCriticosCategoria} para repor
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
 
-                  {/* Busca rápida dentro da categoria */}
-                  <div className="relative w-full sm:w-64">
-                    <LucideIcons.Search
-                      size={15}
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder={`Buscar em ${categoriaAtiva}...`}
-                      value={busca}
-                      onChange={e => setBusca(e.target.value)}
-                      className="w-full h-9 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-800 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                    />
-                    {busca && (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100 self-start sm:self-auto">
                       <button
                         type="button"
-                        onClick={() => setBusca('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        onClick={() => setFiltroStatusCategoria('todos')}
+                        className={`h-7 px-3 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                          filtroStatusCategoria === 'todos'
+                            ? 'bg-white text-slate-900 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
                       >
-                        <LucideIcons.X size={14} />
+                        Todos
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => setFiltroStatusCategoria('repor')}
+                        className={`h-7 px-3 rounded-full text-xs font-medium transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+                          filtroStatusCategoria === 'repor'
+                            ? 'bg-white text-rose-700 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <span>Repor</span>
+                        {qtdCriticosCategoria > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold leading-none tabular-nums">
+                            {qtdCriticosCategoria}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="relative w-full sm:w-56">
+                      <LucideIcons.Search
+                        size={14}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder={`Buscar em ${categoriaAtiva}...`}
+                        value={busca}
+                        onChange={e => setBusca(e.target.value)}
+                        className="w-full h-9 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-800 outline-none focus:bg-white focus:border-emerald-600 transition-all"
+                      />
+                      {busca && (
+                        <button
+                          type="button"
+                          onClick={() => setBusca('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <LucideIcons.X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {produtosExibidos.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300">
-                    <p className="text-slate-400 font-semibold text-xs uppercase tracking-widest mb-3">
-                      Nenhum produto nesta categoria.
+                  <div className="text-center py-14 bg-white rounded-3xl border border-dashed border-slate-200">
+                    <p className="text-slate-400 font-medium text-xs mb-3">
+                      {filtroStatusCategoria === 'repor'
+                        ? 'Nenhum produto precisando reposição nesta categoria.'
+                        : 'Nenhum produto nesta categoria.'}
                     </p>
-                    <button
-                      type="button"
-                      onClick={abrirModalNovoProduto}
-                      className="h-9 px-5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold uppercase tracking-wider hover:bg-indigo-100 transition-colors cursor-pointer"
-                    >
-                      + Adicionar Produto em {categoriaAtiva}
-                    </button>
+                    {filtroStatusCategoria === 'repor' ? (
+                      <button
+                        type="button"
+                        onClick={() => setFiltroStatusCategoria('todos')}
+                        className="h-9 px-5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
+                      >
+                        Ver todos os produtos
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={abrirModalNovoProduto}
+                        className="h-9 px-5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
+                      >
+                        + Adicionar produto em {categoriaAtiva}
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
                     {produtosExibidos.map(renderProdutoCard)}
                   </div>
                 )}
@@ -1216,10 +1278,10 @@ export function Estoque() {
                     key={f.id}
                     type="button"
                     onClick={() => setFiltroMovimento(f.id)}
-                    className={`h-8 px-3.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                    className={`h-8 px-3.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
                       filtroMovimento === f.id
-                        ? 'bg-slate-800 text-white shadow-2xs'
-                        : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                        ? 'bg-slate-900 text-white shadow-2xs'
+                        : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
                     {f.label}
@@ -1234,10 +1296,9 @@ export function Estoque() {
                 />
                 <input
                   type="text"
-                  placeholder="Filtrar por produto ou autor..."
                   value={buscaMovimento}
                   onChange={e => setBuscaMovimento(e.target.value)}
-                  className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200 rounded-full text-xs text-slate-800 outline-none focus:border-indigo-500 transition-all shadow-2xs"
+                  className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200 rounded-full text-xs text-slate-800 outline-none focus:border-emerald-600 transition-all shadow-2xs"
                 />
                 {buscaMovimento && (
                   <button
@@ -1276,12 +1337,18 @@ export function Estoque() {
                                 isEntrada
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                   : isEstorno
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    ? 'bg-slate-50 text-rose-700 border-rose-200'
                                     : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}
                             >
                               {isEntrada ? 'Compra' : isEstorno ? 'Estorno' : 'Ajuste'}
                             </span>
+
+                            {log.notaCompraId && (
+                              <span className="text-xs px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                Nota Compra
+                              </span>
+                            )}
 
                             <span className="text-xs text-slate-400 font-medium tabular-nums">
                               {formatarData(log.data)} às {formatarHora(log.data)}
@@ -1317,18 +1384,26 @@ export function Estoque() {
                       {/* AÇÃO ADMIN: DESFAZER / EXCLUIR LANÇAMENTO */}
                       {isAdmin && (
                         <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <span className="text-xs text-slate-400">
-                            Reverte o saldo automaticamente
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleDesfazerMovimento(log)}
-                            className="h-7 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
-                            title="Desfazer e excluir este lançamento de estoque"
-                          >
-                            <LucideIcons.RotateCcw size={12} strokeWidth={2.2} />
-                            <span>Desfazer</span>
-                          </button>
+                          {log.notaCompraId ? (
+                            <span className="text-xs text-slate-400">
+                              Vinculado à uma Compra (estorne pelo Financeiro)
+                            </span>
+                          ) : (
+                            <>
+                              <span className="text-xs text-slate-400">
+                                Reverte o saldo automaticamente
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDesfazerMovimento(log)}
+                                className="h-7 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200/80 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+                                title="Desfazer e excluir este lançamento de estoque"
+                              >
+                                <LucideIcons.RotateCcw size={12} strokeWidth={2.2} />
+                                <span>Desfazer</span>
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1340,9 +1415,7 @@ export function Estoque() {
         )}
       </main>
 
-      {/* ========================================================= */}
       {/* MODAL: CRIAR / EDITAR CATEGORIA                           */}
-      {/* ========================================================= */}
       {modalNovaCategoriaAberto && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div
@@ -1365,8 +1438,8 @@ export function Estoque() {
 
             <div className="overflow-y-auto space-y-4 px-0.5 pb-2">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1.5">
-                  Nome da Categoria
+                <label className="text-xs font-medium text-slate-600 block mb-1.5">
+                  Nome da categoria
                 </label>
                 <input
                   type="text"
@@ -1374,13 +1447,13 @@ export function Estoque() {
                   placeholder="Ex: Cervejas"
                   value={textoNovaCategoria}
                   onChange={e => setTextoNovaCategoria(e.target.value)}
-                  className="w-full h-11 bg-slate-50 px-4 rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 focus:bg-white font-semibold text-slate-800 uppercase tracking-wider text-sm transition-all"
+                  className="w-full h-11 bg-slate-50 px-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold text-slate-800 text-sm transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1.5">
-                  Ícone Visual
+                <label className="text-xs font-medium text-slate-600 block mb-1.5">
+                  Ícone visual
                 </label>
                 <div className="h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-2xl p-2.5 grid grid-cols-5 gap-2">
                   {OPCOES_ICONES.map(iconeName => {
@@ -1392,8 +1465,8 @@ export function Estoque() {
                         onClick={() => setIconeSelecionado(iconeName)}
                         className={`h-11 rounded-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
                           isSelected
-                            ? 'bg-indigo-600 text-white shadow-xs border border-indigo-600'
-                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
+                            ? 'bg-emerald-700 text-white shadow-xs border border-emerald-700'
+                            : 'bg-white text-slate-500 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                         }`}
                       >
                         {renderizarIconeDinamicamente(iconeName, '', 20)}
@@ -1434,38 +1507,49 @@ export function Estoque() {
       {/* MODAL: CRIAR / EDITAR PRODUTO                             */}
       {/* ========================================================= */}
       {modalNovoProduto && (
-        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
           <div
             className="absolute inset-0"
             onClick={() => !salvandoProduto && setModalNovoProduto(false)}
           />
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 relative animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 my-auto">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <h3 className="text-base font-semibold tracking-tight text-slate-900 uppercase">
-                {editandoId ? 'Editar Produto' : 'Novo Produto'}
-              </h3>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative animate-in zoom-in-95 duration-200 my-auto max-h-full flex flex-col overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <LucideIcons.Package size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
+                    {editandoId ? 'Editar produto' : 'Novo produto'}
+                  </h3>
+                  <p className="text-xs text-slate-400 truncate">
+                    {editandoId ? 'Atualize dados, preço e exibição' : 'Cadastro de item no estoque'}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => !salvandoProduto && setModalNovoProduto(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Fechar"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 <LucideIcons.X size={15} />
               </button>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Toggle Ativo no Cardápio */}
-              <div className="flex items-center justify-between bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200">
-                <div>
-                  <p className="text-xs font-semibold text-slate-700">Exibir no Cardápio</p>
-                  <p className="text-xs text-slate-400">
+              <div className="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80">
+                <div className="min-w-0 pr-3">
+                  <p className="text-xs font-semibold text-slate-800">Exibir no cardápio</p>
+                  <p className="text-xs text-slate-400 truncate">
                     Disponível para lançamento nas comandas
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setNovoProdAtivo(!novoProdAtivo)}
-                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
+                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
                     novoProdAtivo ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
                 >
@@ -1479,16 +1563,16 @@ export function Estoque() {
 
               {/* Foto do Produto */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1.5">
-                  Foto do Produto (Opcional)
+                <label className="text-xs font-medium text-slate-600 block mb-1.5">
+                  Foto do produto (opcional)
                 </label>
-                <div className="flex justify-center px-4 py-4 border-2 border-slate-200 border-dashed rounded-2xl relative hover:border-indigo-400 hover:bg-slate-50/70 transition-colors bg-white group cursor-pointer overflow-hidden">
+                <div className="flex items-center justify-center px-4 py-3.5 border border-dashed border-slate-300 rounded-2xl relative hover:border-emerald-500 hover:bg-slate-50/70 transition-colors bg-slate-50/40 group cursor-pointer overflow-hidden">
                   {imagemPreview ? (
                     <div className="relative inline-block">
                       <img
                         src={imagemPreview}
                         alt="Preview"
-                        className="mx-auto h-24 w-24 object-cover rounded-2xl shadow-xs border border-slate-200"
+                        className="mx-auto h-20 w-20 object-cover rounded-2xl shadow-xs border border-slate-200"
                       />
                       <button
                         type="button"
@@ -1504,16 +1588,16 @@ export function Estoque() {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-1 text-center pointer-events-none">
-                      <div className="mx-auto h-9 w-9 text-slate-400 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
-                        <LucideIcons.ImagePlus size={18} strokeWidth={1.8} />
+                    <div className="flex items-center gap-3 pointer-events-none">
+                      <div className="h-9 w-9 text-slate-400 bg-white border border-slate-200 rounded-xl flex items-center justify-center group-hover:text-emerald-700 group-hover:border-emerald-200 transition-colors shrink-0">
+                        <LucideIcons.ImagePlus size={17} strokeWidth={1.8} />
                       </div>
-                      <div className="text-xs font-medium text-slate-500">
-                        <span className="text-indigo-600 font-semibold">Toque</span> para escolher uma foto
+                      <div className="text-left">
+                        <p className="text-xs font-medium text-slate-600">
+                          <span className="text-emerald-700 font-semibold">Toque</span> para escolher foto
+                        </p>
+                        <p className="text-xs text-slate-400">PNG, JPG ou WEBP (máx. 5MB)</p>
                       </div>
-                      <p className="text-xs text-slate-400 uppercase tracking-wider">
-                        PNG, JPG ou WEBP (Máx. 5MB)
-                      </p>
                     </div>
                   )}
                   {!imagemPreview && (
@@ -1529,28 +1613,28 @@ export function Estoque() {
 
               {/* Nome do Produto */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1">
-                  Nome do Produto *
+                <label className="text-xs font-medium text-slate-600 block mb-1">
+                  Nome do produto *
                 </label>
                 <input
                   type="text"
                   value={novoProdNome}
                   onChange={e => setNovoProdNome(e.target.value)}
-                  placeholder="Ex: Cerveja Heineken"
-                  className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-semibold uppercase text-slate-800 text-xs sm:text-sm transition-all"
+                  placeholder="Ex: Cerveja Heineken 600ml"
+                  className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold text-slate-800 text-sm transition-all"
                 />
               </div>
 
               {/* Categoria e Tamanho */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-600 block mb-1">
                     Categoria *
                   </label>
                   <select
                     value={novoProdCat}
                     onChange={e => setNovoProdCat(e.target.value)}
-                    className="w-full h-10 bg-slate-50 px-3 rounded-xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white text-xs font-semibold text-slate-700 transition-all uppercase"
+                    className="w-full h-10 bg-slate-50 px-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white text-xs font-medium text-slate-800 transition-all"
                   >
                     {categorias.length === 0 && (
                       <option value="" disabled>
@@ -1566,7 +1650,7 @@ export function Estoque() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-600 block mb-1">
                     Tamanho / Tipo
                   </label>
                   <input
@@ -1574,7 +1658,7 @@ export function Estoque() {
                     value={novoProdSubCat}
                     onChange={e => setNovoProdSubCat(e.target.value)}
                     placeholder="Ex: 600ml, Lata"
-                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white font-medium text-xs text-slate-800 transition-all uppercase"
+                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-medium text-xs text-slate-800 transition-all"
                   />
                 </div>
               </div>
@@ -1582,58 +1666,68 @@ export function Estoque() {
               {/* Preço de Venda e Custo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1">
-                    Preço de Venda (R$) *
+                  <label className="text-xs font-medium text-slate-600 block mb-1">
+                    Preço de venda *
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={novoProdVenda}
-                    onChange={e => setNovoProdVenda(e.target.value)}
-                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-600 focus:bg-white text-center font-semibold text-sm text-emerald-700 transition-all tabular-nums"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                      R$
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={novoProdVenda}
+                      onChange={e => setNovoProdVenda(e.target.value)}
+                      className="w-full h-10 bg-slate-50 pl-8 pr-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold text-sm text-emerald-700 transition-all tabular-nums"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1">
-                    Custo Unit. (R$)
+                  <label className="text-xs font-medium text-slate-600 block mb-1">
+                    Custo unitário
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={novoProdCusto}
-                    onChange={e => setNovoProdCusto(e.target.value)}
-                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-4 focus:ring-slate-100 focus:border-slate-500 focus:bg-white text-center font-medium text-sm text-slate-700 transition-all tabular-nums"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                      R$
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={novoProdCusto}
+                      onChange={e => setNovoProdCusto(e.target.value)}
+                      className="w-full h-10 bg-slate-50 pl-8 pr-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-medium text-sm text-slate-700 transition-all tabular-nums"
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-2.5 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => !salvandoProduto && setModalNovoProduto(false)}
-                  disabled={salvandoProduto}
-                  className="flex-1 h-11 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold uppercase tracking-wider rounded-2xl text-xs transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSalvarProduto}
-                  disabled={salvandoProduto}
-                  className="flex-1 h-11 bg-slate-900 hover:bg-slate-800 text-white font-semibold uppercase tracking-wider rounded-2xl text-xs transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70 cursor-pointer"
-                >
-                  {salvandoProduto ? (
-                    <>
-                      <LucideIcons.Loader2 size={15} className="animate-spin" />
-                      <span>Salvando...</span>
-                    </>
-                  ) : (
-                    <span>Salvar Produto</span>
-                  )}
-                </button>
-              </div>
+            <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => !salvandoProduto && setModalNovoProduto(false)}
+                disabled={salvandoProduto}
+                className="h-9 px-4 rounded-xl text-slate-600 hover:bg-slate-200/70 font-medium text-xs transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSalvarProduto}
+                disabled={salvandoProduto}
+                className="h-9 px-5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer"
+              >
+                {salvandoProduto ? (
+                  <>
+                    <LucideIcons.Loader2 size={14} className="animate-spin" />
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <span>{editandoId ? 'Salvar alterações' : 'Cadastrar produto'}</span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1643,148 +1737,171 @@ export function Estoque() {
       {/* MODAL: DETALHES DO PRODUTO E AÇÕES RÁPIDAS DE ESTOQUE     */}
       {/* ========================================================= */}
       {produtoDetalhe && !modalEntradaAberto && !modalInventarioAberto && !modalNovoProduto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="absolute inset-0" onClick={() => setProdutoDetalhe(null)} />
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 relative animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
-            <button
-              type="button"
-              onClick={() => setProdutoDetalhe(null)}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
-            >
-              <LucideIcons.X size={15} />
-            </button>
-
-            <div className="flex items-center gap-4 mb-5 pr-6">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-200 relative animate-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Cabeçalho do produto */}
+            <div className="p-5 pb-4 flex items-center gap-3.5 border-b border-slate-100">
               {produtoDetalhe.imagem_url ? (
                 <img
                   src={produtoDetalhe.imagem_url}
                   alt={produtoDetalhe.nome}
-                  className="w-18 h-18 rounded-2xl object-cover border border-slate-200 shadow-xs shrink-0"
+                  className="w-14 h-14 rounded-2xl object-cover border border-slate-200/80 bg-slate-50 shrink-0"
                 />
               ) : (
-                <div className="w-18 h-18 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
-                  {renderizarIconeDinamicamente(produtoDetalhe.categoria, '', 30)}
+                <div className="w-14 h-14 rounded-2xl bg-slate-100/80 border border-slate-200/60 flex items-center justify-center shrink-0 text-slate-500">
+                  {renderizarIconeDinamicamente(produtoDetalhe.categoria, '', 24)}
                 </div>
               )}
 
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-bold text-slate-900 tracking-tight leading-snug mb-1 truncate uppercase">
+              <div className="min-w-0 flex-1 pr-7">
+                <h3 className="text-base font-bold text-slate-900 leading-tight truncate">
                   {produtoDetalhe.nome}
                 </h3>
-                <span
-                  className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-md inline-block border ${
-                    produtoDetalhe.ativo !== false
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-slate-100 text-slate-500 border-slate-200'
-                  }`}
-                >
-                  {produtoDetalhe.ativo !== false ? 'Cardápio Ativo' : 'Oculto no Cardápio'}
-                </span>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mt-1 truncate">
-                  {produtoDetalhe.categoria}{' '}
-                  {produtoDetalhe.subcategoria && `• ${produtoDetalhe.subcategoria}`}
-                </p>
-              </div>
-            </div>
-
-            {/* Resumo de Saldo e Preço */}
-            <div className="grid grid-cols-2 gap-2.5 mb-5">
-              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 flex flex-col justify-between">
-                <span className="font-semibold text-slate-400 text-xs uppercase tracking-wider">
-                  Estoque Atual
-                </span>
-                <div className="flex items-baseline gap-1 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span
-                    className={`text-2xl font-bold tabular-nums leading-none ${
-                      (produtoDetalhe.estoque || 0) <= 10 && produtoDetalhe.ativo !== false
-                        ? 'text-rose-600'
-                        : 'text-slate-900'
+                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                      produtoDetalhe.ativo !== false
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-slate-100 text-slate-500'
                     }`}
                   >
-                    {produtoDetalhe.estoque || 0}
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        produtoDetalhe.ativo !== false ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>{produtoDetalhe.ativo !== false ? 'Ativo' : 'Oculto'}</span>
                   </span>
-                  <span className="text-xs font-semibold text-slate-400 uppercase">un</span>
+                  <span className="text-xs text-slate-400 truncate">
+                    {produtoDetalhe.categoria}
+                    {produtoDetalhe.subcategoria ? ` • ${produtoDetalhe.subcategoria}` : ''}
+                  </span>
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 flex flex-col justify-between">
-                <span className="font-semibold text-slate-400 text-xs uppercase tracking-wider">
-                  Preço Venda
-                </span>
-                <span className="text-lg font-bold text-emerald-700 tabular-nums leading-none mt-1">
-                  {formatarMoeda(produtoDetalhe.preco)}
-                </span>
+              <button
+                type="button"
+                onClick={() => setProdutoDetalhe(null)}
+                aria-label="Fechar"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer shrink-0 self-start"
+              >
+                <LucideIcons.X size={15} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Resumo unificado de Estoque e Preço */}
+              <div className="bg-slate-50 rounded-2xl border border-slate-200/80 grid grid-cols-2 divide-x divide-slate-200/80">
+                <div className="p-3.5">
+                  <span className="text-xs font-medium text-slate-500 block">Estoque atual</span>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span
+                      className={`text-2xl font-bold tabular-nums leading-none ${
+                        (produtoDetalhe.estoque || 0) <= 0 && produtoDetalhe.ativo !== false
+                          ? 'text-rose-600'
+                          : (produtoDetalhe.estoque || 0) <= 10 && produtoDetalhe.ativo !== false
+                            ? 'text-amber-600'
+                            : 'text-slate-900'
+                      }`}
+                    >
+                      {produtoDetalhe.estoque || 0}
+                    </span>
+                    <span className="text-xs font-medium text-slate-400">un</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5">
+                  <span className="text-xs font-medium text-slate-500 block">Preço de venda</span>
+                  <span className="text-xl font-bold text-emerald-700 tabular-nums leading-none block mt-1">
+                    {formatarMoeda(produtoDetalhe.preco)}
+                  </span>
+                  {typeof produtoDetalhe.precoCusto === 'number' && produtoDetalhe.precoCusto > 0 && (
+                    <span className="text-xs text-slate-400 tabular-nums block mt-1">
+                      Custo {formatarMoeda(produtoDetalhe.precoCusto)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Ações rápidas de movimentação */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQtdForm('');
+                    setCustoDigitado(
+                      produtoDetalhe.precoCusto ? produtoDetalhe.precoCusto.toString() : ''
+                    );
+                    setModalEntradaAberto(true);
+                  }}
+                  className="h-10 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <LucideIcons.PackagePlus size={15} />
+                  <span>Lançar compra</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQtdForm(String(produtoDetalhe.estoque || 0));
+                    setModalInventarioAberto(true);
+                  }}
+                  className="h-10 bg-slate-100 hover:bg-slate-200/80 text-slate-800 font-semibold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <LucideIcons.Scale size={15} className="text-amber-600" />
+                  <span>Ajustar saldo</span>
+                </button>
+              </div>
+
+              {/* Menu limpo de gerenciamento */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white divide-y divide-slate-100 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => abrirModalEditarProduto(produtoDetalhe)}
+                  className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2.5 text-xs font-medium text-slate-700">
+                    <LucideIcons.Pencil size={14} className="text-slate-400" />
+                    <span>Editar dados do produto</span>
+                  </span>
+                  <LucideIcons.ChevronRight size={14} className="text-slate-300" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleStatus(produtoDetalhe.id)}
+                  className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2.5 text-xs font-medium text-slate-700">
+                    {produtoDetalhe.ativo !== false ? (
+                      <>
+                        <LucideIcons.EyeOff size={14} className="text-slate-400" />
+                        <span>Ocultar no cardápio</span>
+                      </>
+                    ) : (
+                      <>
+                        <LucideIcons.Eye size={14} className="text-emerald-600" />
+                        <span>Reativar no cardápio</span>
+                      </>
+                    )}
+                  </span>
+                  <LucideIcons.ChevronRight size={14} className="text-slate-300" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExcluirProduto(produtoDetalhe.id)}
+                  className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-rose-50/60 transition-colors cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2.5 text-xs font-medium text-rose-600">
+                    <LucideIcons.Trash2 size={14} />
+                    <span>Excluir produto</span>
+                  </span>
+                  <LucideIcons.ChevronRight size={14} className="text-rose-300" />
+                </button>
               </div>
             </div>
-
-            {/* Botões de Movimentação: Compra e Ajuste */}
-            <div className="grid grid-cols-2 gap-2.5 mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setQtdForm('');
-                  setCustoDigitado(
-                    produtoDetalhe.precoCusto ? produtoDetalhe.precoCusto.toString() : ''
-                  );
-                  setModalEntradaAberto(true);
-                }}
-                className="bg-emerald-50/70 hover:bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold uppercase tracking-wider py-3 rounded-2xl text-xs transition-all flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer"
-              >
-                <LucideIcons.PackagePlus size={20} className="text-emerald-600" />
-                <span>Lançar Compra</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setQtdForm(String(produtoDetalhe.estoque || 0));
-                  setModalInventarioAberto(true);
-                }}
-                className="bg-amber-50/70 hover:bg-amber-50 border border-amber-200 text-amber-800 font-semibold uppercase tracking-wider py-3 rounded-2xl text-xs transition-all flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer"
-              >
-                <LucideIcons.Scale size={20} className="text-amber-600" />
-                <span>Ajustar Saldo</span>
-              </button>
-            </div>
-
-            {/* Ações Administrativas do Produto */}
-            <div className="flex gap-2.5 mb-2.5">
-              <button
-                type="button"
-                onClick={() => abrirModalEditarProduto(produtoDetalhe)}
-                className="flex-1 h-10 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 font-semibold uppercase tracking-wider rounded-xl text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <LucideIcons.Pencil size={14} />
-                <span>Editar</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(produtoDetalhe.id)}
-                className="flex-1 h-10 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 font-semibold uppercase tracking-wider rounded-xl text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {produtoDetalhe.ativo !== false ? (
-                  <>
-                    <LucideIcons.EyeOff size={14} />
-                    <span>Ocultar</span>
-                  </>
-                ) : (
-                  <>
-                    <LucideIcons.Eye size={14} />
-                    <span>Reativar</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => handleExcluirProduto(produtoDetalhe.id)}
-              className="w-full h-10 bg-white text-rose-600 font-semibold uppercase tracking-wider rounded-xl border border-rose-200 hover:bg-rose-50 text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <LucideIcons.Trash2 size={14} />
-              <span>Excluir Produto</span>
-            </button>
           </div>
         </div>
       )}
@@ -1793,17 +1910,17 @@ export function Estoque() {
       {/* MODAL: LANÇAR COMPRA OU AJUSTAR BALANÇO                   */}
       {/* ========================================================= */}
       {(modalEntradaAberto || modalInventarioAberto) && produtoDetalhe && (
-        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div
             className="absolute inset-0"
             onClick={() => !carregandoAcaoEstoque && fecharModaisEstoque()}
           />
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 relative animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-200 relative animate-in zoom-in-95 duration-200">
             <div className="text-center mb-5">
-              <h3 className="text-base font-bold tracking-tight text-slate-900 uppercase">
-                {modalEntradaAberto ? 'Lançar Compra' : 'Ajuste de Balanço'}
+              <h3 className="text-base font-bold tracking-tight text-slate-900">
+                {modalEntradaAberto ? 'Lançar compra' : 'Ajuste de balanço'}
               </h3>
-              <span className="mt-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 bg-indigo-50 py-1 px-3 rounded-full inline-block border border-indigo-100 max-w-full truncate">
+              <span className="mt-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 py-1 px-3 rounded-full inline-block border border-emerald-100 max-w-full truncate">
                 {produtoDetalhe.nome}
               </span>
             </div>
@@ -1812,8 +1929,8 @@ export function Estoque() {
               {modalEntradaAberto ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1.5 text-center">
-                      Qtd Adicionada *
+                    <label className="text-xs font-medium text-slate-500 block mb-1.5 text-center">
+                      Qtd adicionada *
                     </label>
                     <input
                       type="number"
@@ -1822,12 +1939,12 @@ export function Estoque() {
                       placeholder="Ex: 24"
                       value={qtdForm}
                       onChange={e => setQtdForm(e.target.value)}
-                      className="w-full h-12 bg-slate-50 px-3 rounded-2xl border border-slate-200 text-center font-bold text-lg text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 focus:bg-white transition-all tabular-nums"
+                      className="w-full h-12 bg-slate-50 px-3 rounded-2xl border border-slate-200 text-center font-bold text-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white transition-all tabular-nums"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 block mb-1.5 text-center">
-                      Custo Unit. (R$)
+                    <label className="text-xs font-medium text-slate-500 block mb-1.5 text-center">
+                      Custo unit. (R$)
                     </label>
                     <input
                       type="text"
@@ -1835,14 +1952,14 @@ export function Estoque() {
                       value={custoDigitado}
                       onChange={e => setCustoDigitado(e.target.value)}
                       placeholder="0,00"
-                      className="w-full h-12 bg-slate-50 px-3 rounded-2xl border border-slate-200 text-center font-semibold text-lg text-slate-800 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 focus:bg-white transition-all tabular-nums"
+                      className="w-full h-12 bg-slate-50 px-3 rounded-2xl border border-slate-200 text-center font-semibold text-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white transition-all tabular-nums"
                     />
                   </div>
                 </div>
               ) : (
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-widest text-slate-400 text-center block mb-2">
-                    Quantidade Real na Prateleira (Atual: {produtoDetalhe.estoque || 0} un)
+                  <label className="text-xs font-medium text-slate-500 text-center block mb-2">
+                    Quantidade real na prateleira (Atual: {produtoDetalhe.estoque || 0} un)
                   </label>
                   <input
                     type="number"
@@ -1851,7 +1968,7 @@ export function Estoque() {
                     placeholder={`Atual: ${produtoDetalhe.estoque || 0}`}
                     value={qtdForm}
                     onChange={e => setQtdForm(e.target.value)}
-                    className="w-full h-14 bg-slate-50 px-4 rounded-2xl border border-slate-200 text-center font-bold text-2xl text-slate-900 outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-500 focus:bg-white transition-all tabular-nums"
+                    className="w-full h-14 bg-slate-50 px-4 rounded-2xl border border-slate-200 text-center font-bold text-2xl text-slate-900 outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-500 focus:bg-white transition-all tabular-nums"
                   />
                 </div>
               )}
@@ -1861,7 +1978,7 @@ export function Estoque() {
                   type="button"
                   onClick={fecharModaisEstoque}
                   disabled={carregandoAcaoEstoque}
-                  className="flex-1 h-11 bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold uppercase tracking-wider rounded-2xl text-xs transition-colors active:scale-95 cursor-pointer"
+                  className="flex-1 h-11 bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold rounded-2xl text-xs transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1869,9 +1986,9 @@ export function Estoque() {
                   type="button"
                   disabled={carregandoAcaoEstoque}
                   onClick={modalEntradaAberto ? handleConfirmarEntrada : handleConfirmarInventario}
-                  className={`flex-1 h-11 text-white font-semibold uppercase tracking-wider rounded-2xl text-xs transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 h-11 text-white font-semibold rounded-2xl text-xs transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 ${
                     modalEntradaAberto
-                      ? 'bg-indigo-600 hover:bg-indigo-700'
+                      ? 'bg-emerald-700 hover:bg-emerald-800'
                       : 'bg-amber-600 hover:bg-amber-700'
                   }`}
                 >
@@ -1888,6 +2005,11 @@ export function Estoque() {
       )}
 
       <ModalConfirmacao {...modalConfirmacao} onCancelar={fecharConfirmacao} />
+      <ModalNotaCompraEstoque
+        aberto={modalNotaCompraAberto}
+        onFechar={() => setModalNotaCompraAberto(false)}
+        onSucesso={(msg) => mostrarToast(msg, 'sucesso')}
+      />
     </div>
   );
 }

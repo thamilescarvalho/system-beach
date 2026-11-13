@@ -3,7 +3,9 @@ import { createContext, useContext } from 'react';
 import type {
   Mesa, ItemComanda, VendaFechada, Garcom, Produto,
   MovimentacaoEstoque, Pagamento, Categoria, PagamentoGarcom,
-  NovoPagamentoGarcom, StatusPagamentoGarcom, MetaFinanceira, NovaMetaFinanceira
+  NovoPagamentoGarcom, StatusPagamentoGarcom, MetaFinanceira, NovaMetaFinanceira,
+  ContaFinanceira, NovaContaFinanceira, MovimentacaoCaixa, NovaMovimentacaoCaixa,
+  NotaCompraEstoque, NovaNotaCompraInput
 } from '../types';
 
 export interface EmpresaSaaS {
@@ -46,6 +48,9 @@ export interface AppContextType {
   categorias: Categoria[];
   historicoEstoque: MovimentacaoEstoque[];
   historicoPagamentos: PagamentoGarcom[];
+  contasFinanceiras: ContaFinanceira[];
+  movimentacoesCaixa: MovimentacaoCaixa[];
+  notasCompraEstoque: NotaCompraEstoque[];
   uploadImagemProduto: (file: File) => Promise<string | null>;
   autenticarUsuario: (email: string, senha: string) => Promise<boolean>;
   metaAtiva: MetaFinanceira | null;
@@ -78,6 +83,15 @@ export interface AppContextType {
   atualizarMeuPerfil: (dados: { nome: string; avatar: string; emojiPreferido?: string; telefone?: string }) => Promise<void>;
   alterarMeuEmail: (novoEmail: string, senhaAtual: string) => Promise<void>;
   alterarMinhaSenha: (senhaAtual: string, novaSenha: string) => Promise<void>;
+  // Fluxo de Caixa Fintech, Contas Financeiras e Notas de Compra (Estoque -> Caixa)
+  criarContaFinanceira: (dados: NovaContaFinanceira) => Promise<ContaFinanceira>;
+  atualizarContaFinanceira: (id: string, atualizacao: Partial<NovaContaFinanceira>) => Promise<void>;
+  definirContaFinanceiraPadrao: (id: string) => Promise<void>;
+  excluirContaFinanceira: (id: string) => Promise<void>;
+  registrarMovimentacaoCaixa: (dados: NovaMovimentacaoCaixa) => Promise<MovimentacaoCaixa>;
+  excluirMovimentacaoCaixa: (id: string) => Promise<void>;
+  registrarNotaCompraEstoque: (dados: NovaNotaCompraInput) => Promise<{ notaId: string; movimentacaoCaixaId?: string | null; valorTotal: number }>;
+  estornarNotaCompraEstoque: (notaId: string) => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
