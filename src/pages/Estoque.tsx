@@ -148,20 +148,22 @@ export function Estoque() {
   // FILTRO DE PRODUTOS (POR BUSCA, CATEGORIA E STATUS)
   const qtdCriticosCategoria = useMemo(() => {
     if (!categoriaAtiva) return 0;
+    const catAlvo = categoriaAtiva.trim().toUpperCase();
     return produtosComEstoque.filter(
-      p => p.categoria === categoriaAtiva && p.ativo !== false && (p.estoque || 0) <= 10
+      p => p.categoria.trim().toUpperCase() === catAlvo && p.ativo !== false && (p.estoque || 0) <= 10
     ).length;
   }, [produtosComEstoque, categoriaAtiva]);
 
   const produtosExibidos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
+    const catAlvo = categoriaAtiva ? categoriaAtiva.trim().toUpperCase() : null;
     return produtosComEstoque.filter(p => {
       const matchBusca =
         termo === '' ||
         p.nome.toLowerCase().includes(termo) ||
         p.categoria.toLowerCase().includes(termo) ||
         (p.subcategoria && p.subcategoria.toLowerCase().includes(termo));
-      const matchCategoria = !categoriaAtiva || p.categoria === categoriaAtiva;
+      const matchCategoria = !catAlvo || p.categoria.trim().toUpperCase() === catAlvo;
       const matchStatus =
         !categoriaAtiva ||
         filtroStatusCategoria === 'todos' ||
@@ -236,7 +238,7 @@ export function Estoque() {
   };
 
   const handleSalvarCategoria = async () => {
-    const nomeLimpo = textoNovaCategoria.trim();
+    const nomeLimpo = textoNovaCategoria.trim().toUpperCase();
     if (!nomeLimpo) {
       mostrarToast('Informe um nome para a categoria.', 'erro');
       return;
@@ -269,7 +271,7 @@ export function Estoque() {
     setModalConfirmacao({
       aberto: true,
       titulo: 'Excluir Categoria?',
-      descricao: `Deseja remover a categoria "${cat.nome}"? Os produtos cadastrados nela não serão apagados.`,
+      descricao: `Deseja remover a categoria "${cat.nome.toUpperCase()}"? Os produtos cadastrados nela não serão apagados.`,
       textoConfirmar: 'Excluir Categoria',
       tipo: 'perigo',
       onConfirmar: async () => {
@@ -374,9 +376,9 @@ export function Estoque() {
     }
 
     const dadosSalvar = {
-      nome: novoProdNome.trim(),
-      categoria: novoProdCat,
-      subcategoria: novoProdSubCat.trim(),
+      nome: novoProdNome.trim().toUpperCase(),
+      categoria: novoProdCat.trim(),
+      subcategoria: novoProdSubCat.trim().toUpperCase(),
       imagem_url: urlFinal,
       preco: parseFloat(novoProdVenda.replace(',', '.')) || 0,
       precoCusto: parseFloat(novoProdCusto.replace(',', '.')) || 0,
@@ -415,7 +417,7 @@ export function Estoque() {
     setModalConfirmacao({
       aberto: true,
       titulo: 'Excluir Produto?',
-      descricao: `Tem certeza que deseja remover "${prod?.nome || 'este produto'}" do estoque e do cardápio?`,
+      descricao: `Tem certeza que deseja remover "${(prod?.nome || 'este produto').toUpperCase()}" do estoque e do cardápio?`,
       textoConfirmar: 'Excluir Produto',
       tipo: 'perigo',
       onConfirmar: async () => {
@@ -465,7 +467,7 @@ export function Estoque() {
         custo,
         garcomLogado?.nome || 'Admin'
       );
-      mostrarToast(`+${qtd} un. adicionadas em ${produtoDetalhe.nome}!`);
+      mostrarToast(`+${qtd} un. adicionadas em ${produtoDetalhe.nome.toUpperCase()}!`);
       fecharModaisEstoque();
     } catch {
       mostrarToast('Erro ao registrar entrada de estoque.', 'erro');
@@ -492,7 +494,7 @@ export function Estoque() {
         qtdFisica,
         garcomLogado?.nome || 'Admin'
       );
-      mostrarToast(`Estoque de ${produtoDetalhe.nome} ajustado para ${qtdFisica} un.`);
+      mostrarToast(`Estoque de ${produtoDetalhe.nome.toUpperCase()} ajustado para ${qtdFisica} un.`);
       fecharModaisEstoque();
     } catch {
       mostrarToast('Erro ao registrar ajuste de balanço.', 'erro');
@@ -574,7 +576,7 @@ export function Estoque() {
 
           <div className="min-w-0 flex-1">
             <h3
-              className={`text-sm font-semibold truncate ${
+              className={`text-sm font-semibold uppercase truncate ${
                 ativo ? 'text-slate-900' : 'text-slate-400 line-through'
               }`}
             >
@@ -584,12 +586,12 @@ export function Estoque() {
             {(!categoriaAtiva || produto.subcategoria) && (
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 {!categoriaAtiva && (
-                  <span className="text-xs font-medium text-slate-400 truncate">
+                  <span className="text-xs font-medium text-slate-400 uppercase truncate">
                     {produto.categoria}
                   </span>
                 )}
                 {produto.subcategoria && (
-                  <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md truncate">
+                  <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md uppercase truncate">
                     {produto.subcategoria}
                   </span>
                 )}
@@ -858,10 +860,10 @@ export function Estoque() {
                                   {renderizarIconeDinamicamente(p.categoria, '', 18)}
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="font-semibold text-slate-800 text-xs block truncate">
+                                  <span className="font-semibold text-slate-800 text-xs uppercase block truncate">
                                     {p.nome}
                                   </span>
-                                  <span className="text-xs text-slate-400 truncate block">
+                                  <span className="text-xs text-slate-400 uppercase truncate block">
                                     {p.categoria}
                                   </span>
                                 </div>
@@ -924,7 +926,7 @@ export function Estoque() {
                                 {index + 1}º
                               </span>
                               <div className="min-w-0">
-                                <span className="font-semibold text-slate-700 text-xs block truncate">
+                                <span className="font-semibold text-slate-700 text-xs uppercase block truncate">
                                   {p.nome}
                                 </span>
                                 <span className="text-xs text-slate-400">
@@ -1013,8 +1015,9 @@ export function Estoque() {
                 ) : !modoGerenciarCategorias ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {categorias.map(cat => {
+                      const catNomeUpper = cat.nome.trim().toUpperCase();
                       const itensNessaCat = produtosComEstoque.filter(
-                        p => p.categoria === cat.nome
+                        p => p.categoria.trim().toUpperCase() === catNomeUpper
                       ).length;
                       return (
                         <div key={cat.id} className="relative group">
@@ -1030,7 +1033,7 @@ export function Estoque() {
                               {renderizarIconeDinamicamente(cat.icone, '', 22)}
                             </div>
                             <div className="text-center w-full mt-0.5">
-                              <span className="font-semibold text-slate-800 text-xs block truncate group-hover:text-emerald-800">
+                              <span className="font-semibold text-slate-800 text-xs uppercase block truncate group-hover:text-emerald-800">
                                 {cat.nome}
                               </span>
                               <span className="text-xs text-slate-400 font-medium block mt-0.5">
@@ -1060,8 +1063,9 @@ export function Estoque() {
                   /* MODO ORGANIZAR */
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {categorias.map((cat, index) => {
+                      const catNomeUpper = cat.nome.trim().toUpperCase();
                       const numProdutos = produtosComEstoque.filter(
-                        p => p.categoria === cat.nome
+                        p => p.categoria.trim().toUpperCase() === catNomeUpper
                       ).length;
                       return (
                         <div
@@ -1095,7 +1099,7 @@ export function Estoque() {
                             </div>
 
                             <div className="min-w-0 flex-1 pr-2">
-                              <h4 className="font-semibold text-slate-800 text-xs sm:text-sm truncate">
+                              <h4 className="font-semibold text-slate-800 text-xs sm:text-sm uppercase truncate">
                                 {cat.nome}
                               </h4>
                               <span className="text-xs font-medium text-slate-400">
@@ -1151,7 +1155,7 @@ export function Estoque() {
                     </div>
 
                     <div className="min-w-0">
-                      <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                      <h2 className="text-sm sm:text-base font-bold text-slate-900 uppercase truncate">
                         {categoriaAtiva}
                       </h2>
                       <p className="text-xs text-slate-400 truncate">
@@ -1205,7 +1209,7 @@ export function Estoque() {
                       />
                       <input
                         type="text"
-                        placeholder={`Buscar em ${categoriaAtiva}...`}
+                        placeholder={`Buscar em ${categoriaAtiva.toUpperCase()}...`}
                         value={busca}
                         onChange={e => setBusca(e.target.value)}
                         className="w-full h-9 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-800 outline-none focus:bg-white focus:border-emerald-600 transition-all"
@@ -1244,7 +1248,7 @@ export function Estoque() {
                         onClick={abrirModalNovoProduto}
                         className="h-9 px-5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
                       >
-                        + Adicionar produto em {categoriaAtiva}
+                        + Adicionar produto em {categoriaAtiva.toUpperCase()}
                       </button>
                     )}
                   </div>
@@ -1447,7 +1451,7 @@ export function Estoque() {
                   placeholder="Ex: Cervejas"
                   value={textoNovaCategoria}
                   onChange={e => setTextoNovaCategoria(e.target.value)}
-                  className="w-full h-11 bg-slate-50 px-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold text-slate-800 text-sm transition-all"
+                  className="w-full h-11 bg-slate-50 px-4 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold uppercase text-slate-800 text-sm transition-all"
                 />
               </div>
 
@@ -1621,7 +1625,7 @@ export function Estoque() {
                   value={novoProdNome}
                   onChange={e => setNovoProdNome(e.target.value)}
                   placeholder="Ex: Cerveja Heineken 600ml"
-                  className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold text-slate-800 text-sm transition-all"
+                  className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-semibold uppercase text-slate-800 text-sm transition-all"
                 />
               </div>
 
@@ -1632,9 +1636,9 @@ export function Estoque() {
                     Categoria *
                   </label>
                   <select
-                    value={novoProdCat}
+                    value={categorias.find(c => c.nome.trim().toUpperCase() === novoProdCat.trim().toUpperCase())?.nome ?? novoProdCat}
                     onChange={e => setNovoProdCat(e.target.value)}
-                    className="w-full h-10 bg-slate-50 px-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white text-xs font-medium text-slate-800 transition-all"
+                    className="w-full h-10 bg-slate-50 px-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white text-xs font-medium uppercase text-slate-800 transition-all"
                   >
                     {categorias.length === 0 && (
                       <option value="" disabled>
@@ -1643,7 +1647,7 @@ export function Estoque() {
                     )}
                     {categorias.map(cat => (
                       <option key={cat.id} value={cat.nome}>
-                        {cat.nome}
+                        {cat.nome.toUpperCase()}
                       </option>
                     ))}
                   </select>
@@ -1658,7 +1662,7 @@ export function Estoque() {
                     value={novoProdSubCat}
                     onChange={e => setNovoProdSubCat(e.target.value)}
                     placeholder="Ex: 600ml, Lata"
-                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-medium text-xs text-slate-800 transition-all"
+                    className="w-full h-10 bg-slate-50 px-3.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 focus:bg-white font-medium uppercase text-xs text-slate-800 transition-all"
                   />
                 </div>
               </div>
@@ -1755,7 +1759,7 @@ export function Estoque() {
               )}
 
               <div className="min-w-0 flex-1 pr-7">
-                <h3 className="text-base font-bold text-slate-900 leading-tight truncate">
+                <h3 className="text-base font-bold text-slate-900 leading-tight uppercase truncate">
                   {produtoDetalhe.nome}
                 </h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -1773,7 +1777,7 @@ export function Estoque() {
                     />
                     <span>{produtoDetalhe.ativo !== false ? 'Ativo' : 'Oculto'}</span>
                   </span>
-                  <span className="text-xs text-slate-400 truncate">
+                  <span className="text-xs text-slate-400 uppercase truncate">
                     {produtoDetalhe.categoria}
                     {produtoDetalhe.subcategoria ? ` • ${produtoDetalhe.subcategoria}` : ''}
                   </span>
@@ -1920,7 +1924,7 @@ export function Estoque() {
               <h3 className="text-base font-bold tracking-tight text-slate-900">
                 {modalEntradaAberto ? 'Lançar compra' : 'Ajuste de balanço'}
               </h3>
-              <span className="mt-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 py-1 px-3 rounded-full inline-block border border-emerald-100 max-w-full truncate">
+              <span className="mt-1.5 text-xs font-semibold uppercase text-emerald-800 bg-emerald-50 py-1 px-3 rounded-full inline-block border border-emerald-100 max-w-full truncate">
                 {produtoDetalhe.nome}
               </span>
             </div>

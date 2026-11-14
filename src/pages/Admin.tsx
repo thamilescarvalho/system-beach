@@ -316,12 +316,12 @@ export function Admin() {
   const previewPersonalizado = nomeExibicao.trim().length > 0;
 
   return (
-    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800 md:pl-18">
       {/* HEADER GLOBAL */}
       <Header />
 
       {/* CONTEÚDO PRINCIPAL — ESTILO SETTINGS MINIMALISTA */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12">
         {/* Cabeçalho da Página */}
         <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-medium text-slate-900 tracking-tight">
@@ -366,7 +366,7 @@ export function Admin() {
                   <span className="text-sm font-normal text-slate-800 truncate">Financeiro</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-slate-400 hidden sm:inline">Caixa, metas e relatórios</span>
+                  <span className="text-xs text-slate-400 hidden sm:inline">Caixa, métricas e relatórios</span>
                   <LucideIcons.ChevronRight
                     size={15}
                     strokeWidth={1.8}

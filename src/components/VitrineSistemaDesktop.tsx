@@ -22,7 +22,7 @@ export function VitrineSistemaDesktop() {
       id: 2,
       etiqueta: 'Caixa e Fechamento Digital',
       resumo: 'Gestão Financeira',
-      descricao: 'Acompanhamento de vendas concluídas, formas de pagamento, metas, vales e cupom térmico.'
+      descricao: 'Acompanhamento de vendas concluídas, formas de pagamento, métricas, vales e cupom térmico.'
     }
   ];
 
@@ -235,9 +235,9 @@ export function VitrineSistemaDesktop() {
                   </div>
                   <div className="bg-white rounded-2xl p-2.5 border border-slate-200/70 shadow-2xs flex items-center gap-2">
                     <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                      <LucideIcons.Target size={14} />
+                      <LucideIcons.BarChart3 size={14} />
                     </div>
-                    <span className="text-xs font-normal text-slate-700 truncate">Meta 92%</span>
+                    <span className="text-xs font-normal text-slate-700 truncate">Métricas</span>
                   </div>
                   <div className="bg-white rounded-2xl p-2.5 border border-slate-200/70 shadow-2xs flex items-center gap-2">
                     <div className="w-7 h-7 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">

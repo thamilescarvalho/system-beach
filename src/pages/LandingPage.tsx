@@ -147,7 +147,7 @@ const BEACH_SCENES = [
     shortLabel: 'Painel Financeiro',
     title: 'Painel Financeiro e Extrato de Comandas',
     description:
-      'Acompanhe o faturamento ao vivo, formas de pagamento, metas, vales e histórico detalhado de cada mesa.',
+      'Acompanhe o faturamento ao vivo, formas de pagamento, métricas, vales e histórico detalhado de cada mesa.',
     image: '/peixe-coco-5d.png',
   },
   {
@@ -1563,10 +1563,10 @@ export function LandingPage() {
                       <span className="text-[10px] text-slate-500">Vales</span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-blue-700">
-                        <LucideIcons.Target className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
+                        <LucideIcons.BarChart3 className="w-4 h-4" />
                       </div>
-                      <span className="text-[10px] text-slate-500">Metas</span>
+                      <span className="text-[10px] text-slate-500">Métricas</span>
                     </div>
                   </div>
 
@@ -2153,7 +2153,7 @@ export function LandingPage() {
                 </div>
 
                 <h2 className="text-xl sm:text-3xl font-medium tracking-tight text-slate-800 leading-snug">
-                  Visão completa do caixa, comandas, vales e metas na palma da mão
+                  Visão completa do caixa, comandas, vales e métricas na palma da mão
                 </h2>
 
                 <p className="text-sm text-slate-500 leading-relaxed">
@@ -2168,7 +2168,7 @@ export function LandingPage() {
                     { id: 0, label: '1. Faturamento', icon: LucideIcons.TrendingUp },
                     { id: 1, label: '2. Pagamentos', icon: LucideIcons.PieChart },
                     { id: 2, label: '3. Na Areia', icon: LucideIcons.Clock },
-                    { id: 3, label: '4. Vales & Metas', icon: LucideIcons.Target },
+                    { id: 3, label: '4. Vales & Diárias', icon: LucideIcons.HandCoins },
                   ].map((tab) => {
                     const IconComp = tab.icon;
                     const isActive = financeSlide === tab.id;
@@ -2203,7 +2203,7 @@ export function LandingPage() {
                         {financeSlide === 0 && 'Visão Geral de Faturamento'}
                         {financeSlide === 1 && 'Receitas por Forma de Pagamento'}
                         {financeSlide === 2 && 'Saldo em Atendimento & Guarda-sóis'}
-                        {financeSlide === 3 && 'Controle de Vales & Meta do Dia'}
+                        {financeSlide === 3 && 'Controle de Vales & Diárias da Equipe'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -2316,14 +2316,14 @@ export function LandingPage() {
                     </div>
                   )}
 
-                  {/* TELA FINANCEIRA 4: VALES DE COLABORADORES E METAS */}
+                  {/* TELA FINANCEIRA 4: VALES E DIÁRIAS DE COLABORADORES */}
                   {financeSlide === 3 && (
                     <div className="space-y-3 my-auto">
                       <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700">Meta Diária Estipulada</span>
+                          <span className="font-medium text-slate-700">Total Repassado no Dia</span>
                           <span className="font-semibold text-emerald-700">
-                            106% Atingida (R$ 8.000)
+                            R$ 230,00 (2 lançamentos)
                           </span>
                         </div>
                         <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">

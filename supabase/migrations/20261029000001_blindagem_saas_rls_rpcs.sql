@@ -407,7 +407,6 @@ ALTER TABLE IF EXISTS public.categorias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.vendas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.historico_estoque ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.pagamentos_garcons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.metas_financeiras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.auditoria_logs ENABLE ROW LEVEL SECURITY;
 
 -- 6.1 POLÍTICAS: EMPRESAS
@@ -549,24 +548,6 @@ CREATE POLICY "rls_pagamentos_garcons_select" ON public.pagamentos_garcons
 
 DROP POLICY IF EXISTS "rls_pagamentos_garcons_write" ON public.pagamentos_garcons;
 CREATE POLICY "rls_pagamentos_garcons_write" ON public.pagamentos_garcons
-  FOR ALL TO authenticated
-  USING (
-    (empresa_id = public.meu_empresa_id() AND public.is_admin_workspace() AND public.assinatura_empresa_ativa(empresa_id))
-    OR public.is_super_admin()
-  )
-  WITH CHECK (
-    (empresa_id = public.meu_empresa_id() AND public.is_admin_workspace() AND public.assinatura_empresa_ativa(empresa_id))
-    OR public.is_super_admin()
-  );
-
--- Metas Financeiras
-DROP POLICY IF EXISTS "rls_metas_select" ON public.metas_financeiras;
-CREATE POLICY "rls_metas_select" ON public.metas_financeiras
-  FOR SELECT TO authenticated
-  USING (empresa_id = public.meu_empresa_id() OR public.is_super_admin());
-
-DROP POLICY IF EXISTS "rls_metas_write" ON public.metas_financeiras;
-CREATE POLICY "rls_metas_write" ON public.metas_financeiras
   FOR ALL TO authenticated
   USING (
     (empresa_id = public.meu_empresa_id() AND public.is_admin_workspace() AND public.assinatura_empresa_ativa(empresa_id))

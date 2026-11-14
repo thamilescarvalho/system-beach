@@ -122,27 +122,6 @@ export interface DBPagamentoGarcom {
   empresa_id?: string;
 }
 
-// META FINANCEIRA
-export interface MetaFinanceira {
-  id: string;
-  dataInicio: string;
-  dataFim: string;
-  valorAlvo: number;
-  status: 'ativa' | 'inativa';
-}
-
-export type NovaMetaFinanceira = Omit<MetaFinanceira, 'id' | 'status'>;
-
-export interface DBMetaFinanceira {
-  id: string;
-  data_inicio: string;
-  data_fim: string;
-  valor_alvo: number | string;
-  status: string;
-  created_at?: string;
-  empresa_id?: string;
-}
-
 // ==============================================================================
 // TIPOS FINTECH: CONTAS FINANCEIRAS, FLUXO DE CAIXA E NOTAS DE COMPRA (ESTOQUE)
 // ==============================================================================

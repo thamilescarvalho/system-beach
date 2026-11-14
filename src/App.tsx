@@ -21,6 +21,7 @@ const Admin = lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin }
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const AdminUsuarios = lazy(() => import('./pages/AdminUsuarios').then(m => ({ default: m.AdminUsuarios })));
 const AdminFinanceiro = lazy(() => import('./pages/AdminFinanceiro').then(m => ({ default: m.AdminFinanceiro })));
+const AdminFinanceiroMetricas = lazy(() => import('./pages/AdminFinanceiroMetricas').then(m => ({ default: m.AdminFinanceiroMetricas })));
 const AdminImpressora = lazy(() => import('./pages/AdminImpressora').then(m => ({ default: m.AdminImpressora })));
 const AdminAssinatura = lazy(() => import('./pages/AdminAssinatura').then(m => ({ default: m.AdminAssinatura })));
 const AdminAssinaturaRenovar = lazy(() => import('./pages/AdminAssinaturaRenovar').then(m => ({ default: m.AdminAssinaturaRenovar })));
@@ -167,6 +168,9 @@ export function App() {
           } />
           <Route path="/admin/financeiro" element={
             <ProtectedRoute><AdminRoute><AdminFinanceiro /></AdminRoute></ProtectedRoute>
+          } />
+          <Route path="/admin/financeiro/metricas" element={
+            <ProtectedRoute><AdminRoute><AdminFinanceiroMetricas /></AdminRoute></ProtectedRoute>
           } />
           <Route path="/admin/equipe" element={
             <ProtectedRoute><AdminRoute><AdminUsuarios /></AdminRoute></ProtectedRoute>

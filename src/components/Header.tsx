@@ -14,7 +14,7 @@ interface NavItemConfig {
   label: string;
 }
 
-type CategoriaAlerta = 'bar' | 'financeiro' | 'meta' | 'estoque';
+type CategoriaAlerta = 'bar' | 'financeiro' | 'estoque';
 
 interface AlertaSistema {
   id: string;
@@ -134,7 +134,7 @@ export function Header() {
             id: `bar_pronto_${mesa.numero}_${item.id}`,
             categoria: 'bar',
             titulo: `Pedido pronto • Mesa ${mesa.numero}`,
-            descricao: `${item.quantidade}x ${item.produto.nome}${
+            descricao: `${item.quantidade}x ${item.produto.nome.toUpperCase()}${
               mesa.nomeCliente ? ` (${mesa.nomeCliente})` : ''
             }`,
             detalheTempo: formatarDiaMesHora(item.horaPedido),
@@ -147,7 +147,7 @@ export function Header() {
             id: `bar_pendente_${mesa.numero}_${item.id}`,
             categoria: 'bar',
             titulo: `Em preparo • Mesa ${mesa.numero}`,
-            descricao: `${item.quantidade}x ${item.produto.nome}`,
+            descricao: `${item.quantidade}x ${item.produto.nome.toUpperCase()}`,
             detalheTempo: formatarDiaMesHora(item.horaPedido),
             ordemTimestamp: converterHoraPedidoMs(item.horaPedido, idx),
             rotaDestino: '/cozinha'
@@ -156,38 +156,7 @@ export function Header() {
       });
     });
 
-    // 2. AVISO DE META FINANCEIRA ATIVA
-    if (contexto.metaAtiva && contexto.metaAtiva.valorAlvo > 0) {
-      const meta = contexto.metaAtiva;
-      const inicio = meta.dataInicio.split('T')[0];
-      const fim = meta.dataFim.split('T')[0];
-
-      const faturamentoPeriodo = contexto.historicoVendas
-        .filter((v) => {
-          if (v.status === 'cancelada') return false;
-          const dataVenda = v.dataFechamento.split('T')[0];
-          return dataVenda >= inicio && dataVenda <= fim;
-        })
-        .reduce((acc, v) => acc + v.total, 0);
-
-      const percentual = Math.min(100, Math.round((faturamentoPeriodo / meta.valorAlvo) * 100));
-      const metaBatida = faturamentoPeriodo >= meta.valorAlvo;
-
-      lista.push({
-        id: `meta_${meta.id}_${metaBatida ? 'batida' : Math.floor(percentual / 10)}`,
-        categoria: 'meta',
-        titulo: metaBatida
-          ? `Meta batida (${percentual}%)`
-          : `Meta financeira • ${percentual}%`,
-        descricao: `${formatarMoeda(faturamentoPeriodo)} de ${formatarMoeda(meta.valorAlvo)}`,
-        detalheTempo: formatarDiaMesHora(fim),
-        ordemTimestamp: metaBatida ? agoraMs + 50000 : agoraMs - 1800000,
-        rotaDestino: isAdmin ? '/admin/financeiro' : '/painel',
-        prioridadeAlta: metaBatida
-      });
-    }
-
-    // 3. LANÇAMENTOS DE VALORES DO GERENTE (SALÁRIO, COMISSÃO, BÔNUS, VALE)
+    // 2. LANÇAMENTOS DE VALORES DO GERENTE (SALÁRIO, COMISSÃO, BÔNUS, VALE)
     const pagamentosVisiveis = contexto.historicoPagamentos
       .filter((p) => {
         if (p.status === 'cancelado') return false;
@@ -230,7 +199,7 @@ export function Header() {
       if (produtosCriticos.length > 0) {
         const nomes = produtosCriticos
           .slice(0, 2)
-          .map((p) => `${p.nome} (${p.estoque} un.)`)
+          .map((p) => `${p.nome.toUpperCase()} (${p.estoque} un.)`)
           .join(', ');
         lista.push({
           id: `estoque_critico_${produtosCriticos.map((p) => `${p.id}_${p.estoque}`).join('_')}`,
@@ -403,7 +372,7 @@ export function Header() {
           window.dispatchEvent(new CustomEvent('tsystem:notificacoes-sync'));
           try {
             new Notification('Notificações Ativadas! 🔔', {
-              body: 'Você receberá avisos em tempo real de pedidos prontos no bar e metas.',
+              body: 'Você receberá avisos em tempo real de pedidos prontos no bar e alertas do sistema.',
               icon: '/favicon.ico'
             });
           } catch {
@@ -564,6 +533,10 @@ export function Header() {
   };
 
   const handleVoltar = () => {
+    if (path === '/admin/financeiro/metricas') {
+      navigate('/admin/financeiro');
+      return;
+    }
     if (path === '/admin/assinatura/renovar') {
       navigate('/admin/assinatura');
       return;
@@ -591,6 +564,7 @@ export function Header() {
     if (path === '/painel') return 'Painel de Vendas';
     if (path === '/admin/estoque') return 'Estoque';
     if (path === '/admin/financeiro') return 'Financeiro';
+    if (path === '/admin/financeiro/metricas') return 'Métricas Financeiras';
     if (path === '/admin/equipe') return 'Usuários';
     if (path === '/admin/impressora') return 'Impressora';
     if (path === '/admin/assinatura/renovar') return 'Renovar Assinatura';
@@ -611,7 +585,7 @@ export function Header() {
     if (path === '/cozinha') {
       return 'text-green-600 bg-green-50/80 border-green-200/80 hover:bg-green-100/90 hover:text-green-700 hover:border-green-300 hover:shadow-green-500/20';
     }
-    if (path === '/painel' || path === '/admin/financeiro') {
+    if (path === '/painel' || path.startsWith('/admin/financeiro')) {
       return 'text-emerald-700 bg-emerald-50/80 border-emerald-200/80 hover:bg-emerald-100/90 hover:text-emerald-800 hover:border-emerald-300 hover:shadow-emerald-500/20';
     }
     if (path === '/admin/estoque' || path === '/admin/equipe') {
@@ -627,8 +601,8 @@ export function Header() {
 
   const primeiroNomeRaw = garcom.nome.trim().split(/\s+/)[0] || '';
   const primeiroNome = primeiroNomeRaw
-    ? primeiroNomeRaw.charAt(0).toUpperCase() + primeiroNomeRaw.slice(1).toLowerCase()
-    : 'Colaborador';
+    ? primeiroNomeRaw.toUpperCase()
+    : 'COLABORADOR';
 
   return (
     <Fragment>
@@ -749,7 +723,7 @@ export function Header() {
               />
 
               <div className="hidden md:flex items-center gap-1.5">
-                <h2 className="text-sm font-medium text-slate-700 leading-none truncate max-w-28">{primeiroNome}</h2>
+                <h2 className="text-sm font-medium text-slate-700 leading-none truncate max-w-28 uppercase">{primeiroNome}</h2>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
                 <LucideIcons.ChevronDown size={14} className={`text-slate-400 transition-transform ${menuAberto ? 'rotate-180' : ''}`} />
               </div>
@@ -856,15 +830,10 @@ export function Header() {
                                 Icone: LucideIcons.Wallet,
                                 cor: 'bg-green-50 text-green-600'
                               }
-                            : alerta.categoria === 'meta'
-                              ? {
-                                  Icone: LucideIcons.Target,
-                                  cor: 'bg-yellow-50 text-yellow-600'
-                                }
-                              : {
-                                  Icone: LucideIcons.PackageSearch,
-                                  cor: 'bg-rose-50 text-rose-600'
-                                };
+                            : {
+                                Icone: LucideIcons.PackageSearch,
+                                cor: 'bg-rose-50 text-rose-600'
+                              };
 
                       const IconeAlerta = iconeConfig.Icone;
 
@@ -923,7 +892,7 @@ export function Header() {
             {menuAberto && (
               <div className="absolute top-14 right-4 md:right-6 w-56 bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden p-2 flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 font-sans">
                 <div className="px-3 py-3 mb-1 border-b border-slate-100 bg-slate-50/50 rounded-xl">
-                  <p className="text-xs font-bold text-slate-800 truncate">{garcom.nome}</p>
+                  <p className="text-xs font-bold text-slate-800 truncate uppercase">{garcom.nome}</p>
                   <p className="text-xs scale-90 origin-left font-sans text-slate-400 uppercase tracking-widest mt-0.5">
                     {garcom.cargo === 'super_admin' ? 'Super Admin' : garcom.cargo === 'admin' ? 'Administrador' : 'Garçom'}
                   </p>

@@ -366,10 +366,10 @@ export function AdminAssinaturaRenovar() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-slate-50/50 font-sans flex flex-col relative antialiased text-slate-800 md:pl-18">
       <Header />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-14 md:pl-24">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-14">
         {/* Cabeçalho da Página */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

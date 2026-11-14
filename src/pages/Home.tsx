@@ -58,7 +58,7 @@ export function Home() {
           numeroMesa: mesa.numero,
           nomeCliente: mesa.nomeCliente || '',
           quantidadeItensProntos: qtdProntaMesa,
-          descricaoCurta: `${primeiroItem.quantidade}x ${primeiroItem.produto.nome}${
+          descricaoCurta: `${primeiroItem.quantidade}x ${primeiroItem.produto.nome.toUpperCase()}${
             itensProntos.length > 1 ? ` e +${itensProntos.length - 1}` : ''
           }`
         });

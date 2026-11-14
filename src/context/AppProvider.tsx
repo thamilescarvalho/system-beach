@@ -17,8 +17,6 @@ import type {
   NovoPagamentoGarcom,
   CategoriaPagamentoGarcom,
   StatusPagamentoGarcom,
-  MetaFinanceira,
-  NovaMetaFinanceira,
   CargoUsuario,
   StatusUsuario,
   ContaFinanceira,
@@ -322,7 +320,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [contasFinanceiras, setContasFinanceiras] = useState<ContaFinanceira[]>([]);
   const [movimentacoesCaixa, setMovimentacoesCaixa] = useState<MovimentacaoCaixa[]>([]);
   const [notasCompraEstoque, setNotasCompraEstoque] = useState<NotaCompraEstoque[]>([]);
-  const [metaAtiva, setMetaAtiva] = useState<MetaFinanceira | null>(null);
   const [garcomLogado, setGarcomLogadoState] = useState<Garcom | null>(null);
 
   const isAdminRef = useRef<boolean>(false);
@@ -746,7 +743,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         resHist,
         resCats,
         resPagamentos,
-        resMeta,
         resEmpresa,
         resContas,
         resMovCaixa,
@@ -759,7 +755,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('historico_estoque').select('*').eq('empresa_id', eid).order('data', { ascending: false }).limit(300),
         supabase.from('categorias').select('*').eq('empresa_id', eid).is('deletado_em', null).order('ordem', { ascending: true }),
         supabase.from('pagamentos_garcons').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_pagamento', { ascending: false }).limit(200),
-        supabase.from('metas_financeiras').select('*').eq('empresa_id', eid).eq('status', 'ativa').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('empresas').select('*').eq('id', eid).limit(1).maybeSingle(),
         supabase.from('contas_financeiras').select('*').eq('empresa_id', eid).is('deletado_em', null).order('padrao', { ascending: false }).order('created_at', { ascending: true }),
         supabase.from('movimentacoes_caixa').select('*').eq('empresa_id', eid).is('deletado_em', null).order('data_movimentacao', { ascending: false }).limit(500),
@@ -841,18 +836,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (resNotas.data) {
         setNotasCompraEstoque((resNotas.data as DBNotaCompraEstoque[]).map(mapearNotaCompraDB));
-      }
-
-      if (resMeta.data) {
-        setMetaAtiva({
-          id: resMeta.data.id,
-          dataInicio: resMeta.data.data_inicio,
-          dataFim: resMeta.data.data_fim,
-          valorAlvo: Number(resMeta.data.valor_alvo),
-          status: 'ativa'
-        });
-      } else if (!resMeta.error) {
-        setMetaAtiva(null);
       }
 
       if (resEmpresa.data) {
@@ -1368,22 +1351,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const adicionarCategoria = async (nome: string, icone: string) => {
     const eid = obterEmpresaId();
+    const nomeNormalizado = nome.trim().toUpperCase();
     const novaOrdem = categorias.length;
-    const { error } = await supabase.from('categorias').insert([{ nome, icone, ativo: true, ordem: novaOrdem, empresa_id: eid }]);
+    const { error } = await supabase.from('categorias').insert([{ nome: nomeNormalizado, icone, ativo: true, ordem: novaOrdem, empresa_id: eid }]);
     garantirSucesso(error, 'Erro ao criar categoria. Verifique sua conexão.');
-    await registrarAuditoria('CRIACAO', 'CATEGORIA', `Categoria '${nome}' criada.`);
+    await registrarAuditoria('CRIACAO', 'CATEGORIA', `Categoria '${nomeNormalizado}' criada.`);
     await recarregarTabela('categorias');
   };
 
   const editarCategoria = async (id: number, nome: string, icone: string) => {
     const eid = obterEmpresaId();
+    const nomeNormalizado = nome.trim().toUpperCase();
     const catAntiga = categorias.find(c => c.id === id);
-    const { error } = await supabase.from('categorias').update({ nome, icone }).eq('id', id).eq('empresa_id', eid);
+    const { error } = await supabase.from('categorias').update({ nome: nomeNormalizado, icone }).eq('id', id).eq('empresa_id', eid);
     garantirSucesso(error, 'Erro ao atualizar categoria. Verifique sua conexão.');
-    if (catAntiga && catAntiga.nome !== nome) {
+    if (catAntiga && catAntiga.nome !== nomeNormalizado) {
       const { error: errProd } = await supabase
         .from('produtos')
-        .update({ categoria: nome })
+        .update({ categoria: nomeNormalizado })
         .eq('categoria', catAntiga.nome)
         .eq('empresa_id', eid);
       garantirSucesso(errProd, 'Erro ao atualizar categoria nos produtos.');
@@ -1413,10 +1398,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const adicionarProduto = async (novo: Omit<Produto, 'id'>) => {
     const eid = obterEmpresaId();
+    const nomeNormalizado = novo.nome.trim().toUpperCase();
+    const categoriaNormalizada = novo.categoria.trim().toUpperCase();
+    const subcategoriaNormalizada = novo.subcategoria ? novo.subcategoria.trim().toUpperCase() : novo.subcategoria;
     const { error } = await supabase.from('produtos').insert([{
-      nome: novo.nome,
-      categoria: novo.categoria,
-      subcategoria: novo.subcategoria,
+      nome: nomeNormalizado,
+      categoria: categoriaNormalizada,
+      subcategoria: subcategoriaNormalizada,
       imagem_url: novo.imagem_url,
       preco: novo.preco,
       preco_custo: novo.precoCusto,
@@ -1425,16 +1413,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       empresa_id: eid
     }]);
     garantirSucesso(error, 'Erro ao cadastrar produto. Verifique sua conexão.');
-    await registrarAuditoria('CRIACAO', 'PRODUTO', `Produto '${novo.nome}' adicionado ao catálogo.`);
+    await registrarAuditoria('CRIACAO', 'PRODUTO', `Produto '${nomeNormalizado}' adicionado ao catálogo.`);
     await recarregarTabela('produtos');
   };
 
   const editarProduto = async (id: number, atualizacao: Partial<Produto>) => {
     const eid = obterEmpresaId();
     const { error } = await supabase.from('produtos').update({
-      nome: atualizacao.nome,
-      categoria: atualizacao.categoria,
-      subcategoria: atualizacao.subcategoria,
+      nome: atualizacao.nome !== undefined ? atualizacao.nome.trim().toUpperCase() : undefined,
+      categoria: atualizacao.categoria !== undefined ? atualizacao.categoria.trim().toUpperCase() : undefined,
+      subcategoria: atualizacao.subcategoria !== undefined
+        ? (atualizacao.subcategoria ? atualizacao.subcategoria.trim().toUpperCase() : atualizacao.subcategoria)
+        : undefined,
       imagem_url: atualizacao.imagem_url,
       preco: atualizacao.preco,
       preco_custo: atualizacao.precoCusto,
@@ -1943,29 +1933,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await carregarDados(true);
   };
 
-  const salvarMetaFinanceira = async (dados: NovaMetaFinanceira): Promise<void> => {
-    const eid = obterEmpresaId();
-    const payload = {
-      data_inicio: dados.dataInicio,
-      data_fim: dados.dataFim,
-      valor_alvo: Number(dados.valorAlvo),
-      status: 'ativa',
-      empresa_id: eid
-    };
-    const { data, error } = await supabase.from('metas_financeiras').insert([payload]).select('*').single();
-    if (error) throw error;
-    if (data) {
-      setMetaAtiva({
-        id: data.id,
-        dataInicio: data.data_inicio,
-        dataFim: data.data_fim,
-        valorAlvo: Number(data.valor_alvo),
-        status: data.status as 'ativa' | 'inativa'
-      });
-    }
-    await carregarDados(true);
-  };
-
   // ==============================================================================
   // CONTAS FINANCEIRAS, MOVIMENTAÇÕES DE CAIXA E NOTAS DE COMPRA DO ESTOQUE
   // ==============================================================================
@@ -2245,8 +2212,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       contasFinanceiras,
       movimentacoesCaixa,
       notasCompraEstoque,
-      metaAtiva,
-      salvarMetaFinanceira,
       uploadImagemProduto,
       autenticarUsuario,
       adicionarProduto,

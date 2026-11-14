@@ -24,7 +24,6 @@ export function Painel() {
   // ESTADOS DOS MODAIS
   const [modalPagamentosAberto, setModalPagamentosAberto] = useState(false);
   const [modalRecebimentosAberto, setModalRecebimentosAberto] = useState(false);
-  const [modalMetaAberto, setModalMetaAberto] = useState(false);
 
   const primeiroDiaDoMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     .toISOString()
@@ -33,7 +32,6 @@ export function Painel() {
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
 
   // DADOS DO CONTEXTO (SUPABASE)
-  const metaAtiva = contexto?.metaAtiva;
   const historico = contexto?.historicoVendas || [];
   const garcomLogado = contexto?.garcomLogado;
   const todosPagamentos = contexto?.historicoPagamentos || [];
@@ -58,30 +56,6 @@ export function Painel() {
 
   const vendasValidas = vendasFiltradas.filter((v) => v.status !== 'cancelada');
   const faturamentoTotal = vendasValidas.reduce((total, venda) => total + venda.total, 0);
-
-  // META DE VENDAS
-  let faturamentoDaMeta = 0;
-
-  if (metaAtiva) {
-    const vendasDentroDaMeta = historico.filter((venda) => {
-      if (venda.status === 'cancelada') return false;
-
-      const dataVenda = venda.dataFechamento.split('T')[0];
-      const dataDentroDoPeriodoMeta =
-        dataVenda >= metaAtiva.dataInicio && dataVenda <= metaAtiva.dataFim;
-      const isAdmin = garcomLogado?.cargo === 'admin' || garcomLogado?.cargo === 'super_admin';
-      const privacidadeValida = isAdmin ? true : venda.garcomNome === garcomLogado?.nome;
-
-      return dataDentroDoPeriodoMeta && privacidadeValida;
-    });
-
-    faturamentoDaMeta = vendasDentroDaMeta.reduce((acc, v) => acc + v.total, 0);
-  }
-
-  const valorAlvoMeta = metaAtiva ? metaAtiva.valorAlvo : 0;
-  const porcentagemMeta =
-    valorAlvoMeta > 0 ? Math.min((faturamentoDaMeta / valorAlvoMeta) * 100, 100) : 0;
-  const metaBatida = valorAlvoMeta > 0 && faturamentoDaMeta >= valorAlvoMeta;
 
   // VALES E REPASSES (SUPABASE)
   const recebimentosReal = todosPagamentos.filter((pagamento: PagamentoGarcom) => {
@@ -115,7 +89,7 @@ export function Painel() {
 
   // EFEITOS DE SCROLL E FOCO
   useEffect(() => {
-    if (vendaSelecionada || modalPagamentosAberto || modalRecebimentosAberto || modalMetaAberto) {
+    if (vendaSelecionada || modalPagamentosAberto || modalRecebimentosAberto) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -123,7 +97,7 @@ export function Painel() {
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [vendaSelecionada, modalPagamentosAberto, modalRecebimentosAberto, modalMetaAberto]);
+  }, [vendaSelecionada, modalPagamentosAberto, modalRecebimentosAberto]);
 
   useEffect(() => {
     if (mostrarPesquisa && inputPesquisaRef.current) {
@@ -250,11 +224,11 @@ export function Painel() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-100/80 font-sans flex flex-col relative antialiased text-slate-800 pb-24 md:pb-12">
+    <div className="min-h-dvh bg-slate-100/80 font-sans flex flex-col relative antialiased text-slate-800 pb-24 md:pb-12 md:pl-18">
       <div className="print:hidden">
         <Header />
 
-        <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-20 md:pt-24 md:pl-24">
+        <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-20 md:pt-24">
           {/* DATA / PERÍODO */}
           <div className="flex items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
@@ -361,18 +335,7 @@ export function Painel() {
           </div>
 
           {/* BARRA DE ATALHOS */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-2.5 mb-7">
-            <button
-              type="button"
-              onClick={() => setModalMetaAberto(true)}
-              className="bg-white hover:bg-slate-50/80 border border-slate-200/80 rounded-3xl py-2.5 px-2 shadow-2xs hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer group"
-            >
-              <div className="w-8 h-8 rounded-4xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <LucideIcons.Target size={16} strokeWidth={1.2} />
-              </div>
-              <span className="text-xs font-normal text-slate-800 leading-tight">Meta</span>
-            </button>
-
+          <div className="grid grid-cols-2 gap-3 sm:gap-2.5 mb-7">
             <button
               type="button"
               onClick={() => setModalRecebimentosAberto(true)}
@@ -684,100 +647,6 @@ export function Painel() {
                 </span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: DETALHES DA META */}
-      {modalMetaAberto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200 font-sans print:hidden">
-          <div className="absolute inset-0" onClick={() => setModalMetaAberto(false)} />
-
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-sm shadow-2xl border border-slate-100 relative z-10 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 p-5 pb-7 sm:pb-5">
-            <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-4 sm:hidden" />
-
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-                  <LucideIcons.Target size={17} strokeWidth={1.8} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-900">Meta de Vendas</h3>
-                  <p className="text-[11px] text-slate-400">Acompanhamento do período</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalMetaAberto(false)}
-                className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer"
-              >
-                <LucideIcons.X size={15} />
-              </button>
-            </div>
-
-            {!metaAtiva ? (
-              <div className="py-8 flex flex-col items-center text-center gap-2">
-                <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
-                  <LucideIcons.Target size={22} strokeWidth={1.6} />
-                </div>
-                <p className="text-sm font-medium text-slate-700">Nenhuma meta ativa</p>
-                <p className="text-xs text-slate-400 max-w-xs">
-                  Quando a administração definir uma meta para o período, seu progresso aparecerá
-                  aqui.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-700">Progresso atual</p>
-                    <p className="text-[11px] text-slate-400">
-                      {formatarDataBR(metaAtiva.dataInicio)} até{' '}
-                      {formatarDataBR(metaAtiva.dataFim)}
-                    </p>
-                  </div>
-                  <span className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
-                    {porcentagemMeta.toFixed(1)}%
-                  </span>
-                </div>
-
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ease-out ${
-                      metaBatida ? 'bg-emerald-600' : 'bg-emerald-800'
-                    }`}
-                    style={{ width: `${porcentagemMeta}%` }}
-                  />
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-3.5 space-y-2.5 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Meta estipulada</span>
-                    <span className="font-medium text-slate-800 tabular-nums">
-                      {formatarMoeda(valorAlvoMeta)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Já faturado</span>
-                    <span className="font-medium text-slate-800 tabular-nums">
-                      {formatarMoeda(faturamentoDaMeta)}
-                    </span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center">
-                    <span className="text-slate-500">Restante</span>
-                    <span
-                      className={`font-medium tabular-nums ${
-                        metaBatida ? 'text-emerald-600' : 'text-slate-900'
-                      }`}
-                    >
-                      {metaBatida
-                        ? 'Meta concluída! 🎉'
-                        : formatarMoeda(valorAlvoMeta - faturamentoDaMeta)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

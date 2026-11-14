@@ -284,12 +284,12 @@ export function MeuPerfil() {
   };
 
   return (
-    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800">
+    <div className="min-h-dvh bg-white font-sans flex flex-col relative antialiased text-slate-800 md:pl-18">
       {/* HEADER GLOBAL */}
       <Header />
 
       {/* CONTEÚDO PRINCIPAL — MESMA PALETA E LINGUAGEM VISUAL DA PÁGINA ADMIN */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12 md:pl-24">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-22 pb-28 md:pt-24 md:pb-12">
         {/* Cabeçalho da Página */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>

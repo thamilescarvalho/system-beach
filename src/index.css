@@ -1,6 +1,10 @@
 /* No seu index.css */
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 /* ==============================================================================
    SAFE AREA UTILITIES (iOS Notch / Dynamic Island / Home Indicator)
    ============================================================================== */
@@ -32,8 +36,12 @@
   bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom, 0px));
 }
 
-body {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
 }
 
 /* ==============================================================================

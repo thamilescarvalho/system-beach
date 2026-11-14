@@ -197,7 +197,6 @@ serve(async (req: Request) => {
         supabaseAdmin.from('categorias').delete().eq('empresa_id', empresaId),
         supabaseAdmin.from('historico_estoque').delete().eq('empresa_id', empresaId),
         supabaseAdmin.from('pagamentos_garcons').delete().eq('empresa_id', empresaId),
-        supabaseAdmin.from('metas_financeiras').delete().eq('empresa_id', empresaId),
         supabaseAdmin.from('faturas_assinatura').delete().eq('empresa_id', empresaId),
         supabaseAdmin.from('vendas').delete().eq('empresa_id', empresaId),
       ])

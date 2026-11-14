@@ -3,7 +3,7 @@ import { createContext, useContext } from 'react';
 import type {
   Mesa, ItemComanda, VendaFechada, Garcom, Produto,
   MovimentacaoEstoque, Pagamento, Categoria, PagamentoGarcom,
-  NovoPagamentoGarcom, StatusPagamentoGarcom, MetaFinanceira, NovaMetaFinanceira,
+  NovoPagamentoGarcom, StatusPagamentoGarcom,
   ContaFinanceira, NovaContaFinanceira, MovimentacaoCaixa, NovaMovimentacaoCaixa,
   NotaCompraEstoque, NovaNotaCompraInput
 } from '../types';
@@ -53,8 +53,6 @@ export interface AppContextType {
   notasCompraEstoque: NotaCompraEstoque[];
   uploadImagemProduto: (file: File) => Promise<string | null>;
   autenticarUsuario: (email: string, senha: string) => Promise<boolean>;
-  metaAtiva: MetaFinanceira | null;
-  salvarMetaFinanceira: (dados: NovaMetaFinanceira) => Promise<void>;
   adicionarProduto: (produto: Omit<Produto, 'id'>) => Promise<void>;
   editarProduto: (id: number, atualizacao: Partial<Produto>) => Promise<void>;
   excluirProduto: (id: number) => Promise<void>;

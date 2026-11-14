@@ -1,5 +1,6 @@
 // src/pages/AdminFinanceiro.tsx
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { Header } from '../components/Header';
 import { imprimirCupomTermico } from '../utils/impressoraTermica';
@@ -46,6 +47,7 @@ function formatarHora(isoString: string): string {
 }
 
 export function AdminFinanceiro() {
+  const navigate = useNavigate();
   const contexto = useAppContext();
   const adminLogado = contexto?.garcomLogado?.nome || 'Admin';
   const dataHoje = useMemo(() => obterDataLocalYYYYMMDD(), []);
@@ -84,7 +86,6 @@ export function AdminFinanceiro() {
   const [modalCancelarAberto, setModalCancelarAberto] = useState(false);
   const [modalPagamentosAberto, setModalPagamentosAberto] = useState(false);
   const [modalValeAberto, setModalValeAberto] = useState(false);
-  const [modalMetaAberto, setModalMetaAberto] = useState(false);
   const [modalGuardaSolAberto, setModalGuardaSolAberto] = useState(false);
   const [modalMesasAberto, setModalMesasAberto] = useState(false);
   const [modalContasAberto, setModalContasAberto] = useState(false);
@@ -116,7 +117,6 @@ export function AdminFinanceiro() {
   const historicoBruto = useMemo(() => contexto?.historicoVendas || [], [contexto?.historicoVendas]);
   const mesas = useMemo(() => contexto?.mesas || [], [contexto?.mesas]);
   const listaFuncionarios = useMemo(() => contexto?.garcons || contexto?.usuarios || [], [contexto?.garcons, contexto?.usuarios]);
-  const metaAtiva = contexto?.metaAtiva;
   const contasFinanceiras = useMemo(() => contexto?.contasFinanceiras || [], [contexto?.contasFinanceiras]);
   const movimentacoesCaixa = useMemo(() => contexto?.movimentacoesCaixa || [], [contexto?.movimentacoesCaixa]);
   const historicoPagamentos = useMemo(() => contexto?.historicoPagamentos || [], [contexto?.historicoPagamentos]);
@@ -182,20 +182,11 @@ export function AdminFinanceiro() {
   }, [historicoFiltrado, contaFiltroId, chipFiltro, resolveContaDaVenda]);
 
   const vendasValidas = useMemo(() => historicoFiltrado.filter((v) => v.status !== 'cancelada'), [historicoFiltrado]);
-  const faturamentoTotal = useMemo(() => vendasValidas.reduce((acc, venda) => acc + venda.total, 0), [vendasValidas]);
-
-  const taxaServicoTotal = useMemo(() => vendasValidas.reduce((totalTaxa, venda) => {
-    const itemServico = venda.itens.find((item) => item.id === 'taxa-servico-10');
-    if (itemServico) return totalTaxa + itemServico.produto.preco * itemServico.quantidade;
-    return totalTaxa;
-  }, 0), [vendasValidas]);
 
   const mesasOcupadas = mesas.filter((m) => m.status === 'ocupada');
   const valorEmAberto = mesasOcupadas.reduce((acc, mesa) => {
     return acc + mesa.itens.reduce((sum, item) => sum + item.produto.preco * item.quantidade, 0);
   }, 0);
-
-  const saldoLiquido = faturamentoTotal - taxaServicoTotal;
 
   // MOVIMENTAÇÕES, VALES PAGOS E NOTAS FILTRADAS POR PERÍODO + CONTA + BUSCA
   const movimentacoesNoPeriodo = useMemo(() => {
@@ -594,12 +585,6 @@ export function AdminFinanceiro() {
     resolveContaDaVenda
   ]);
 
-  // META
-  let percentualMeta = 0;
-  if (metaAtiva && metaAtiva.valorAlvo > 0) {
-    percentualMeta = Math.min((saldoLiquido / metaAtiva.valorAlvo) * 100, 100);
-  }
-
   const totalPagamentosResumo = Object.values(resumoPagamentos).reduce((acc, val) => acc + val, 0);
 
   const configPagamentos: Record<string, { icon: React.ReactNode; corBg: string; corTexto: string; border: string }> = {
@@ -752,63 +737,6 @@ export function AdminFinanceiro() {
     }
   };
 
-  // MODAL METAS
-  const [metaDataInicio, setMetaDataInicio] = useState(dataHoje);
-  const [metaDataFim, setMetaDataFim] = useState(dataHoje);
-  const [novaMetaInput, setNovaMetaInput] = useState('');
-  const [carregandoMeta, setCarregandoMeta] = useState(false);
-
-  const handleMetaValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valorApenasNumeros = e.target.value.replace(/\D/g, '');
-    if (valorApenasNumeros === '') {
-      setNovaMetaInput('');
-      return;
-    }
-    const valorNumericoDecimal = parseInt(valorApenasNumeros, 10) / 100;
-    setNovaMetaInput(
-      valorNumericoDecimal.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
-    );
-  };
-
-  const handleSalvarMeta = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const valorDesmascarado = novaMetaInput.replace(/\./g, '').replace(',', '.');
-    const valorNumericoDB = parseFloat(valorDesmascarado);
-
-    if (Number.isNaN(valorNumericoDB) || valorNumericoDB <= 0) {
-      mostrarToast('Por favor, informe um valor maior que zero.', 'erro');
-      return;
-    }
-
-    if (metaDataFim < metaDataInicio) {
-      mostrarToast('A data final não pode ser anterior à data inicial.', 'erro');
-      return;
-    }
-
-    setCarregandoMeta(true);
-    try {
-      if (contexto?.salvarMetaFinanceira) {
-        await contexto.salvarMetaFinanceira({
-          dataInicio: metaDataInicio,
-          dataFim: metaDataFim,
-          valorAlvo: valorNumericoDB
-        });
-        mostrarToast('Nova meta ativada com sucesso!', 'sucesso');
-        setModalMetaAberto(false);
-        setNovaMetaInput('');
-      }
-    } catch (error: unknown) {
-      console.error('Erro ao salvar meta:', error);
-      mostrarToast('Falha ao registrar meta no banco de dados.', 'erro');
-    } finally {
-      setCarregandoMeta(false);
-    }
-  };
-
   // CANCELAMENTO / ESTORNO
   const [motivoCancelamento, setMotivoCancelamento] = useState('');
   const [carregandoCancelamento, setCarregandoCancelamento] = useState(false);
@@ -865,7 +793,6 @@ export function AdminFinanceiro() {
       modalCancelarAberto ||
       modalPagamentosAberto ||
       modalValeAberto ||
-      modalMetaAberto ||
       modalGuardaSolAberto ||
       modalMesasAberto ||
       modalContasAberto ||
@@ -896,10 +823,6 @@ export function AdminFinanceiro() {
         setModalValeAberto(false);
         return;
       }
-      if (modalMetaAberto && !carregandoMeta) {
-        setModalMetaAberto(false);
-        return;
-      }
       if (modalNotaCompraAberto) setModalNotaCompraAberto(false);
       if (modalMovAberto) setModalMovAberto(false);
       if (modalContasAberto) setModalContasAberto(false);
@@ -916,8 +839,6 @@ export function AdminFinanceiro() {
     vendaSelecionada,
     modalValeAberto,
     carregandoVale,
-    modalMetaAberto,
-    carregandoMeta,
     modalNotaCompraAberto,
     modalMovAberto,
     modalContasAberto,
@@ -990,7 +911,7 @@ export function AdminFinanceiro() {
         <Header />
 
         {/* DASHBOARD HEADER FINTECH MINIMALISTA */}
-        <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white rounded-b-3xl pt-18 md:pt-20 md:pl-24 pb-6 relative overflow-hidden">
+        <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white rounded-b-3xl pt-22 sm:pt-24 md:pt-24 md:pl-18 pb-5 sm:pb-6 relative overflow-hidden">
           <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
 
           <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 flex flex-col gap-3">
@@ -1131,7 +1052,7 @@ export function AdminFinanceiro() {
                 <button
                   type="button"
                   onClick={() => setVisaoHero('entradas')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs cursor-pointer transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium cursor-pointer transition-all ${
                     visaoHero === 'entradas'
                       ? 'bg-emerald-500/30 border-emerald-300/50 text-white'
                       : 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-400/20 text-emerald-200'
@@ -1139,14 +1060,11 @@ export function AdminFinanceiro() {
                 >
                   <LucideIcons.ArrowDownLeft size={12} className="text-emerald-300" />
                   <span>Entradas</span>
-                  <span className="font-semibold text-white tabular-nums">
-                    {mostrarValores ? formatarMoeda(totalEntradasPeriodo) : '•••'}
-                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setVisaoHero('saidas')}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs cursor-pointer transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium cursor-pointer transition-all ${
                     visaoHero === 'saidas'
                       ? 'bg-rose-500/30 border-rose-300/50 text-white'
                       : 'bg-rose-500/15 hover:bg-rose-500/25 border-rose-400/20 text-rose-200'
@@ -1154,9 +1072,6 @@ export function AdminFinanceiro() {
                 >
                   <LucideIcons.ArrowUpRight size={12} className="text-rose-300" />
                   <span>Saídas</span>
-                  <span className="font-semibold text-white tabular-nums">
-                    {mostrarValores ? formatarMoeda(totalSaidasPeriodo) : '•••'}
-                  </span>
                 </button>
               </div>
             </div>
@@ -1177,51 +1092,61 @@ export function AdminFinanceiro() {
         </div>
 
         {/* AÇÕES RÁPIDAS MINIMALISTAS */}
-        <div className="md:pl-24 mt-3.5 mb-5">
+        <div className="md:pl-18 mt-3.5 mb-5">
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto scrollbar-none pb-0.5">
               <button
                 type="button"
+                title="Nova Entrada"
+                aria-label="Registrar entrada no caixa"
                 onClick={() => {
                   setTipoMovModal('entrada');
                   setModalMovAberto(true);
                 }}
-                className="h-9 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/70 text-emerald-800 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/70 text-emerald-800 text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.ArrowDownLeft size={14} />
               </button>
 
               <button
                 type="button"
+                title="Nova Saída"
+                aria-label="Registrar saída no caixa"
                 onClick={() => {
                   setTipoMovModal('saida');
                   setModalMovAberto(true);
                 }}
-                className="h-9 px-3 rounded-full bg-rose-50 hover:bg-rose-100/80 border border-rose-200/70 text-rose-700 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-rose-50 hover:bg-rose-100/80 border border-rose-200/70 text-rose-700 text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.ArrowUpRight size={14} />
               </button>
 
               <button
                 type="button"
+                title="Lançar Nota de Compra"
+                aria-label="Lançar nota de compra no estoque"
                 onClick={() => setModalNotaCompraAberto(true)}
-                className="h-9 px-3 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.Plus size={14} />
               </button>
 
               <button
                 type="button"
+                title="Taxa Guarda-Sol"
+                aria-label="Ver histórico de taxa guarda-sol"
                 onClick={() => setModalGuardaSolAberto(true)}
-                className="h-9 px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.Umbrella size={14} className="text-amber-700" />
               </button>
 
               <button
                 type="button"
+                title="Mesas Abertas"
+                aria-label="Ver consumo em mesas abertas"
                 onClick={() => setModalMesasAberto(true)}
-                className="h-9 px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 px-2.5 sm:px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.Clock size={14} className="text-slate-500" />
                 
@@ -1234,26 +1159,29 @@ export function AdminFinanceiro() {
 
               <button
                 type="button"
+                title="Lançar Vale"
+                aria-label="Lançar vale ou pagamento da equipe"
                 onClick={() => setModalValeAberto(true)}
-                className="h-9 px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
               >
                 <LucideIcons.Banknote size={15} className="text-emerald-600" />
               </button>
 
               <button
                 type="button"
-                onClick={() => setModalMetaAberto(true)}
-                className="h-9 px-3 rounded-full bg-slate-100/80 hover:bg-slate-200/60 border border-slate-200/70 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-colors cursor-pointer"
+                onClick={() => navigate('/admin/financeiro/metricas')}
+                title="Central de Métricas e Indicadores"
+                aria-label="Abrir central de métricas financeiras"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap shadow-xs transition-all cursor-pointer"
               >
-                <LucideIcons.Target size={14} className="text-slate-800" />
-
+                <LucideIcons.BarChart3 size={14} className="text-emerald-400" />
               </button>
             </div>
           </div>
         </div>
 
         {/* CONTEÚDO PRINCIPAL: EXTRATO */}
-        <main className="md:pl-24 relative z-20">
+        <main className="md:pl-18 relative z-20">
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 space-y-5 pb-12 font-sans">
             {/* ABAS + FILTRO MODERNO + EXTRATO */}
             <section>
@@ -2224,134 +2152,6 @@ export function AdminFinanceiro() {
       </ModalBase>
 
       {/* =====================================================================
-          MODAL: DEFINIR META
-      ===================================================================== */}
-      <ModalBase
-        aberto={modalMetaAberto}
-        onFechar={() => setModalMetaAberto(false)}
-        titulo="Metas da Casa"
-        subtitulo="Objetivo de faturamento do período"
-        icone={<LucideIcons.Target size={18} />}
-        tomIcone="blue"
-        tamanho="md"
-        bloqueado={carregandoMeta}
-        footer={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={carregandoMeta}
-              onClick={() => setModalMetaAberto(false)}
-              className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 cursor-pointer disabled:opacity-50"
-            >
-              Fechar
-            </button>
-            <button
-              type="submit"
-              form="form-meta-casa"
-              disabled={carregandoMeta}
-              className="flex-2 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {carregandoMeta ? (
-                <LucideIcons.Loader2 size={16} className="animate-spin" />
-              ) : (
-                <>
-                  <LucideIcons.Check size={16} />
-                  <span>Atualizar Meta</span>
-                </>
-              )}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {metaAtiva ? (
-            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4">
-              <div className="flex justify-between items-center gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                  <span className="text-xs font-semibold text-slate-700">Meta ativa</span>
-                </div>
-                <span className="text-xs font-medium text-slate-500 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-                  {formatarData(metaAtiva.dataInicio).slice(0, 5)} até{' '}
-                  {formatarData(metaAtiva.dataFim).slice(0, 5)}
-                </span>
-              </div>
-
-              <p className="text-2xl font-bold text-slate-900 tabular-nums mb-2">
-                {formatarMoeda(metaAtiva.valorAlvo)}
-              </p>
-
-              <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${percentualMeta}%` }}
-                />
-              </div>
-
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500">
-                  Atingido: <strong className="text-slate-700">{formatarMoeda(saldoLiquido)}</strong>
-                </span>
-                <span className="font-bold text-blue-600 tabular-nums">{percentualMeta.toFixed(1)}%</span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-4 text-center">
-              <p className="text-xs font-medium text-slate-500">
-                Nenhuma meta ativa. Defina um objetivo abaixo.
-              </p>
-            </div>
-          )}
-
-          <form id="form-meta-casa" onSubmit={handleSalvarMeta} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Data inicial</label>
-                <input
-                  disabled={carregandoMeta}
-                  required
-                  type="date"
-                  value={metaDataInicio}
-                  onChange={(e) => setMetaDataInicio(e.target.value)}
-                  className="appearance-none w-full bg-white border border-slate-200 rounded-xl h-10 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Data final</label>
-                <input
-                  disabled={carregandoMeta}
-                  required
-                  type="date"
-                  value={metaDataFim}
-                  onChange={(e) => setMetaDataFim(e.target.value)}
-                  className="appearance-none w-full bg-white border border-slate-200 rounded-xl h-10 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Valor alvo (R$)</label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400 text-xs font-medium pointer-events-none">
-                  R$
-                </span>
-                <input
-                  required
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0,00"
-                  disabled={carregandoMeta}
-                  value={novaMetaInput}
-                  onChange={handleMetaValorChange}
-                  className="appearance-none w-full bg-white border border-slate-200 rounded-xl h-10 pl-9 pr-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500 placeholder:text-slate-300 disabled:opacity-50 tabular-nums"
-                />
-              </div>
-            </div>
-          </form>
-        </div>
-      </ModalBase>
-
-      {/* =====================================================================
           MODAL: DETALHES DA VENDA
       ===================================================================== */}
       {vendaSelecionada && (
@@ -2598,7 +2398,7 @@ export function AdminFinanceiro() {
         </div>
         {vendaSelecionada?.itens.map((item) => (
           <div key={item.id} className="flex justify-between mb-1">
-            <span className="pr-2">
+            <span className="pr-2 uppercase">
               {item.quantidade}x {item.produto.nome}
             </span>
             <span className="tabular-nums">{formatarMoeda(item.produto.preco * item.quantidade)}</span>

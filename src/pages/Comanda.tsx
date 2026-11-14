@@ -98,9 +98,9 @@ export function Comanda() {
     if (categorias && categorias.length > 0) {
       return [...categorias]
         .sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
-        .map(c => c.nome);
+        .map(c => c.nome.trim().toUpperCase());
     }
-    return Array.from(new Set(cardapioAtivo.map(p => extrairNomeCategoria(p.categoria))));
+    return Array.from(new Set(cardapioAtivo.map(p => extrairNomeCategoria(p.categoria).trim().toUpperCase())));
   }, [categorias, cardapioAtivo]);
 
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
@@ -143,18 +143,18 @@ export function Comanda() {
         if (produto.estoque !== undefined) {
           const qtdAtualNaMesa = existe ? existe.quantidade : 0;
           if (qtdAtualNaMesa >= produto.estoque) {
-            alert(`Sem estoque! Só restam ${produto.estoque} unidades de ${produto.nome}.`);
+            alert(`Sem estoque! Só restam ${produto.estoque} unidades de ${produto.nome.toUpperCase()}.`);
             return prev;
           }
         }
-        dispararToast(`+1 ${produto.nome} adicionado`);
+        dispararToast(`+1 ${produto.nome.toUpperCase()} adicionado`);
         if (existe) {
           return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item);
         }
         return [...prev, { id: `item_ui_${Date.now()}`, produto, quantidade: 1, statusCozinha: 'pendente' }];
       } else {
         if (!existe) return prev;
-        dispararToast(`${produto.nome} atualizado`);
+        dispararToast(`${produto.nome.toUpperCase()} atualizado`);
         if (existe.quantidade > 1) {
           return prev.map(item => item.produto.id === produto.id ? { ...item, quantidade: item.quantidade - 1 } : item);
         }
@@ -737,7 +737,7 @@ export function Comanda() {
                                 <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] flex items-center justify-center shrink-0 tabular-nums">
                                   {item.quantidade}x
                                 </span>
-                                <span className="font-medium text-slate-700 truncate text-[11px]">
+                                <span className="font-medium text-slate-700 truncate text-[11px] uppercase">
                                   {item.produto.nome}
                                 </span>
                               </div>

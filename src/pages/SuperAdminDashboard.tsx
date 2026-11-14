@@ -523,7 +523,6 @@ export function SuperAdminDashboard() {
         supabase.from('categorias').delete().eq('empresa_id', empresa.id),
         supabase.from('historico_estoque').delete().eq('empresa_id', empresa.id),
         supabase.from('pagamentos_garcons').delete().eq('empresa_id', empresa.id),
-        supabase.from('metas_financeiras').delete().eq('empresa_id', empresa.id),
         supabase.from('faturas_assinatura').delete().eq('empresa_id', empresa.id),
         supabase.from('vendas').delete().eq('empresa_id', empresa.id)
       ]);
@@ -1369,7 +1368,7 @@ export function SuperAdminDashboard() {
       const novasCategoriasPayload = catsParaClonar
         .filter((c) => !nomesCatsDestino.has(c.nome.trim().toLowerCase()))
         .map((c, idx) => ({
-          nome: c.nome.trim(),
+          nome: c.nome.trim().toUpperCase(),
           icone: c.icone || 'Utensils',
           ativo: c.ativo !== false,
           ordem: ordemBase + idx,
@@ -1384,9 +1383,9 @@ export function SuperAdminDashboard() {
             )
         )
         .map((p) => ({
-          nome: p.nome.trim(),
-          categoria: p.categoria.trim(),
-          subcategoria: p.subcategoria || null,
+          nome: p.nome.trim().toUpperCase(),
+          categoria: p.categoria.trim().toUpperCase(),
+          subcategoria: p.subcategoria ? p.subcategoria.trim().toUpperCase() : null,
           imagem_url: p.imagem_url || null,
           preco: Number(p.preco || 0),
           preco_custo: Number(p.preco_custo || 0),
@@ -4282,7 +4281,7 @@ export function SuperAdminDashboard() {
                               size={12}
                               className={selecionada ? 'text-emerald-400' : 'opacity-30'}
                             />
-                            <span>{cat.nome}</span>
+                            <span className="uppercase">{cat.nome}</span>
                             <span
                               className={`text-xs px-1.5 py-0.5 rounded-md ${
                                 selecionada ? 'bg-white/15 text-white' : 'bg-slate-200/70 text-slate-600'

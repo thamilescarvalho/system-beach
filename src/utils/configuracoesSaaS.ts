@@ -100,7 +100,7 @@ export const CONFIGURACAO_SAAS_PADRAO: ConfiguracaoGlobalSaaS = {
   recursosPlano: [
     'Mapa de Guarda-sóis e Mesas ilimitados em tempo real',
     'Comandas mobile ágeis sincronizadas com Bar e Cozinha',
-    'Gestão de Caixa, Estoque, Equipe e Metas Financeiras',
+    'Gestão de Caixa, Estoque, Equipe e Métricas Financeiras',
     'Impressão térmica Bluetooth/USB e Suporte dedicado'
   ],
   ciclos: {
