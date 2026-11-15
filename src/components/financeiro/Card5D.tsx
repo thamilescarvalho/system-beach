@@ -7,6 +7,8 @@ interface Card5DProps {
   interativo?: boolean;
   className?: string;
   innerClassName?: string;
+  onClick?: () => void;
+  title?: string;
   children: ReactNode;
 }
 
@@ -18,6 +20,8 @@ export function Card5D({
   interativo = true,
   className = '',
   innerClassName = '',
+  onClick,
+  title,
   children
 }: Card5DProps) {
   const [tilt, setTilt] = useState<{ rx: number; ry: number; gx: number; gy: number; ativo: boolean }>({
@@ -64,12 +68,27 @@ export function Card5D({
       }
     : undefined;
 
+  const clicavel = Boolean(onClick);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      onKeyDown={clicavel ? handleKeyDown : undefined}
+      role={clicavel ? 'button' : undefined}
+      tabIndex={clicavel ? 0 : undefined}
+      title={title}
       style={estiloTransform}
-      className={`relative hover:z-30 focus-within:z-30 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05),0_1px_3px_rgba(15,23,42,0.02)] hover:shadow-[0_10px_28px_-6px_rgba(15,23,42,0.08)] transition-shadow duration-300 overflow-visible ${className}`}
+      className={`relative hover:z-30 focus-within:z-30 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05),0_1px_3px_rgba(15,23,42,0.02)] hover:shadow-[0_10px_28px_-6px_rgba(15,23,42,0.08)] transition-all duration-300 overflow-visible ${clicavel ? 'cursor-pointer active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-200' : ''} ${className}`}
     >
       {/* Brilho especular 5D sutil no hover */}
       {podeInclinar && (

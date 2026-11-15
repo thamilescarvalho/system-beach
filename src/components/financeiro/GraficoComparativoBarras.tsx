@@ -21,9 +21,7 @@ function construirCaminhoSuave(coords: { x: number; y: number }[]): string {
 }
 
 /**
- * Gráfico minimalista de curvas suaves (estilo SaaS UI Kit) comparando Entradas e Saídas,
- * com tooltip flutuante e grade limpa.
- */
+ * Gráfico comparando Entradas e Saídas */
 export function GraficoComparativoBarras({
   pontos,
   ocultarValores = false
@@ -110,7 +108,7 @@ export function GraficoComparativoBarras({
 
         {/* Área do gráfico SVG */}
         <div className="relative flex-1 min-w-0">
-          {/* Pílula flutuante estilo Dtour UI Kit */}
+          {/* Pílula flutuante */}
           {pontoAtivo && (
             <div
               style={{
@@ -144,7 +142,7 @@ export function GraficoComparativoBarras({
               </linearGradient>
             </defs>
 
-            {/* Linhas horizontais sutis */}
+            {/* Linhas */}
             {[0, 0.33, 0.66, 1].map((f, i) => {
               const y = padTop + utilH * f;
               return (
@@ -160,10 +158,10 @@ export function GraficoComparativoBarras({
               );
             })}
 
-            {/* Área preenchida sob Entradas */}
+            {/* Área Entradas */}
             {areaEntradas && <path d={areaEntradas} fill="url(#gradAreaEntradas)" />}
 
-            {/* Curva Saídas (Amarelo/Âmbar suave como na referência) */}
+            {/* Curva Saídas */}
             <path
               d={pathSaidas}
               fill="none"
@@ -172,7 +170,7 @@ export function GraficoComparativoBarras({
               strokeLinecap="round"
             />
 
-            {/* Curva Entradas (Azul Celeste limpo como na referência) */}
+            {/* Curva Entradas */}
             <path
               d={pathEntradas}
               fill="none"
@@ -181,7 +179,7 @@ export function GraficoComparativoBarras({
               strokeLinecap="round"
             />
 
-            {/* Linha vertical tracejada no ponto ativo */}
+            {/* Linha vertical */}
             <line
               x1={coordAtiva.x}
               x2={coordAtiva.x}

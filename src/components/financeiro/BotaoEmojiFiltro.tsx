@@ -71,7 +71,7 @@ interface MenuFiltroMetricaDropdownProps {
   opcoesMetodo?: OpcaoMetodoEmoji[];
   metodoSelecionado?: MetodoPagamentoChave;
   onChangeMetodo?: (metodo: MetodoPagamentoChave) => void;
-  alinhamento?: 'direita' | 'esquerda' | 'responsivo';
+  alinhamento?: 'direita' | 'esquerda' | 'responsivo' | 'card-esquerda';
   tamanho?: 'sm' | 'md';
 }
 
@@ -112,18 +112,28 @@ export function MenuFiltroMetricaDropdown({
       ? 'left-0'
       : alinhamento === 'responsivo'
         ? 'left-0 sm:left-auto sm:right-0'
-        : 'right-0';
+        : alinhamento === 'card-esquerda'
+          ? '-right-28 sm:right-0'
+          : 'right-0';
 
-  const classeAlturaBotao = tamanho === 'md' ? 'h-8 px-3 text-xs' : 'h-7 px-2.5 text-[11px]';
+  const classeAlturaBotao =
+    tamanho === 'md'
+      ? 'h-8 px-3 text-xs gap-1.5'
+      : 'h-6 sm:h-7 px-2 sm:px-2.5 text-[10px] sm:text-[11px] gap-1 sm:gap-1.5';
 
   return (
-    <div ref={containerRef} className="relative inline-block font-sans shrink-0">
+    <div
+      ref={containerRef}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="relative inline-block font-sans shrink-0"
+    >
       <button
         type="button"
         aria-haspopup="dialog"
         aria-expanded={aberto}
         onClick={() => setAberto((v) => !v)}
-        className={`${classeAlturaBotao} rounded-full border font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+        className={`${classeAlturaBotao} rounded-full border font-medium inline-flex items-center transition-colors cursor-pointer whitespace-nowrap ${
           temFiltroAtivo
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100/70'
             : 'bg-slate-50 border-slate-200/90 text-slate-600 hover:bg-slate-100'
@@ -131,18 +141,18 @@ export function MenuFiltroMetricaDropdown({
       >
         {temFormas ? (
           <SlidersHorizontal
-            size={12}
+            size={11}
             className={temFiltroAtivo ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'}
           />
         ) : (
           <CalendarDays
-            size={12}
+            size={11}
             className={temFiltroAtivo ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'}
           />
         )}
-        <span className="truncate max-w-32 sm:max-w-40">{textoBotao}</span>
+        <span className="truncate max-w-16 sm:max-w-40">{textoBotao}</span>
         <ChevronDown
-          size={12}
+          size={11}
           className={`shrink-0 transition-transform duration-150 ${
             aberto ? 'rotate-180' : ''
           } ${temFiltroAtivo ? 'text-emerald-600' : 'text-slate-400'}`}
@@ -341,7 +351,12 @@ export function MenuContaDropdown({
   const filtrando = Boolean(contaAtiva);
 
   return (
-    <div ref={containerRef} className="relative inline-block font-sans shrink-0">
+    <div
+      ref={containerRef}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="relative inline-block font-sans shrink-0"
+    >
       <button
         type="button"
         aria-haspopup="listbox"
@@ -460,7 +475,12 @@ export function MenuSimplesDropdown<T extends string>({
   const ativoObj = opcoes.find((o) => o.chave === valor) ?? opcoes[0];
 
   return (
-    <div ref={containerRef} className="relative inline-block font-sans shrink-0">
+    <div
+      ref={containerRef}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="relative inline-block font-sans shrink-0"
+    >
       <button
         type="button"
         aria-haspopup="listbox"

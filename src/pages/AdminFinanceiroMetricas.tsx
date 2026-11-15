@@ -11,6 +11,10 @@ import {
 } from '../components/financeiro/BotaoEmojiFiltro';
 import { GraficoComparativoBarras } from '../components/financeiro/GraficoComparativoBarras';
 import {
+  ModalDetalheMetrica,
+  type TipoMetricaModal
+} from '../components/financeiro/ModalDetalheMetrica';
+import {
   calcularSaldosPorConta,
   formatarMoeda,
   obterDataLocalYYYYMMDD
@@ -19,6 +23,7 @@ import {
   calcularIntervaloPreset,
   calcularResumoExecutivoBI,
   calcularResumoGuardaSolPeriodo,
+  calcularResumoLucroPeriodo,
   calcularResumoVendasPeriodo,
   calcularRecebimentosPorMetodo,
   formatarRotuloIntervalo,
@@ -62,45 +67,6 @@ function resolverIntervaloEstado(estado: EstadoFiltroPeriodo, hoje: string): Int
   return calcularIntervaloPreset(estado.preset, hoje);
 }
 
-function LinhaDeltaMinimalista({
-  delta,
-  atualZero = false,
-  inverterCor = false,
-  complemento
-}: {
-  delta: number | null;
-  atualZero?: boolean;
-  inverterCor?: boolean;
-  complemento?: string;
-}) {
-  if (delta === null || (atualZero && delta === -100)) {
-    return (
-      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 tabular-nums truncate">
-        <span className="font-medium text-slate-500">Estável</span>
-        {complemento && <span className="truncate">· {complemento}</span>}
-      </div>
-    );
-  }
-
-  const arredondado = Number(delta.toFixed(1));
-  const neutro = Math.abs(arredondado) < 0.2;
-  const positivo = arredondado > 0;
-  const bom = inverterCor ? !positivo : positivo;
-
-  const corTexto = neutro ? 'text-slate-500' : bom ? 'text-sky-600' : 'text-rose-500';
-  const seta = neutro ? '•' : positivo ? '↑' : '↓';
-  const sinal = positivo ? '+' : '';
-
-  return (
-    <div className="flex items-center gap-1.5 text-[11px] tabular-nums truncate">
-      <span className={`font-semibold shrink-0 ${corTexto}`}>
-        {`${sinal}${arredondado.toFixed(1).replace('.', ',')}% ${seta}`}
-      </span>
-      <span className="text-slate-400 truncate">{complemento ? `(${complemento})` : '(vs. ant.)'}</span>
-    </div>
-  );
-}
-
 function AnelProgressoCircular({
   percentual,
   corHex
@@ -116,8 +82,11 @@ function AnelProgressoCircular({
   const offset = circunferencia - (pctLimpo / 100) * circunferencia;
 
   return (
-    <div className="relative inline-flex items-center justify-center my-2">
-      <svg width={tamanho} height={tamanho} className="-rotate-90">
+    <div className="relative inline-flex items-center justify-center my-1 sm:my-2">
+      <svg
+        viewBox={`0 0 ${tamanho} ${tamanho}`}
+        className="w-20 h-20 sm:w-28 sm:h-28 -rotate-90"
+      >
         <circle
           cx={tamanho / 2}
           cy={tamanho / 2}
@@ -140,7 +109,7 @@ function AnelProgressoCircular({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-slate-900 tabular-nums">
+        <span className="text-base sm:text-xl font-bold text-slate-900 tabular-nums">
           {Math.round(pctLimpo)}%
         </span>
       </div>
@@ -181,10 +150,19 @@ export function AdminFinanceiroMetricas() {
     preset: 'hoje',
     custom: { inicio: dataHoje, fim: dataHoje }
   });
+  const [periodoCardLucro, setPeriodoCardLucro] = useState<EstadoFiltroPeriodo>({
+    preset: 'hoje',
+    custom: { inicio: dataHoje, fim: dataHoje }
+  });
   const [metodoSelecionado, setMetodoSelecionado] = useState<MetodoPagamentoChave>('todos');
   const [abaRanking, setAbaRanking] = useState<AbaRanking>('produtos');
+  const [modalMetricaAtiva, setModalMetricaAtiva] = useState<TipoMetricaModal | null>(null);
 
   const contaFiltroNormalizada = contaFiltroId === 'todas' ? null : contaFiltroId;
+  const contaRotulo = useMemo(() => {
+    if (!contaFiltroNormalizada) return 'Todas as contas';
+    return contasFinanceiras.find((c) => c.id === contaFiltroNormalizada)?.nome || 'Todas as contas';
+  }, [contaFiltroNormalizada, contasFinanceiras]);
 
   const aoMudarPeriodoGlobal = (novoPreset: PresetPeriodo) => {
     setPeriodoGlobal((prev) => {
@@ -192,6 +170,7 @@ export function AdminFinanceiroMetricas() {
       setPeriodoCardVendas(proximo);
       setPeriodoCardRecebimentos(proximo);
       setPeriodoCardGuardaSol(proximo);
+      setPeriodoCardLucro(proximo);
       return proximo;
     });
   };
@@ -204,6 +183,7 @@ export function AdminFinanceiroMetricas() {
       setPeriodoCardVendas(proximo);
       setPeriodoCardRecebimentos(proximo);
       setPeriodoCardGuardaSol(proximo);
+      setPeriodoCardLucro(proximo);
       return proximo;
     });
   };
@@ -233,6 +213,10 @@ export function AdminFinanceiroMetricas() {
   const intervaloCardGuardaSol = useMemo(
     () => resolverIntervaloEstado(periodoCardGuardaSol, dataHoje),
     [periodoCardGuardaSol, dataHoje]
+  );
+  const intervaloCardLucro = useMemo(
+    () => resolverIntervaloEstado(periodoCardLucro, dataHoje),
+    [periodoCardLucro, dataHoje]
   );
 
   const resumoVendas = useMemo(
@@ -285,6 +269,19 @@ export function AdminFinanceiroMetricas() {
       intervaloCardGuardaSol,
       contaFiltroNormalizada
     ]
+  );
+
+  const resumoLucro = useMemo(
+    () =>
+      calcularResumoLucroPeriodo({
+        vendas: historicoVendas,
+        produtos,
+        contasFinanceiras,
+        inicio: intervaloCardLucro.inicio,
+        fim: intervaloCardLucro.fim,
+        contaFiltroId: contaFiltroNormalizada
+      }),
+    [historicoVendas, produtos, contasFinanceiras, intervaloCardLucro, contaFiltroNormalizada]
   );
 
   const resumoBI = useMemo(
@@ -387,6 +384,11 @@ export function AdminFinanceiroMetricas() {
     intervaloCardGuardaSol.fim,
     dataHoje
   );
+  const rotuloCardLucro = formatarRotuloIntervalo(
+    intervaloCardLucro.inicio,
+    intervaloCardLucro.fim,
+    dataHoje
+  );
 
   const percentualAnelVendas = useMemo(() => {
     const totalPedidos = resumoVendas.quantidadeConcluidas + resumoVendas.quantidadeCanceladas;
@@ -394,21 +396,13 @@ export function AdminFinanceiroMetricas() {
     return (resumoVendas.quantidadeConcluidas / totalPedidos) * 100;
   }, [resumoVendas]);
 
-  const percentualAnelRecebimentos = useMemo(() => {
-    if (resumoRecebimentos.totalGeralPeriodo <= 0) return 0;
-    if (metodoSelecionado === 'todos') {
-      return (resumoRecebimentos.valorVendasSelecionado / resumoRecebimentos.totalGeralPeriodo) * 100;
-    }
-    return (resumoRecebimentos.totalSelecionado / resumoRecebimentos.totalGeralPeriodo) * 100;
-  }, [resumoRecebimentos, metodoSelecionado]);
-
   return (
     <div className="min-h-dvh bg-[#f5f7fb] text-slate-800 font-sans antialiased md:pl-18">
       <Header />
 
-      <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 pt-20 pb-28 md:pt-22 md:pb-12 space-y-5">
+      <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 md:px-8 pt-20 pb-28 md:pt-22 md:pb-12 space-y-3.5 sm:space-y-5">
         {/* BARRA SUPERIOR */}
-        <section className="relative z-40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <section className="relative z-40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <MenuContaDropdown
               contas={contasFinanceiras}
@@ -451,13 +445,18 @@ export function AdminFinanceiroMetricas() {
           </div>
         </section>
 
-        {/* LINHA 1: 4 CARDS HORIZONTAIS COMPACTOS (Vendas, Recebido, Guarda-Sol, Resultado) */}
-        <section className="relative z-30 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* LINHA 1: 4 CARDS HORIZONTAIS MINIMALISTAS (2 POR LINHA NO CELULAR, 4 NO DESKTOP) */}
+        <section className="relative z-30 grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4">
           {/* CARD 1: QUANTIDADE DE VENDAS FECHADAS */}
-          <Card5D innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                Vendas Fechadas
+          <Card5D
+            onClick={() => setModalMetricaAtiva('vendas')}
+            title="Clique para analisar vendas"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
+          >
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+                <span className="sm:hidden">Vendas</span>
+                <span className="hidden sm:inline">Vendas Fechadas</span>
               </span>
 
               <MenuFiltroMetricaDropdown
@@ -473,41 +472,31 @@ export function AdminFinanceiroMetricas() {
                     custom: { ...prev.custom, [campo]: valor }
                   }))
                 }
-                alinhamento="direita"
+                alinhamento="card-esquerda"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1 min-w-0">
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight tabular-nums">
-                  {resumoVendas.quantidadeConcluidas}
-                </div>
-                <LinhaDeltaMinimalista
-                  delta={resumoVendas.deltaQuantidadePct}
-                  atualZero={resumoVendas.quantidadeConcluidas === 0}
-                />
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="text-xl sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
+                {resumoVendas.quantidadeConcluidas}
               </div>
 
-              <div className="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-500 shrink-0">
-                <LucideIcons.ShoppingBag size={20} strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-500 shrink-0">
+                <LucideIcons.ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
               </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
-              <span className="truncate">
-                PDV: {mascarar(formatarMoeda(resumoVendas.faturamentoConcluidas))}
-              </span>
-              <span className="shrink-0">
-                Ticket: {mascarar(formatarMoeda(resumoVendas.ticketMedio))}
-              </span>
             </div>
           </Card5D>
 
           {/* CARD 2: VALOR RECEBIDO (PDV + FINANCEIRO ENTRADAS) */}
-          <Card5D innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                Valor Recebido
+          <Card5D
+            onClick={() => setModalMetricaAtiva('recebido')}
+            title="Clique para analisar recebimentos"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
+          >
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+                <span className="sm:hidden">Recebido</span>
+                <span className="hidden sm:inline">Valor Recebido</span>
               </span>
 
               <MenuFiltroMetricaDropdown
@@ -532,38 +521,73 @@ export function AdminFinanceiroMetricas() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1 min-w-0">
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
-                  {mascarar(formatarMoeda(resumoRecebimentos.totalSelecionado))}
-                </div>
-                <LinhaDeltaMinimalista
-                  delta={resumoRecebimentos.deltaTotalPct}
-                  atualZero={resumoRecebimentos.totalSelecionado === 0}
-                  complemento={metodoAtivoMeta.label}
-                />
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="text-lg sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
+                {mascarar(formatarMoeda(resumoRecebimentos.totalSelecionado))}
               </div>
 
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                <LucideIcons.Wallet size={20} strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <LucideIcons.Wallet className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
               </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
-              <span className="truncate">
-                PDV: {mascarar(formatarMoeda(resumoRecebimentos.valorVendasSelecionado))}
-              </span>
-              <span className="shrink-0">
-                Fin.: {mascarar(formatarMoeda(resumoRecebimentos.valorEntradasManuaisSelecionado))}
-              </span>
             </div>
           </Card5D>
 
-          {/* CARD 3: TAXA DE GUARDA-SOL RECEBIDA */}
-          <Card5D innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                Taxa Guarda-Sol
+          {/* CARD 3: LUCRO TOTAL DOS PRODUTOS VENDIDOS (PREÇO DE VENDA - DESCONTOS - CUSTO) */}
+          <Card5D
+            onClick={() => setModalMetricaAtiva('lucro')}
+            title="Clique para analisar lucro por comanda e produto"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
+          >
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+                <span className="sm:hidden">Lucro</span>
+                <span className="hidden sm:inline">Lucro de Produtos</span>
+              </span>
+
+              <MenuFiltroMetricaDropdown
+                opcoesPeriodo={OPCOES_PERIODO_GLOBAL}
+                presetPeriodo={periodoCardLucro.preset}
+                rotuloPeriodo={rotuloCardLucro}
+                customDatas={periodoCardLucro.custom}
+                dataMaxima={dataHoje}
+                onChangePreset={(preset) =>
+                  setPeriodoCardLucro((prev) => ({ ...prev, preset }))
+                }
+                onChangeCustomData={(campo, valor) =>
+                  setPeriodoCardLucro((prev) => ({
+                    preset: 'custom',
+                    custom: { ...prev.custom, [campo]: valor }
+                  }))
+                }
+                alinhamento="card-esquerda"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div
+                className={`text-lg sm:text-2xl xl:text-3xl font-bold tracking-tight tabular-nums truncate ${
+                  resumoLucro.lucroTotal < 0 ? 'text-rose-600' : 'text-slate-900'
+                }`}
+              >
+                {mascarar(formatarMoeda(resumoLucro.lucroTotal))}
+              </div>
+
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+                <LucideIcons.BadgeDollarSign className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              </div>
+            </div>
+          </Card5D>
+
+          {/* CARD 4: TAXA DE GUARDA-SOL RECEBIDA */}
+          <Card5D
+            onClick={() => setModalMetricaAtiva('guardasol')}
+            title="Clique para analisar taxas de guarda-sol"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
+          >
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+                <span className="sm:hidden">Guarda-Sol</span>
+                <span className="hidden sm:inline">Taxa Guarda-Sol</span>
               </span>
 
               <MenuFiltroMetricaDropdown
@@ -585,77 +609,32 @@ export function AdminFinanceiroMetricas() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1 min-w-0">
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
-                  {mascarar(formatarMoeda(resumoGuardaSol.valorTotal))}
-                </div>
-                <LinhaDeltaMinimalista
-                  delta={resumoGuardaSol.deltaValorPct}
-                  atualZero={resumoGuardaSol.valorTotal === 0}
-                />
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="text-lg sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
+                {mascarar(formatarMoeda(resumoGuardaSol.valorTotal))}
               </div>
 
-              <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                <LucideIcons.Umbrella size={20} strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                <LucideIcons.Umbrella className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
               </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
-              <span>{resumoGuardaSol.qtdVendasComGuardaSol} comandas</span>
-              <span>{resumoGuardaSol.qtdUnidades} guarda-sóis</span>
-            </div>
-          </Card5D>
-
-          {/* CARD 4: RESULTADO LÍQUIDO & SAÍDAS */}
-          <Card5D innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                Resultado Líquido
-              </span>
-              <span className="h-7 px-2.5 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-medium text-slate-600 inline-flex items-center">
-                {rotuloGlobal}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1 min-w-0">
-                <div
-                  className={`text-2xl sm:text-3xl font-bold tracking-tight tabular-nums truncate ${
-                    resumoBI.resultadoLiquido < 0 ? 'text-rose-600' : 'text-slate-900'
-                  }`}
-                >
-                  {mascarar(formatarMoeda(resumoBI.resultadoLiquido))}
-                </div>
-                <LinhaDeltaMinimalista
-                  delta={resumoBI.deltaResultadoPct}
-                  atualZero={resumoBI.entradasTotal === 0 && resumoBI.saidasTotal === 0}
-                  complemento={`Saídas ${mascarar(formatarMoeda(resumoBI.saidasTotal))}`}
-                />
-              </div>
-
-              <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 shrink-0">
-                <LucideIcons.TrendingUp size={20} strokeWidth={1.8} />
-              </div>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-400 tabular-nums">
-              <span className="truncate">
-                Entradas: {mascarar(formatarMoeda(resumoBI.entradasTotal))}
-              </span>
-              <span className="shrink-0">
-                Contas: {mascarar(formatarMoeda(saldosContas.saldoConsolidado))}
-              </span>
             </div>
           </Card5D>
         </section>
 
-        {/* LINHA 2: ESTATÍSTICAS (2 CARDS COM ANEL CIRCULAR + 1 GRÁFICO DE CURVAS SUAVES) */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-stretch">
-          <Card5D className="lg:col-span-3" innerClassName="p-5 flex flex-col justify-between items-center text-center">
+        {/* LINHA 2: ESTATÍSTICAS (2 CARDS LADO A LADO NO CELULAR/DESKTOP + GRÁFICO DE CURVAS SUAVES) */}
+        <section className="grid grid-cols-2 lg:grid-cols-12 gap-2.5 sm:gap-4 items-stretch">
+          {/* CARD 5: VENDAS CONCLUÍDAS (ANEL CIRCULAR) */}
+          <Card5D
+            onClick={() => setModalMetricaAtiva('vendas')}
+            title="Clique para analisar vendas"
+            className="col-span-1 lg:col-span-3"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between items-center text-center"
+          >
             <div className="w-full text-left">
-              <span className="text-[11px] font-medium text-slate-400 block">Estatísticas</span>
-              <h2 className="text-sm font-semibold text-slate-900 mt-0.5">
+              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">
+                Estatísticas
+              </span>
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 mt-0.5 truncate">
                 Vendas Concluídas
               </h2>
             </div>
@@ -663,36 +642,74 @@ export function AdminFinanceiroMetricas() {
             <AnelProgressoCircular percentual={percentualAnelVendas} corHex="#38bdf8" />
 
             <div className="w-full">
-              <span className="text-xs font-medium text-slate-400 block">
+              <span className="text-[10px] sm:text-xs font-medium text-slate-400 block truncate">
                 {`Faturamento (${rotuloCardVendas})`}
               </span>
-              <span className="text-base font-bold text-slate-900 tabular-nums mt-0.5 block">
+              <span className="text-sm sm:text-base font-bold text-slate-900 tabular-nums mt-0.5 block truncate">
                 {mascarar(formatarMoeda(resumoVendas.faturamentoConcluidas))}
               </span>
             </div>
           </Card5D>
 
-          <Card5D className="lg:col-span-3" innerClassName="p-5 flex flex-col justify-between items-center text-center">
-            <div className="w-full text-left">
-              <span className="text-[11px] font-medium text-slate-400 block">Estatísticas</span>
-              <h2 className="text-sm font-semibold text-slate-900 mt-0.5 truncate">
-                {metodoSelecionado === 'todos' ? 'Receita via PDV' : `Meio: ${metodoAtivoMeta.label}`}
-              </h2>
+          {/* CARD 6: RESULTADO LÍQUIDO & SALDO DE CAIXA */}
+          <Card5D
+            onClick={() => setModalMetricaAtiva('resultado')}
+            title="Clique para analisar resultado líquido"
+            className="col-span-1 lg:col-span-3"
+            innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-2.5 sm:gap-3.5"
+          >
+            <div className="flex items-start justify-between gap-1.5">
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">
+                  Estatísticas
+                </span>
+                <h2 className="text-xs sm:text-sm font-semibold text-slate-900 mt-0.5 truncate">
+                  <span className="sm:hidden">Resultado</span>
+                  <span className="hidden sm:inline">Resultado Líquido</span>
+                </h2>
+              </div>
+              <span className="h-5 sm:h-6 px-2 rounded-full bg-slate-100 border border-slate-200/80 text-[10px] font-medium text-slate-600 inline-flex items-center shrink-0">
+                {rotuloGlobal}
+              </span>
             </div>
 
-            <AnelProgressoCircular percentual={percentualAnelRecebimentos} corHex="#facc15" />
+            <div className="flex items-center justify-between gap-2">
+              <div
+                className={`text-lg sm:text-2xl font-bold tracking-tight tabular-nums truncate ${
+                  resumoBI.resultadoLiquido < 0 ? 'text-rose-600' : 'text-slate-900'
+                }`}
+              >
+                {mascarar(formatarMoeda(resumoBI.resultadoLiquido))}
+              </div>
 
-            <div className="w-full">
-              <span className="text-xs font-medium text-slate-400 block">
-                Total Recebido ({rotuloCardRecebimentos})
-              </span>
-              <span className="text-base font-bold text-slate-900 tabular-nums mt-0.5 block">
-                {mascarar(formatarMoeda(resumoRecebimentos.totalSelecionado))}
-              </span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 shrink-0">
+                <LucideIcons.TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <div className="pt-2 sm:pt-2.5 border-t border-slate-100 space-y-1 text-[10px] sm:text-[11px] text-slate-400 tabular-nums">
+              <div className="flex items-center justify-between gap-1">
+                <span>Entradas:</span>
+                <span className="font-semibold text-slate-600 truncate">
+                  {mascarar(formatarMoeda(resumoBI.entradasTotal))}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <span>Saídas:</span>
+                <span className="font-semibold text-rose-500 truncate">
+                  {mascarar(formatarMoeda(resumoBI.saidasTotal))}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <span>Contas:</span>
+                <span className="font-semibold text-emerald-600 truncate">
+                  {mascarar(formatarMoeda(saldosContas.saldoConsolidado))}
+                </span>
+              </div>
             </div>
           </Card5D>
 
-          <Card5D interativo={false} className="sm:col-span-2 lg:col-span-6" innerClassName="p-5 flex flex-col justify-between gap-3">
+          <Card5D interativo={false} className="col-span-2 lg:col-span-6" innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <span className="text-[11px] font-medium text-slate-400 block">Estatísticas</span>
@@ -803,21 +820,21 @@ export function AdminFinanceiroMetricas() {
               </div>
 
               <div className="p-3 rounded-xl bg-[#f8fafc] border border-slate-100">
-                <span className="text-[10px] font-medium text-slate-400 block">
-                  {resumoBI.margemBrutaProdutosPct !== null ? 'Lucro Bruto Est.' : 'Taxa Serviço 10%'}
+                <span className="text-[10px] font-medium text-slate-400 block truncate">
+                  {resumoLucro.descontoTotal > 0 ? 'Descontos Comandas' : 'Taxa Serviço 10%'}
                 </span>
-                <span className="text-sm font-bold text-slate-900 tabular-nums mt-0.5 block">
+                <span className="text-sm font-bold text-slate-900 tabular-nums mt-0.5 block truncate">
                   {mascarar(
                     formatarMoeda(
-                      resumoBI.margemBrutaProdutosPct !== null
-                        ? resumoBI.lucroBrutoEstimado
+                      resumoLucro.descontoTotal > 0
+                        ? resumoLucro.descontoTotal
                         : resumoBI.taxaServicoTotal
                     )
                   )}
                 </span>
-                <span className="text-[10px] text-slate-400">
-                  {resumoBI.margemBrutaProdutosPct !== null
-                    ? `Margem ${resumoBI.margemBrutaProdutosPct.toFixed(0)}%`
+                <span className="text-[10px] text-slate-400 truncate block">
+                  {resumoLucro.descontoTotal > 0
+                    ? `${resumoLucro.qtdComandasComDesconto} comanda(s) c/ desc.`
                     : `${resumoVendas.itensPorVenda.toFixed(1).replace('.', ',')} itens/venda`}
                 </span>
               </div>
@@ -918,6 +935,27 @@ export function AdminFinanceiroMetricas() {
           </Card5D>
         </section>
       </main>
+
+      <ModalDetalheMetrica
+        tipo={modalMetricaAtiva}
+        onClose={() => setModalMetricaAtiva(null)}
+        ocultarValores={ocultarValores}
+        contaRotulo={contaRotulo}
+        rotulosPeriodo={{
+          global: rotuloGlobal,
+          vendas: rotuloCardVendas,
+          recebido: rotuloCardRecebimentos,
+          lucro: rotuloCardLucro,
+          guardasol: rotuloCardGuardaSol
+        }}
+        metodoLabel={metodoAtivoMeta.label}
+        resumoVendas={resumoVendas}
+        resumoRecebimentos={resumoRecebimentos}
+        resumoLucro={resumoLucro}
+        resumoGuardaSol={resumoGuardaSol}
+        resumoBI={resumoBI}
+        saldoConsolidadoContas={saldosContas.saldoConsolidado}
+      />
     </div>
   );
 }

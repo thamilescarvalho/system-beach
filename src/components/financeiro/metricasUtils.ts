@@ -215,6 +215,7 @@ export interface ResumoVendasPeriodo {
   ritmoBuckets: { label: string; quantidade: number; valor: number }[];
   picoHorarioLabel: string | null;
   picoHorarioQtd: number;
+  vendasPeriodo: VendaFechada[];
 }
 
 export function calcularResumoVendasPeriodo(params: {
@@ -238,12 +239,14 @@ export function calcularResumoVendasPeriodo(params: {
   let prevFaturamento = 0;
 
   const vendasAtuaisValidas: VendaFechada[] = [];
+  const vendasPeriodoBruto: VendaFechada[] = [];
 
   for (const v of vendas) {
     if (!vendaPertenceConta(v, contaFiltroId, mapaContas, contaPadraoId)) continue;
     const dt = obterDataLocalYYYYMMDD(v.dataFechamento);
 
     if (dt >= inicio && dt <= fim) {
+      vendasPeriodoBruto.push(v);
       if (v.status === 'cancelada') {
         quantidadeCanceladas += 1;
         valorCanceladas += Number(v.total) || 0;
@@ -254,7 +257,14 @@ export function calcularResumoVendasPeriodo(params: {
 
         if (Array.isArray(v.itens)) {
           for (const item of v.itens) {
-            if (item.id === 'taxa-servico-10') continue;
+            if (
+              item.id === 'taxa-servico-10' ||
+              item.produto?.id === 998 ||
+              String(item.id || '').startsWith('desconto-') ||
+              (Number(item.produto?.preco) || 0) < 0
+            ) {
+              continue;
+            }
             totalItensVendidos += Number(item.quantidade) || 0;
           }
         }
@@ -340,6 +350,10 @@ export function calcularResumoVendasPeriodo(params: {
     }
   }
 
+  const vendasPeriodo = [...vendasPeriodoBruto].sort((a, b) =>
+    String(b.dataFechamento || '').localeCompare(String(a.dataFechamento || ''))
+  );
+
   return {
     quantidadeConcluidas,
     quantidadeCanceladas,
@@ -353,7 +367,8 @@ export function calcularResumoVendasPeriodo(params: {
     deltaTicketPct: calcularVariacaoPercentual(ticketMedio, prevTicket),
     ritmoBuckets,
     picoHorarioLabel,
-    picoHorarioQtd
+    picoHorarioQtd,
+    vendasPeriodo
   };
 }
 
@@ -369,6 +384,17 @@ export interface DetalheMetodoRecebido {
   participacaoPct: number;
 }
 
+export interface LancamentoRecebidoDetalhe {
+  id: string;
+  dataHora: string;
+  origem: 'pdv' | 'financeiro';
+  titulo: string;
+  subtitulo: string;
+  metodoChave: Exclude<MetodoPagamentoChave, 'todos'>;
+  metodoLabel: string;
+  valor: number;
+}
+
 export interface ResumoRecebimentosPorMetodo {
   totalSelecionado: number;
   valorVendasSelecionado: number;
@@ -378,6 +404,7 @@ export interface ResumoRecebimentosPorMetodo {
   totalGeralPeriodo: number;
   deltaTotalPct: number | null;
   detalhesPorMetodo: DetalheMetodoRecebido[];
+  lancamentosPeriodo: LancamentoRecebidoDetalhe[];
 }
 
 /**
@@ -425,6 +452,7 @@ export function calcularRecebimentosPorMetodo(params: {
   });
 
   let prevTotalSelecionado = 0;
+  const lancamentosPeriodo: LancamentoRecebidoDetalhe[] = [];
 
   const processarVenda = (v: VendaFechada, ehAtual: boolean) => {
     if (v.status === 'cancelada') return;
@@ -436,6 +464,9 @@ export function calcularRecebimentosPorMetodo(params: {
         : [{ metodo: 'Não Especificado', valor: v.total }];
 
     const metodosVistosNaVenda = new Set<Exclude<MetodoPagamentoChave, 'todos'>>();
+    let valorVendaNoFiltro = 0;
+    const metodosNoFiltro: string[] = [];
+    let chavePrincipal: Exclude<MetodoPagamentoChave, 'todos'> = 'outros';
 
     for (const pag of pags) {
       const val = Number(pag.valor) || 0;
@@ -452,9 +483,33 @@ export function calcularRecebimentosPorMetodo(params: {
             metodosVistosNaVenda.add(chave);
           }
         }
+        if (metodoSelecionado === 'todos' || metodoSelecionado === chave) {
+          valorVendaNoFiltro += val;
+          chavePrincipal = chave;
+          const rotuloMetodo = entry?.label || String(pag.metodo || 'OUTROS');
+          if (!metodosNoFiltro.includes(rotuloMetodo)) {
+            metodosNoFiltro.push(rotuloMetodo);
+          }
+        }
       } else if (metodoSelecionado === 'todos' || metodoSelecionado === chave) {
         prevTotalSelecionado += val;
       }
+    }
+
+    if (ehAtual && valorVendaNoFiltro > 0) {
+      const clienteOuMesa = v.nomeCliente?.trim()
+        ? `Mesa ${v.numeroMesa} · ${v.nomeCliente.trim()}`
+        : `Mesa ${v.numeroMesa}`;
+      lancamentosPeriodo.push({
+        id: `pdv-${v.id}`,
+        dataHora: v.dataFechamento,
+        origem: 'pdv',
+        titulo: clienteOuMesa,
+        subtitulo: v.garcomNome ? `Operador: ${v.garcomNome}` : 'Venda PDV',
+        metodoChave: chavePrincipal,
+        metodoLabel: metodosNoFiltro.join(' · ') || 'PDV',
+        valor: valorVendaNoFiltro
+      });
     }
   };
 
@@ -481,12 +536,28 @@ export function calcularRecebimentosPorMetodo(params: {
         entry.total += val;
         entry.qtdEntradasManuais += 1;
       }
+      if (metodoSelecionado === 'todos' || metodoSelecionado === chave) {
+        lancamentosPeriodo.push({
+          id: `fin-${m.id}`,
+          dataHora: m.dataMovimentacao,
+          origem: 'financeiro',
+          titulo: (m.descricao || m.categoria || 'ENTRADA MANUAL').trim(),
+          subtitulo: m.categoria || 'Financeiro',
+          metodoChave: chave,
+          metodoLabel: entry?.label || String(m.metodoPagamento || 'OUTROS'),
+          valor: val
+        });
+      }
     } else if (dt >= prev.inicio && dt <= prev.fim) {
       if (metodoSelecionado === 'todos' || metodoSelecionado === chave) {
         prevTotalSelecionado += val;
       }
     }
   }
+
+  lancamentosPeriodo.sort((a, b) =>
+    String(b.dataHora || '').localeCompare(String(a.dataHora || ''))
+  );
 
   const listaBruta = Array.from(acumuladores.values());
   const totalGeralPeriodo = listaBruta.reduce((acc, item) => acc + item.total, 0);
@@ -518,7 +589,8 @@ export function calcularRecebimentosPorMetodo(params: {
       qtdEntradasManuaisSelecionado,
       totalGeralPeriodo,
       deltaTotalPct: calcularVariacaoPercentual(totalGeralPeriodo, prevTotalSelecionado),
-      detalhesPorMetodo
+      detalhesPorMetodo,
+      lancamentosPeriodo
     };
   }
 
@@ -533,7 +605,8 @@ export function calcularRecebimentosPorMetodo(params: {
     qtdEntradasManuaisSelecionado: alvo?.qtdEntradasManuais ?? 0,
     totalGeralPeriodo,
     deltaTotalPct: calcularVariacaoPercentual(totalSelecionado, prevTotalSelecionado),
-    detalhesPorMetodo
+    detalhesPorMetodo,
+    lancamentosPeriodo
   };
 }
 
@@ -673,6 +746,17 @@ export function calcularResumoExecutivoBI(params: {
 
           if (item.id === 'taxa-servico-10') {
             taxaServicoTotal += subtotalItem;
+            continue;
+          }
+
+          if (
+            item.produto?.id === 998 ||
+            String(item.id || '').startsWith('desconto-') ||
+            precoUnit < 0
+          ) {
+            const desc = Math.abs(subtotalItem);
+            receitaProdutos = Math.max(0, receitaProdutos - desc);
+            receitaProdutosComCusto = Math.max(0, receitaProdutosComCusto - desc);
             continue;
           }
 
@@ -1008,12 +1092,23 @@ export function calcularResumoExecutivoBI(params: {
   };
 }
 
+export interface RegistroGuardaSolDetalhe {
+  id: string;
+  dataHora: string;
+  origem: 'pdv' | 'financeiro';
+  titulo: string;
+  subtitulo: string;
+  quantidade: number;
+  valor: number;
+}
+
 export interface ResumoGuardaSolPeriodo {
   valorTotal: number;
   qtdVendasComGuardaSol: number;
   qtdUnidades: number;
   ticketMedioGuardaSol: number;
   deltaValorPct: number | null;
+  registrosGuardaSol: RegistroGuardaSolDetalhe[];
 }
 
 function ehTextoGuardaSol(texto?: string | null): boolean {
@@ -1047,6 +1142,7 @@ export function calcularResumoGuardaSolPeriodo(params: {
   let qtdVendasComGuardaSol = 0;
   let qtdUnidades = 0;
   let prevValorTotal = 0;
+  const registrosGuardaSol: RegistroGuardaSolDetalhe[] = [];
 
   for (const v of vendas) {
     if (v.status === 'cancelada') continue;
@@ -1074,6 +1170,17 @@ export function calcularResumoGuardaSolPeriodo(params: {
         valorTotal += somaVenda;
         qtdVendasComGuardaSol += 1;
         qtdUnidades += unidadesVenda;
+        registrosGuardaSol.push({
+          id: `gs-pdv-${v.id}`,
+          dataHora: v.dataFechamento,
+          origem: 'pdv',
+          titulo: v.nomeCliente?.trim()
+            ? `Mesa ${v.numeroMesa} · ${v.nomeCliente.trim()}`
+            : `Mesa ${v.numeroMesa}`,
+          subtitulo: v.garcomNome ? `Operador: ${v.garcomNome}` : 'Comanda PDV',
+          quantidade: unidadesVenda,
+          valor: somaVenda
+        });
       } else if (noPrev) {
         prevValorTotal += somaVenda;
       }
@@ -1091,10 +1198,23 @@ export function calcularResumoGuardaSolPeriodo(params: {
       valorTotal += val;
       qtdVendasComGuardaSol += 1;
       qtdUnidades += 1;
+      registrosGuardaSol.push({
+        id: `gs-fin-${m.id}`,
+        dataHora: m.dataMovimentacao,
+        origem: 'financeiro',
+        titulo: (m.descricao || 'TAXA GUARDA-SOL').trim(),
+        subtitulo: m.categoria || 'Financeiro',
+        quantidade: 1,
+        valor: val
+      });
     } else if (dt >= prev.inicio && dt <= prev.fim) {
       prevValorTotal += val;
     }
   }
+
+  registrosGuardaSol.sort((a, b) =>
+    String(b.dataHora || '').localeCompare(String(a.dataHora || ''))
+  );
 
   const ticketMedioGuardaSol = qtdVendasComGuardaSol > 0 ? valorTotal / qtdVendasComGuardaSol : 0;
 
@@ -1103,7 +1223,283 @@ export function calcularResumoGuardaSolPeriodo(params: {
     qtdVendasComGuardaSol,
     qtdUnidades,
     ticketMedioGuardaSol,
-    deltaValorPct: calcularVariacaoPercentual(valorTotal, prevValorTotal)
+    deltaValorPct: calcularVariacaoPercentual(valorTotal, prevValorTotal),
+    registrosGuardaSol
   };
 }
 
+
+
+export interface ItemLucroDetalhe {
+  nome: string;
+  quantidade: number;
+  precoVendaUnit: number;
+  custoUnit: number;
+  subtotalVenda: number;
+  subtotalCusto: number;
+  lucroItem: number;
+}
+
+export interface VendaLucroDetalhe {
+  id: string;
+  numeroMesa: number;
+  nomeCliente?: string;
+  garcomNome?: string;
+  dataFechamento: string;
+  receitaBruta: number;
+  custoTotal: number;
+  desconto: number;
+  lucroLiquido: number;
+  margemPct: number;
+  itens: ItemLucroDetalhe[];
+}
+
+export interface ProdutoLucroDetalhe {
+  nome: string;
+  categoria: string;
+  quantidade: number;
+  receitaBruta: number;
+  custoTotal: number;
+  lucroBruto: number;
+  margemPct: number;
+}
+
+export interface ResumoLucroPeriodo {
+  lucroTotal: number;
+  receitaBrutaProdutos: number;
+  descontoTotal: number;
+  receitaLiquidaProdutos: number;
+  custoTotal: number;
+  margemLucroPct: number;
+  qtdItensVendidos: number;
+  qtdComandasComDesconto: number;
+  deltaLucroPct: number | null;
+  vendasLucro: VendaLucroDetalhe[];
+  produtosLucro: ProdutoLucroDetalhe[];
+}
+
+export function calcularResumoLucroPeriodo(params: {
+  vendas: VendaFechada[];
+  produtos: Produto[];
+  contasFinanceiras: ContaFinanceira[];
+  inicio: string;
+  fim: string;
+  contaFiltroId?: string | null;
+}): ResumoLucroPeriodo {
+  const { vendas, produtos, contasFinanceiras, inicio, fim, contaFiltroId = null } = params;
+  const { mapaContas, contaPadraoId } = criarMapaContaVenda(contasFinanceiras);
+  const prev = calcularPeriodoAnteriorEquivalente(inicio, fim);
+
+  const mapaProduto = new Map<number, { custo: number; categoria: string }>();
+  for (const p of produtos) {
+    mapaProduto.set(p.id, {
+      custo: Number(p.precoCusto) || 0,
+      categoria: (p.categoria || 'OUTROS').trim().toUpperCase()
+    });
+  }
+
+  const apurarVenda = (v: VendaFechada, coletarDetalhes: boolean) => {
+    let receitaBrutaVenda = 0;
+    let custoVenda = 0;
+    let taxaServicoVenda = 0;
+    let taxaGuardaSolVenda = 0;
+    let descontoItensVenda = 0;
+    let qtdItensVenda = 0;
+    const itensDetalhe: ItemLucroDetalhe[] = [];
+    const itensAgrupados: {
+      prodKey: string;
+      nome: string;
+      categoria: string;
+      qtd: number;
+      subtotal: number;
+      custoItem: number;
+    }[] = [];
+
+    if (Array.isArray(v.itens)) {
+      for (const item of v.itens) {
+        const qtd = Number(item.quantidade) || 0;
+        const precoUnit = Number(item.produto?.preco) || 0;
+        const subtotal = precoUnit * qtd;
+        const idStr = String(item.id || '');
+        const prodId = item.produto?.id;
+
+        if (idStr === 'taxa-servico-10') {
+          taxaServicoVenda += Math.max(0, subtotal);
+          continue;
+        }
+
+        if (prodId === 998 || idStr.startsWith('desconto-') || precoUnit < 0) {
+          descontoItensVenda += Math.abs(subtotal);
+          continue;
+        }
+
+        if (prodId === 999 || idStr.startsWith('taxa-') || ehTextoGuardaSol(item.produto?.nome)) {
+          taxaGuardaSolVenda += Math.max(0, subtotal);
+          continue;
+        }
+
+        if (qtd <= 0) continue;
+
+        receitaBrutaVenda += subtotal;
+        qtdItensVenda += qtd;
+
+        const infoCatalogo = prodId != null ? mapaProduto.get(prodId) : undefined;
+        const custoUnit =
+          Number(item.produto?.precoCusto) > 0
+            ? Number(item.produto.precoCusto)
+            : infoCatalogo?.custo || 0;
+        const custoItemTotal = custoUnit * qtd;
+        custoVenda += custoItemTotal;
+
+        if (coletarDetalhes) {
+          const nomeProd = (item.produto?.nome || 'PRODUTO').trim().toUpperCase();
+          const catProd = (item.produto?.categoria || infoCatalogo?.categoria || 'OUTROS')
+            .trim()
+            .toUpperCase();
+          itensDetalhe.push({
+            nome: nomeProd,
+            quantidade: qtd,
+            precoVendaUnit: precoUnit,
+            custoUnit,
+            subtotalVenda: subtotal,
+            subtotalCusto: custoItemTotal,
+            lucroItem: subtotal - custoItemTotal
+          });
+          itensAgrupados.push({
+            prodKey: `${prodId ?? nomeProd}`,
+            nome: nomeProd,
+            categoria: catProd,
+            qtd,
+            subtotal,
+            custoItem: custoItemTotal
+          });
+        }
+      }
+    }
+
+    const somaPositivaVenda = receitaBrutaVenda + taxaServicoVenda + taxaGuardaSolVenda;
+    const totalPagoVenda = Number(v.total) || 0;
+    const descontoImplicito =
+      somaPositivaVenda > totalPagoVenda + 0.009 ? somaPositivaVenda - totalPagoVenda : 0;
+    const descontoVenda = Math.max(descontoItensVenda, descontoImplicito);
+
+    return {
+      receitaBrutaVenda,
+      custoVenda,
+      descontoVenda,
+      qtdItensVenda,
+      itensDetalhe,
+      itensAgrupados
+    };
+  };
+
+  let receitaBrutaProdutos = 0;
+  let custoTotal = 0;
+  let descontoTotal = 0;
+  let qtdItensVendidos = 0;
+  let qtdComandasComDesconto = 0;
+
+  let prevReceitaBruta = 0;
+  let prevCustoTotal = 0;
+  let prevDescontoTotal = 0;
+
+  const vendasLucro: VendaLucroDetalhe[] = [];
+  const mapaProdutosLucro = new Map<
+    string,
+    { nome: string; categoria: string; quantidade: number; receitaBruta: number; custoTotal: number }
+  >();
+
+  for (const v of vendas) {
+    if (v.status === 'cancelada') continue;
+    if (!vendaPertenceConta(v, contaFiltroId, mapaContas, contaPadraoId)) continue;
+
+    const dt = obterDataLocalYYYYMMDD(v.dataFechamento);
+    if (dt >= inicio && dt <= fim) {
+      const apurado = apurarVenda(v, true);
+      receitaBrutaProdutos += apurado.receitaBrutaVenda;
+      custoTotal += apurado.custoVenda;
+      descontoTotal += apurado.descontoVenda;
+      qtdItensVendidos += apurado.qtdItensVenda;
+      if (apurado.descontoVenda > 0.009) {
+        qtdComandasComDesconto += 1;
+      }
+
+      if (apurado.qtdItensVenda > 0 || apurado.descontoVenda > 0) {
+        const recLiqVenda = Math.max(0, apurado.receitaBrutaVenda - apurado.descontoVenda);
+        const lucroVenda = recLiqVenda - apurado.custoVenda;
+        const margemVenda = recLiqVenda > 0 ? (lucroVenda / recLiqVenda) * 100 : 0;
+        vendasLucro.push({
+          id: v.id,
+          numeroMesa: v.numeroMesa,
+          nomeCliente: v.nomeCliente || undefined,
+          garcomNome: v.garcomNome || undefined,
+          dataFechamento: v.dataFechamento,
+          receitaBruta: apurado.receitaBrutaVenda,
+          custoTotal: apurado.custoVenda,
+          desconto: apurado.descontoVenda,
+          lucroLiquido: lucroVenda,
+          margemPct: margemVenda,
+          itens: apurado.itensDetalhe
+        });
+      }
+
+      for (const ig of apurado.itensAgrupados) {
+        const atual = mapaProdutosLucro.get(ig.prodKey) || {
+          nome: ig.nome,
+          categoria: ig.categoria,
+          quantidade: 0,
+          receitaBruta: 0,
+          custoTotal: 0
+        };
+        atual.quantidade += ig.qtd;
+        atual.receitaBruta += ig.subtotal;
+        atual.custoTotal += ig.custoItem;
+        mapaProdutosLucro.set(ig.prodKey, atual);
+      }
+    } else if (dt >= prev.inicio && dt <= prev.fim) {
+      const apuradoPrev = apurarVenda(v, false);
+      prevReceitaBruta += apuradoPrev.receitaBrutaVenda;
+      prevCustoTotal += apuradoPrev.custoVenda;
+      prevDescontoTotal += apuradoPrev.descontoVenda;
+    }
+  }
+
+  vendasLucro.sort((a, b) =>
+    String(b.dataFechamento || '').localeCompare(String(a.dataFechamento || ''))
+  );
+
+  const produtosLucro: ProdutoLucroDetalhe[] = Array.from(mapaProdutosLucro.values())
+    .map((p) => {
+      const lucroBruto = p.receitaBruta - p.custoTotal;
+      const margemPct = p.receitaBruta > 0 ? (lucroBruto / p.receitaBruta) * 100 : 0;
+      return {
+        ...p,
+        lucroBruto,
+        margemPct
+      };
+    })
+    .sort((a, b) => b.lucroBruto - a.lucroBruto);
+
+  const receitaLiquidaProdutos = Math.max(0, receitaBrutaProdutos - descontoTotal);
+  const lucroTotal = receitaLiquidaProdutos - custoTotal;
+  const margemLucroPct =
+    receitaLiquidaProdutos > 0 ? (lucroTotal / receitaLiquidaProdutos) * 100 : 0;
+
+  const prevReceitaLiquida = Math.max(0, prevReceitaBruta - prevDescontoTotal);
+  const prevLucroTotal = prevReceitaLiquida - prevCustoTotal;
+  const deltaLucroPct = calcularVariacaoPercentual(lucroTotal, prevLucroTotal);
+
+  return {
+    lucroTotal,
+    receitaBrutaProdutos,
+    descontoTotal,
+    receitaLiquidaProdutos,
+    custoTotal,
+    margemLucroPct,
+    qtdItensVendidos,
+    qtdComandasComDesconto,
+    deltaLucroPct,
+    vendasLucro,
+    produtosLucro
+  };
+}
