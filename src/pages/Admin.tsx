@@ -597,26 +597,29 @@ export function Admin() {
       {/* MODAL: PREFERÊNCIAS DE NOTIFICAÇÕES */}
       {modalNotificacoes && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-150"
           onClick={() => setModalNotificacoes(false)}
         >
           <div
-            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 p-6 pb-8 sm:pb-6 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 font-sans"
+            className="relative w-full max-w-xs sm:max-w-md bg-white rounded-3xl border border-slate-100 ring-1 ring-slate-900/5 shadow-2xl shadow-slate-900/15 max-h-[82dvh] flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-150 font-sans"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-4 sm:hidden" />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b from-slate-50/70 to-transparent"
+            />
 
-            <div className="flex items-start justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-200/80 flex items-center justify-center shrink-0">
-                  <LucideIcons.Bell size={20} strokeWidth={1.9} />
+            <div className="relative z-10 px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/70 shadow-2xs flex items-center justify-center shrink-0">
+                  <LucideIcons.Bell size={17} strokeWidth={1.8} />
                 </div>
-                <div>
-                  <h2 className="text-base font-medium text-slate-900 tracking-tight">
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold text-slate-900 tracking-tight leading-tight truncate">
                     Notificações e Alertas
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Configure avisos sonoros e notificações em tempo real.
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                    Avisos sonoros e alertas em tempo real
                   </p>
                 </div>
               </div>
@@ -624,27 +627,27 @@ export function Admin() {
                 type="button"
                 onClick={() => setModalNotificacoes(false)}
                 aria-label="Fechar"
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
-                <LucideIcons.X size={16} />
+                <LucideIcons.X size={14} />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="relative z-10 p-4 space-y-2.5 overflow-y-auto">
               {/* Alerta Sonoro */}
-              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                     {alertaSonoroAtivo ? (
-                      <LucideIcons.Volume2 size={16} className="text-yellow-600" />
+                      <LucideIcons.Volume2 size={15} strokeWidth={1.8} className="text-amber-600" />
                     ) : (
-                      <LucideIcons.VolumeX size={16} className="text-slate-400" />
+                      <LucideIcons.VolumeX size={15} strokeWidth={1.8} className="text-slate-400" />
                     )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-slate-800">Alerta Sonoro</p>
-                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                      Toca um aviso sonoro quando pedidos ficam prontos no bar ou cozinha.
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5">
+                      Aviso sonoro quando pedidos ficam prontos.
                     </p>
                   </div>
                 </div>
@@ -654,7 +657,7 @@ export function Admin() {
                   aria-checked={alertaSonoroAtivo}
                   onClick={handleToggleSom}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                    alertaSonoroAtivo ? 'bg-yellow-500' : 'bg-slate-200'
+                    alertaSonoroAtivo ? 'bg-emerald-600' : 'bg-slate-200'
                   }`}
                 >
                   <span
@@ -666,11 +669,12 @@ export function Admin() {
               </div>
 
               {/* Notificações Nativas do Navegador */}
-              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                     <LucideIcons.BellRing
-                      size={16}
+                      size={15}
+                      strokeWidth={1.8}
                       className={
                         notificacoesNavegadorAtivo && permissaoNavegador === 'granted'
                           ? 'text-emerald-600'
@@ -680,8 +684,8 @@ export function Admin() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-slate-800">Notificações do Dispositivo</p>
-                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                      Exibe alertas na tela do celular ou computador mesmo em segundo plano.
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5">
+                      Exibe alertas na tela mesmo em segundo plano.
                     </p>
                   </div>
                 </div>
@@ -692,7 +696,7 @@ export function Admin() {
                   onClick={handleToggleNotificacaoNavegador}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                     notificacoesNavegadorAtivo && permissaoNavegador === 'granted'
-                      ? 'bg-emerald-500'
+                      ? 'bg-emerald-600'
                       : 'bg-slate-200'
                   }`}
                 >
@@ -710,9 +714,9 @@ export function Admin() {
               <button
                 type="button"
                 onClick={tocarSomTeste}
-                className="w-full h-10 rounded-4xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                className="w-full h-9 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-medium text-slate-600 hover:text-slate-800 flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
               >
-                <LucideIcons.Play size={14} className="text-yellow-600" />
+                <LucideIcons.Play size={13} strokeWidth={1.8} className="text-slate-500" />
                 <span>Testar som de alerta</span>
               </button>
             </div>
@@ -723,27 +727,31 @@ export function Admin() {
       {/* MODAL: GESTÃO DA MINHA EMPRESA (DADOS CADASTRAIS + IDENTIDADE) */}
       {modalEmpresa && isAdmin && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-150"
           onClick={() => !salvando && setModalEmpresa(false)}
         >
           <div
-            className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 p-6 pb-8 sm:pb-6 animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300 font-sans max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-xs sm:max-w-md bg-white rounded-3xl border border-slate-100 ring-1 ring-slate-900/5 shadow-2xl shadow-slate-900/15 max-h-[85dvh] flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-150 font-sans"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-4 sm:hidden" />
+            {/* Brilho especular 5D superior */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b from-slate-50/70 to-transparent"
+            />
 
-            {/* Cabeçalho */}
-            <div className="flex items-start justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-200/80 flex items-center justify-center shrink-0">
-                  <LucideIcons.Store size={20} strokeWidth={2} />
+            {/* Cabeçalho compacto */}
+            <div className="relative z-10 px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-slate-50 text-slate-600 border border-slate-200/80 shadow-2xs flex items-center justify-center shrink-0">
+                  <LucideIcons.Store size={17} strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-medium text-slate-900 tracking-tight leading-tight truncate">
+                  <h2 className="text-sm font-semibold text-slate-900 tracking-tight leading-tight truncate">
                     Minha Empresa
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed truncate">
-                    Identidade do sistema e dados cadastrais oficiais do estabelecimento.
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                    Identidade e dados cadastrais
                   </p>
                 </div>
               </div>
@@ -751,40 +759,41 @@ export function Admin() {
                 type="button"
                 onClick={() => !salvando && setModalEmpresa(false)}
                 aria-label="Fechar"
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="w-7 h-7 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
-                <LucideIcons.X size={16} />
+                <LucideIcons.X size={14} />
               </button>
             </div>
 
-            {/* PRÉ-VISUALIZAÇÃO AO VIVO DO HEADER */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 mb-5">
-              <span className="text-xs font-medium text-slate-400 block mb-2 pl-0.5">
-                Pré-visualização do Header
-              </span>
-              <div className="h-12 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between px-3.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <LucideIcons.Umbrella size={18} strokeWidth={2.2} className="text-yellow-600 shrink-0" />
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-xs font-normal uppercase text-slate-600 tracking-wide leading-none truncate">
-                      {nomePreview}
-                    </span>
-                    {previewPersonalizado && (
-                      <span className="text-[9px] uppercase text-yellow-800 leading-none">
-                        {NOME_PADRAO_SISTEMA}
+            {/* Corpo rolável compacto */}
+            <form onSubmit={handleSalvarEmpresa} className="relative z-10 flex-1 overflow-y-auto p-4 space-y-3">
+              {/* PRÉ-VISUALIZAÇÃO AO VIVO DO HEADER */}
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-2.5">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block mb-1.5 pl-0.5">
+                  Pré-visualização do Header
+                </span>
+                <div className="h-10 bg-white rounded-xl border border-slate-200/80 shadow-2xs flex items-center justify-between px-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <LucideIcons.Umbrella size={15} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[11px] font-medium uppercase text-slate-700 tracking-wide leading-none truncate">
+                        {nomePreview}
                       </span>
-                    )}
+                      {previewPersonalizado && (
+                        <span className="text-[9px] uppercase text-slate-400 leading-none mt-0.5">
+                          {NOME_PADRAO_SISTEMA}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <LucideIcons.Bell size={14} strokeWidth={1.8} className="text-slate-300 shrink-0" />
                 </div>
-                <LucideIcons.Bell size={16} className="text-slate-300 shrink-0" />
               </div>
-            </div>
 
-            <form onSubmit={handleSalvarEmpresa} className="space-y-4">
               {/* Nome Oficial e Nome de Exibição */}
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="space-y-1">
-                  <label htmlFor="nome-fantasia" className="text-xs font-medium text-slate-700 pl-0.5">
+                  <label htmlFor="nome-fantasia" className="text-[11px] font-medium text-slate-600 pl-0.5 block">
                     Nome do Estabelecimento *
                   </label>
                   <input
@@ -797,16 +806,16 @@ export function Admin() {
                       setErro('');
                     }}
                     placeholder="Ex: Barraca Coral Beach"
-                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                    className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between px-0.5">
-                    <label htmlFor="nome-exibicao" className="text-xs font-medium text-slate-700">
-                      Nome no Header (Branding Personalizado)
+                    <label htmlFor="nome-exibicao" className="text-[11px] font-medium text-slate-600">
+                      Nome no Header (Branding)
                     </label>
-                    <span className="text-[11px] text-slate-400 tabular-nums">
+                    <span className="text-[10px] text-slate-400 tabular-nums">
                       {nomeExibicao.length}/{LIMITE_NOME_EXIBICAO}
                     </span>
                   </div>
@@ -820,18 +829,15 @@ export function Admin() {
                       setErro('');
                     }}
                     placeholder={`Deixe vazio para usar "${NOME_PADRAO_SISTEMA}"`}
-                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                    className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all"
                   />
-                  <p className="text-[11px] text-slate-400 pl-0.5">
-                    O nome que os colaboradores verão no topo de todas as páginas do sistema.
-                  </p>
                 </div>
               </div>
 
-              {/* Documento e Telefone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Documento e Telefone em 2 colunas */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label htmlFor="documento-empresa" className="text-xs font-medium text-slate-700 pl-0.5">
+                  <label htmlFor="documento-empresa" className="text-[11px] font-medium text-slate-600 pl-0.5 block">
                     CPF ou CNPJ
                   </label>
                   <input
@@ -844,12 +850,12 @@ export function Admin() {
                       setErro('');
                     }}
                     placeholder="00.000.000/0000-00"
-                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 tabular-nums placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                    className="w-full h-9 px-2.5 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 tabular-nums placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="telefone-empresa" className="text-xs font-medium text-slate-700 pl-0.5">
+                  <label htmlFor="telefone-empresa" className="text-[11px] font-medium text-slate-600 pl-0.5 block">
                     WhatsApp / Telefone
                   </label>
                   <input
@@ -862,18 +868,18 @@ export function Admin() {
                       setErro('');
                     }}
                     placeholder="(00) 00000-0000"
-                    className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 tabular-nums placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                    className="w-full h-9 px-2.5 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 tabular-nums placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all"
                   />
                 </div>
               </div>
 
               {/* E-mail de Contato Comercial */}
               <div className="space-y-1">
-                <label htmlFor="email-empresa" className="text-xs font-medium text-slate-700 pl-0.5">
+                <label htmlFor="email-empresa" className="text-[11px] font-medium text-slate-600 pl-0.5 block">
                   E-mail Oficial da Empresa
                 </label>
                 <div className="relative">
-                  <LucideIcons.Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <LucideIcons.Mail size={14} strokeWidth={1.8} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     id="email-empresa"
                     type="email"
@@ -883,76 +889,70 @@ export function Admin() {
                       setErro('');
                     }}
                     placeholder="contato@barracacoral.com"
-                    className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                    className="w-full h-9 pl-9 pr-3 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all"
                   />
                 </div>
               </div>
 
               {/* Informações da Licença Atual */}
               {dadosEmpresa?.status_assinatura && (
-                <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 space-y-1 text-xs">
-                  <div className="flex items-center justify-between text-slate-600">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <LucideIcons.ShieldCheck size={14} className="text-emerald-500" />
-                      Status do Plano:
-                    </span>
-                    <span className="font-medium capitalize text-slate-900">
+                <div className="rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
+                  <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                    <LucideIcons.ShieldCheck size={13} strokeWidth={1.8} className="text-emerald-600 shrink-0" />
+                    <span>
                       {dadosEmpresa.status_assinatura === 'ativa'
                         ? 'Plano Ativo'
                         : dadosEmpresa.status_assinatura === 'degustacao'
-                          ? 'Período de Degustação (Trial)'
+                          ? 'Degustação (Trial)'
                           : 'Aguardando Ativação'}
                     </span>
-                  </div>
+                  </span>
                   {dadosEmpresa.data_vencimento && (
-                    <div className="flex items-center justify-between text-slate-500 text-[11px]">
-                      <span>Vencimento da Licença:</span>
-                      <span className="tabular-nums font-medium text-slate-700">
-                        {new Date(dadosEmpresa.data_vencimento).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
+                    <span className="tabular-nums text-slate-400">
+                      Vence {new Date(dadosEmpresa.data_vencimento).toLocaleDateString('pt-BR')}
+                    </span>
                   )}
                 </div>
               )}
 
               {/* Feedback de Erro ou Sucesso */}
               {erro && (
-                <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5">
-                  <LucideIcons.AlertCircle size={15} className="shrink-0" />
+                <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                  <LucideIcons.AlertCircle size={14} className="shrink-0" />
                   <span>{erro}</span>
                 </div>
               )}
 
               {sucesso && (
-                <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
-                  <LucideIcons.CheckCircle2 size={15} className="shrink-0" />
-                  <span>Dados do estabelecimento atualizados com sucesso!</span>
+                <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+                  <LucideIcons.CheckCircle2 size={14} className="shrink-0" />
+                  <span>Dados atualizados com sucesso!</span>
                 </div>
               )}
 
               {/* Ações */}
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-2.5 border-t border-slate-100">
                 <button
                   type="button"
                   disabled={salvando}
                   onClick={() => setModalEmpresa(false)}
-                  className="h-10 px-4 rounded-4xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50"
+                  className="h-9 px-3.5 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={salvando}
-                  className="h-10 px-5 rounded-4xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-slate-900/20 cursor-pointer"
+                  className="h-9 px-4 rounded-full bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   {salvando ? (
                     <>
-                      <LucideIcons.Loader2 size={15} className="animate-spin" />
+                      <LucideIcons.Loader2 size={14} className="animate-spin" />
                       <span>Salvando...</span>
                     </>
                   ) : (
                     <>
-                      <LucideIcons.Check size={15} />
+                      <LucideIcons.Check size={14} strokeWidth={2} />
                       <span>Salvar alterações</span>
                     </>
                   )}

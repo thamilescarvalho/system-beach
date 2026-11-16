@@ -24,11 +24,9 @@ export function Card5D({
   title,
   children
 }: Card5DProps) {
-  const [tilt, setTilt] = useState<{ rx: number; ry: number; gx: number; gy: number; ativo: boolean }>({
+  const [tilt, setTilt] = useState<{ rx: number; ry: number; ativo: boolean }>({
     rx: 0,
     ry: 0,
-    gx: 50,
-    gy: 20,
     ativo: false
   });
 
@@ -50,15 +48,13 @@ export function Card5D({
     setTilt({
       rx: Number(rx.toFixed(2)),
       ry: Number(ry.toFixed(2)),
-      gx: Math.round(relX * 100),
-      gy: Math.round(relY * 100),
       ativo: true
     });
   };
 
   const handleMouseLeave = () => {
     if (!tilt.ativo) return;
-    setTilt({ rx: 0, ry: 0, gx: 50, gy: 20, ativo: false });
+    setTilt({ rx: 0, ry: 0, ativo: false });
   };
 
   const estiloTransform = podeInclinar
@@ -88,23 +84,8 @@ export function Card5D({
       tabIndex={clicavel ? 0 : undefined}
       title={title}
       style={estiloTransform}
-      className={`relative hover:z-30 focus-within:z-30 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.05),0_1px_3px_rgba(15,23,42,0.02)] hover:shadow-[0_10px_28px_-6px_rgba(15,23,42,0.08)] transition-all duration-300 overflow-visible ${clicavel ? 'cursor-pointer active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-200' : ''} ${className}`}
+      className={`relative hover:z-30 focus-within:z-30 rounded-2xl bg-white border border-slate-100/90 shadow-sm shadow-slate-200/60 hover:shadow-md hover:shadow-slate-200/80 transition-all duration-300 overflow-visible ${clicavel ? 'cursor-pointer hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-200/80' : ''} ${className}`}
     >
-      {/* Brilho especular 5D sutil no hover */}
-      {podeInclinar && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-2xl overflow-hidden"
-        >
-          <div
-            className="absolute inset-0 transition-opacity duration-300"
-            style={{
-              opacity: tilt.ativo ? 1 : 0,
-              background: `radial-gradient(360px circle at ${tilt.gx}% ${tilt.gy}%, rgba(16,185,129,0.045), transparent 65%)`
-            }}
-          />
-        </div>
-      )}
       <div className={`relative z-10 h-full ${innerClassName}`}>{children}</div>
     </div>
   );

@@ -1,12 +1,69 @@
 // src/pages/Comanda.tsx
-import { useState, useMemo, useEffect } from 'react';
-import type { ElementType } from 'react'; 
+import { useState, useMemo, useEffect, useRef } from 'react';
+import type { ElementType } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { useAppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { imprimirCupomTermico } from '../utils/impressoraTermica';
+import { MenuSimplesDropdown } from '../components/financeiro/BotaoEmojiFiltro';
 import type { Produto, ItemComanda, Pagamento, MetodoPagamento, Categoria } from '../types';
 import * as LucideIcons from 'lucide-react';
+
+function obterNomeIconeLucideCategoria(nomeCategoria?: string, nomeIcone?: string): string {
+  if (nomeIcone && nomeIcone !== 'Package' && nomeIcone in LucideIcons) {
+    return nomeIcone;
+  }
+
+  const nome = (nomeCategoria || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+
+  if (nome.includes('CAIPIRINHA') || nome.includes('DRINK') || nome.includes('COQUET')) return 'Martini';
+  if (nome.includes('CERVEJA') || nome.includes('CHOPP')) return 'Beer';
+  if (nome.includes('VINHO')) return 'Wine';
+  if (
+    nome.includes('DESTILAD') ||
+    nome.includes('WHISKY') ||
+    nome.includes('VODKA') ||
+    nome.includes('DOSE') ||
+    nome.includes('CACHACA') ||
+    nome.includes('GIN')
+  ) {
+    return 'GlassWater';
+  }
+  if (nome.includes('BEBIDA') || nome.includes('REFRI') || nome.includes('SUCO') || nome.includes('AGUA')) {
+    return 'CupSoda';
+  }
+  if (nome.includes('CAFE')) return 'Coffee';
+  if (
+    nome.includes('CAMARAO') ||
+    nome.includes('PEIXE') ||
+    nome.includes('PORC') ||
+    nome.includes('PETISC') ||
+    nome.includes('FRIT')
+  ) {
+    return 'Fish';
+  }
+  if (nome.includes('PIZZA')) return 'Pizza';
+  if (nome.includes('LANCHE') || nome.includes('HAMBURG') || nome.includes('SANDUICH')) return 'Sandwich';
+  if (nome.includes('CARNE') || nome.includes('CHURRASC') || nome.includes('ESPET')) return 'Beef';
+  if (nome.includes('SALAD')) return 'Salad';
+  if (nome.includes('SOPA') || nome.includes('CALDO')) return 'Soup';
+  if (nome.includes('REFEI') || nome.includes('ALMOC') || nome.includes('PRATO') || nome.includes('JANT')) {
+    return 'UtensilsCrossed';
+  }
+  if (nome.includes('BOLO') || nome.includes('TORTA')) return 'CakeSlice';
+  if (nome.includes('SOBREMES') || nome.includes('DOCE') || nome.includes('SORVET') || nome.includes('ACAI')) {
+    return 'IceCreamCone';
+  }
+  if (nome.includes('GUARDA') || nome.includes('PRAIA') || nome.includes('ALUGUEL') || nome.includes('CADEIRA')) {
+    return 'Umbrella';
+  }
+  if (nome.includes('GELO')) return 'Snowflake';
+
+  return nomeIcone || 'Package';
+}
 
 interface IconeCategoriaProps {
   nomeCategoria: string;
@@ -15,15 +72,15 @@ interface IconeCategoriaProps {
   size?: number;
 }
 
-function IconeCategoria({ nomeCategoria, categorias, className = "", size = 28 }: IconeCategoriaProps) {
+function IconeCategoria({ nomeCategoria, categorias, className = '', size = 20 }: IconeCategoriaProps) {
   const categoriaDoBanco = categorias.find(
-    c => c.nome.toLowerCase() === nomeCategoria.toLowerCase()
+    (c) => c.nome.toLowerCase() === nomeCategoria.toLowerCase()
   );
-  
-  const iconeNome = categoriaDoBanco?.icone || 'Package';
-  const IconeComponente = (LucideIcons as unknown as Record<string, ElementType>)[iconeNome] || LucideIcons.Package;
-  
-  return <IconeComponente className={className} size={size} strokeWidth={2} />;
+  const iconeNome = obterNomeIconeLucideCategoria(nomeCategoria, categoriaDoBanco?.icone);
+  const IconeComponente =
+    (LucideIcons as unknown as Record<string, ElementType>)[iconeNome] || LucideIcons.Package;
+
+  return <IconeComponente className={className} size={size} strokeWidth={1.75} />;
 }
 
 const extrairNomeCategoria = (categoria: unknown): string => {
@@ -105,17 +162,34 @@ export function Comanda() {
 
   const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
   const [subcategoriaAtiva, setSubcategoriaAtiva] = useState<string | null>(null);
+  const [buscaCardapio, setBuscaCardapio] = useState('');
   const [mostrarItens, setMostrarItens] = useState(false);
   const [statusSalvo, setStatusSalvo] = useState(false);
-  
-  const [mensagemToast, setMensagemToast] = useState<string | null>(null);
 
-  const dispararToast = (msg: string) => {
-    setMensagemToast(msg);
-    setTimeout(() => {
+  const [mensagemToast, setMensagemToast] = useState<{
+    texto: string;
+    tipo: 'info' | 'alerta';
+  } | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const dispararToast = (texto: string, tipo: 'info' | 'alerta' = 'info') => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setMensagemToast({ texto, tipo });
+    toastTimerRef.current = window.setTimeout(() => {
       setMensagemToast(null);
+      toastTimerRef.current = null;
     }, 2500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
   
   const [etapaModal, setEtapaModal] = useState<0 | 1 | 2>(0);
   const [itemEditandoObs, setItemEditandoObs] = useState<ItemComanda | null>(null);
@@ -143,7 +217,10 @@ export function Comanda() {
         if (produto.estoque !== undefined) {
           const qtdAtualNaMesa = existe ? existe.quantidade : 0;
           if (qtdAtualNaMesa >= produto.estoque) {
-            alert(`Sem estoque! Só restam ${produto.estoque} unidades de ${produto.nome.toUpperCase()}.`);
+            dispararToast(
+              `Sem estoque! Restam ${produto.estoque} un. de ${produto.nome.toUpperCase()}.`,
+              'alerta'
+            );
             return prev;
           }
         }
@@ -346,15 +423,148 @@ export function Comanda() {
     return produtosDaCategoriaAtiva.filter(p => p.subcategoria === subcategoriaAtiva);
   }, [produtosDaCategoriaAtiva, subcategoriaAtiva]);
 
+  const termoBuscaCardapio = buscaCardapio.trim().toLowerCase();
+  const produtosBuscaRapida = useMemo(() => {
+    if (!termoBuscaCardapio) return [];
+    return cardapioAtivo.filter((p) => {
+      const catNome = extrairNomeCategoria(p.categoria).toLowerCase();
+      const subNome = (p.subcategoria || '').toLowerCase();
+      return (
+        p.nome.toLowerCase().includes(termoBuscaCardapio) ||
+        catNome.includes(termoBuscaCardapio) ||
+        subNome.includes(termoBuscaCardapio)
+      );
+    });
+  }, [cardapioAtivo, termoBuscaCardapio]);
+
+  const temAlteracoesPendentes = useMemo(() => {
+    if (!mesaAtual || mesaAtual.numero !== mesaIdCarregada) return false;
+    if (nomeCliente.trim() !== (mesaAtual.nomeCliente || '').trim()) return true;
+
+    const originais = agruparItensParaInterface(mesaAtual.itens || []);
+    if (originais.length !== itensPedidos.length) return true;
+
+    const mapaOriginais = new Map(originais.map((i) => [i.produto.id, i]));
+    return itensPedidos.some((atual) => {
+      const orig = mapaOriginais.get(atual.produto.id);
+      if (!orig) return true;
+      return (
+        orig.quantidade !== atual.quantidade ||
+        (orig.observacao || '') !== (atual.observacao || '')
+      );
+    });
+  }, [mesaAtual, mesaIdCarregada, nomeCliente, itensPedidos]);
+
+  const renderizarCardProduto = (produto: Produto) => {
+    const estaEsgotado = produto.estoque !== undefined && produto.estoque <= 0;
+    const catNome = extrairNomeCategoria(produto.categoria);
+    const qtdNaMesa = itensPedidos.find((i) => i.produto.id === produto.id)?.quantidade || 0;
+
+    return (
+      <button
+        key={produto.id}
+        type="button"
+        onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')}
+        disabled={estaEsgotado}
+        className={`group relative flex flex-col justify-between p-2 sm:p-2.5 rounded-4xl border text-left font-sans transition-all duration-200 ${
+          estaEsgotado
+            ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+            : 'bg-white border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300 active:scale-[0.98] cursor-pointer'
+        }`}
+      >
+        {/* FOTO EM DESTAQUE */}
+        <div className="relative w-full aspect-square rounded-3xl bg-slate-50 border border-slate-100/90 overflow-hidden flex items-center justify-center select-none">
+          {produto.imagem_url ? (
+            <img
+              src={produto.imagem_url}
+              alt={produto.nome}
+              loading="lazy"
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                estaEsgotado ? 'opacity-50 grayscale' : ''
+              }`}
+            />
+          ) : (
+            <div
+              className={`w-12 h-12 rounded-2xl bg-white border border-slate-200/70 shadow-2xs flex items-center justify-center text-slate-400 transition-transform duration-300 group-hover:scale-105 ${
+                estaEsgotado ? 'opacity-40' : ''
+              }`}
+            >
+              <IconeCategoria nomeCategoria={catNome} categorias={categorias} size={22} />
+            </div>
+          )}
+
+          {qtdNaMesa > 0 && !estaEsgotado && (
+            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-900/90 backdrop-blur-xs text-white text-[10px] font-semibold tabular-nums shadow-xs">
+              {qtdNaMesa}x
+            </span>
+          )}
+
+          {estaEsgotado && (
+            <span className="absolute inset-x-2 bottom-2 text-center text-[9px] bg-rose-50/95 border border-rose-200/80 text-rose-500 px-2 py-1 rounded-full font-semibold uppercase tracking-wider backdrop-blur-xs">
+              Esgotado
+            </span>
+          )}
+        </div>
+
+        {/* NOME DO PRODUTO */}
+        <div className="px-1 pt-2 pb-1 flex-1 flex flex-col justify-start select-none">
+          <p
+            className={`text-[11px] sm:text-xs font-medium tracking-tight uppercase leading-snug line-clamp-2 min-h-8 ${
+              estaEsgotado ? 'text-slate-400 line-through' : 'text-slate-700'
+            }`}
+          >
+            {produto.nome}
+          </p>
+        </div>
+
+        {/* BARRA INFERIOR COMPACTA SLATE-100 */}
+        <div className="mt-1 w-full p-1.5 pl-2.5 rounded-3xl bg-slate-100 border border-slate-200/70 flex items-center justify-between gap-1.5 select-none">
+          <div className="min-w-0 flex flex-col">
+            <span className="text-[11px] sm:text-xs font-medium text-slate-400 tabular-nums leading-none">
+              {formatarMoeda(produto.preco)}
+            </span>
+            <span
+              className={`text-[9px] font-medium uppercase tracking-wide truncate block mt-0.5 ${
+                estaEsgotado ? 'text-rose-400' : 'text-slate-400'
+              }`}
+            >
+              {estaEsgotado ? 'Esgotado' : (produto.subcategoria || 'UNID.')}
+            </span>
+          </div>
+
+          <div
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all shadow-2xs ${
+              estaEsgotado
+                ? 'bg-slate-200/70 text-slate-400 border border-slate-200'
+                : 'bg-white border border-slate-200/90 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 group-hover:scale-105'
+            }`}
+          >
+            {estaEsgotado ? (
+              <LucideIcons.X size={13} strokeWidth={2} />
+            ) : (
+              <LucideIcons.Plus size={14} strokeWidth={2} />
+            )}
+          </div>
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <div className="min-h-dvh bg-slate-50 font-sans pt-20 md:pt-24 md:pl-18 pb-36 lg:pb-28 relative overflow-hidden select-none">
+    <div className="min-h-dvh bg-slate-50 font-sans pt-22 sm:pt-24 md:pt-24 md:pl-18 pb-32 lg:pb-28 relative overflow-hidden select-none">
       
       {/* TOAST DE NOTIFICAÇÃO */}
       {mensagemToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
-          <div className="bg-slate-900/95 text-white px-5 py-3 rounded-full shadow-xl backdrop-blur-md border border-white/10 flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-            <span className="text-[11px] font-bold uppercase tracking-widest">{mensagemToast}</span>
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md flex justify-center animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
+          <div className="bg-slate-900/95 text-white px-5 py-3 rounded-full shadow-xl backdrop-blur-md border border-white/10 flex items-center gap-3 max-w-full">
+            <span
+              className={`w-2 h-2 rounded-full animate-pulse shrink-0 ${
+                mensagemToast.tipo === 'alerta' ? 'bg-amber-400' : 'bg-teal-400'
+              }`}
+            ></span>
+            <span className="text-[11px] font-bold uppercase tracking-widest truncate">
+              {mensagemToast.texto}
+            </span>
           </div>
         </div>
       )}
@@ -362,13 +572,11 @@ export function Comanda() {
       {/* FUNDO */}
       <div
         aria-hidden="true"
-        className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(45, 212, 191, 0.14) 0%, rgba(45, 212, 191, 0) 70%)' }}
+        className="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none bg-radial from-teal-400/15 to-transparent blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(129, 140, 248, 0.14) 0%, rgba(129, 140, 248, 0) 70%)' }}
+        className="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] max-w-125 max-h-125 rounded-full pointer-events-none bg-radial from-indigo-400/15 to-transparent blur-2xl"
       />
 
       <Header />
@@ -376,88 +584,129 @@ export function Comanda() {
       <main className="max-w-6xl mx-auto px-4 md:px-8 relative z-10 flex flex-col lg:grid lg:grid-cols-[1fr_420px] gap-6 lg:gap-8 items-start">
         
         {/* LADO ESQUERDO: MENU / CARDÁPIO */}
-        <div className="w-full space-y-6 order-2 lg:order-1">
-          {!categoriaAtiva ? (
-            <section className="space-y-4 animate-in fade-in duration-500">
-              <h3 className="flex items-center justify-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 select-none">
+        <div className="w-full space-y-5 order-2 lg:order-1">
+          {/* BUSCA RÁPIDA DE PRODUTOS */}
+          <div className="relative">
+            <LucideIcons.Search
+              size={15}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={buscaCardapio}
+              onChange={(e) => setBuscaCardapio(e.target.value)}
+              placeholder="Buscar produto"
+              className="w-full h-11 pl-10 pr-9 rounded-full bg-white border border-slate-200 shadow-2xs text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+            {buscaCardapio && (
+              <button
+                type="button"
+                onClick={() => setBuscaCardapio('')}
+                aria-label="Limpar busca"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <LucideIcons.X size={14} />
+              </button>
+            )}
+          </div>
+
+          {termoBuscaCardapio ? (
+            <section className="space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  Resultados ({produtosBuscaRapida.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBuscaCardapio('')}
+                  className="text-[11px] font-semibold text-teal-700 hover:text-teal-800 cursor-pointer"
+                >
+                  Limpar busca
+                </button>
+              </div>
+              {produtosBuscaRapida.length === 0 ? (
+                <p className="text-center text-[11px] uppercase tracking-widest font-medium text-slate-400 py-10 bg-white rounded-4xl border border-slate-200 border-dashed select-none">
+                  <span>Nenhum produto encontrado para &ldquo;{buscaCardapio}&rdquo;.</span>
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
+                  {produtosBuscaRapida.map((produto) => renderizarCardProduto(produto))}
+                </div>
+              )}
+            </section>
+          ) : !categoriaAtiva ? (
+            <section className="space-y-4 animate-in fade-in duration-300">
+              <h3 className="flex items-center justify-center gap-3 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-4 select-none">
                 <div className="w-12 h-px bg-slate-200"></div> <span>Categorias</span> <div className="w-12 h-px bg-slate-200"></div>
               </h3>
               {categoriasDisponiveis.length === 0 ? (
-                <div className="bg-white p-8 rounded-4xl border border-dashed border-slate-300 text-center shadow-sm select-none">
-                  <p className="text-slate-400 font-bold text-sm"><span>O cardápio está vazio.</span></p>
+                <div className="bg-white p-8 rounded-4xl border border-dashed border-slate-300 text-center shadow-2xs select-none">
+                  <p className="text-slate-400 font-medium text-sm"><span>O cardápio está vazio.</span></p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
                   {categoriasDisponiveis.map((cat) => (
-                    <button key={cat} type="button" onClick={() => { setCategoriaAtiva(cat); setSubcategoriaAtiva(null); }} className="flex flex-col items-center justify-center p-4 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-1 active:scale-[0.96] transition-all group">
-                      <div className="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-teal-50 transition-all duration-300">
-                        <IconeCategoria nomeCategoria={cat} categorias={categorias} className="text-slate-500 group-hover:text-teal-600" />
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setCategoriaAtiva(cat);
+                        setSubcategoriaAtiva(null);
+                      }}
+                      className="flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-3xl bg-white border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 active:scale-[0.97] transition-all group cursor-pointer"
+                    >
+                      <div className="w-11 h-11 sm:w-12 sm:h-12 bg-slate-50 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-center mb-2.5 text-slate-500 group-hover:text-slate-700 group-hover:scale-105 transition-all duration-200">
+                        <IconeCategoria nomeCategoria={cat} categorias={categorias} size={22} />
                       </div>
-                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-tight text-center leading-tight select-none"><span>{cat}</span></span>
+                      <span className="text-[11px] font-medium text-slate-700 uppercase tracking-tight text-center leading-tight line-clamp-2 select-none">
+                        <span>{cat}</span>
+                      </span>
                     </button>
                   ))}
                 </div>
               )}
             </section>
           ) : (
-            <section className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center justify-between px-2 mb-4">
-                <h3 className="text-lg md:text-xl font-black text-slate-800 tracking-tight flex items-center gap-3 uppercase select-none">
-                  <span className="bg-white w-10 h-10 rounded-xl shadow-sm flex items-center justify-center border border-slate-200">
-                    <IconeCategoria nomeCategoria={categoriaAtiva} categorias={categorias} className="text-teal-600" size={20} />
-                  </span> 
-                  <span>{categoriaAtiva}</span>
+            <section className="space-y-4 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between gap-2 px-1 mb-3">
+                <h3 className="text-base sm:text-lg font-semibold text-slate-800 tracking-tight flex items-center gap-2.5 uppercase select-none min-w-0 flex-1">
+                  <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-500 shrink-0">
+                    <IconeCategoria nomeCategoria={categoriaAtiva} categorias={categorias} size={18} />
+                  </span>
+                  <span className="truncate">{categoriaAtiva}</span>
                 </h3>
-                <button type="button" onClick={() => { setCategoriaAtiva(null); setSubcategoriaAtiva(null); }} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-slate-200 px-4 py-2 rounded-full active:scale-95 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm">
-                  Voltar
-                </button>
+
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  {subcategoriasDisponiveis.length > 0 && (
+                    <MenuSimplesDropdown
+                      opcoes={[
+                        { chave: '__TODOS__', label: 'Todos' },
+                        ...subcategoriasDisponiveis.map((sub) => ({ chave: sub, label: sub }))
+                      ]}
+                      valor={subcategoriaAtiva ?? '__TODOS__'}
+                      onChange={(val) => setSubcategoriaAtiva(val === '__TODOS__' ? null : val)}
+                      tituloMenu="Filtrar tamanho / variação"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoriaAtiva(null);
+                      setSubcategoriaAtiva(null);
+                    }}
+                    className="h-8 px-3 sm:px-3.5 rounded-full bg-white border border-slate-200/90 hover:bg-slate-50 hover:text-slate-800 text-xs font-medium text-slate-600 inline-flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+                  >
+                    <LucideIcons.ArrowLeft size={13} strokeWidth={2} />
+                    <span>Voltar</span>
+                  </button>
+                </div>
               </div>
 
-              {subcategoriasDisponiveis.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide mb-2 select-none">
-                  <button type="button" onClick={() => setSubcategoriaAtiva(null)} className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === null ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>Todos</button>
-                  {subcategoriasDisponiveis.map(sub => (
-                    <button type="button" key={sub} onClick={() => setSubcategoriaAtiva(sub)} className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm border ${subcategoriaAtiva === sub ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{sub}</button>
-                  ))}
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 gap-3 mt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5">
                 {produtosExibidosMenu.length === 0 ? (
-                   <p className="text-center text-[11px] uppercase tracking-widest font-bold text-slate-400 py-10 bg-white rounded-3xl border border-slate-200 border-dashed select-none"><span>Nenhum produto nesta variação.</span></p>
+                   <p className="col-span-full text-center text-[11px] uppercase tracking-widest font-medium text-slate-400 py-10 bg-white rounded-4xl border border-slate-200 border-dashed select-none"><span>Nenhum produto nesta variação.</span></p>
                 ) : (
-                  produtosExibidosMenu.map((produto) => {
-                    const estaEsgotado = produto.estoque !== undefined && produto.estoque <= 0;
-                    const catNome = extrairNomeCategoria(produto.categoria);
-                    
-                    return (
-                      <button key={produto.id} type="button" onClick={() => !estaEsgotado && manipularProduto(produto, 'mais')} disabled={estaEsgotado} className={`w-full p-3 md:p-4 rounded-3xl border flex justify-between items-center gap-4 transition-all text-left group ${estaEsgotado ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed' : 'bg-white border-slate-200 shadow-sm active:scale-[0.98] hover:border-teal-300 hover:shadow-md'}`}>
-                        
-                        <div className="flex items-center gap-4 flex-1 min-w-0 select-none">
-                          {produto.imagem_url ? (
-                            <img src={produto.imagem_url} alt={produto.nome} className={`w-16 h-16 rounded-2xl object-cover border border-slate-100 shadow-sm shrink-0 transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`} />
-                          ) : (
-                            <div className={`w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${estaEsgotado ? 'opacity-50' : ''}`}>
-                              <IconeCategoria nomeCategoria={catNome} categorias={categorias} className="text-slate-400" size={24} />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <p className={`font-bold text-[14px] md:text-[15px] tracking-tight mb-2 leading-none truncate uppercase ${estaEsgotado ? 'text-slate-500 line-through' : 'text-slate-800'}`}><span>{produto.nome}</span></p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-teal-700 font-bold text-[13px] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100 tabular-nums"><span>{formatarMoeda(produto.preco)}</span></span>
-                              {produto.subcategoria && !estaEsgotado && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest bg-slate-100 border border-slate-200 px-2 py-1 rounded-md truncate max-w-20"><span>{produto.subcategoria}</span></span>}
-                              {estaEsgotado && <span className="text-[9px] bg-rose-50 border border-rose-100 text-rose-500 px-2 py-1 rounded-md font-bold uppercase tracking-widest"><span>Esgotado</span></span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${estaEsgotado ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'bg-teal-50 text-teal-600 border border-teal-200'}`}>
-                          {estaEsgotado ? <LucideIcons.X size={18} strokeWidth={2.5}/> : <LucideIcons.Plus size={20} strokeWidth={3}/>}
-                        </div>
-
-                      </button>
-                    );
-                  })
+                  produtosExibidosMenu.map((produto) => renderizarCardProduto(produto))
                 )}
               </div>
             </section>
@@ -476,107 +725,179 @@ export function Comanda() {
               placeholder="Nome do Cliente" 
               value={nomeCliente} 
               onChange={(e) => setNomeCliente(e.target.value)} 
-              className="w-full pl-12 pr-5 h-13 bg-white rounded-full shadow-sm border border-slate-200 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 font-medium text-slate-800 transition-all uppercase tracking-wide text-[12px]" 
+              className="w-full pl-12 pr-5 h-13 bg-white rounded-full shadow-sm border border-slate-200 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 font-sans text-slate-800 transition-all uppercase tracking-wide text-[12px]" 
             />
           </div>
 
-          <section className="space-y-4">
-            <button type="button" onClick={() => setMostrarItens(!mostrarItens)} className="w-full relative overflow-hidden rounded-4xl bg-slate-900 border border-slate-800 shadow-xl shadow-slate-900/10 active:scale-[0.98] transition-all p-6 text-left group">
+          <section>
+            <button
+              type="button"
+              onClick={() => setMostrarItens(!mostrarItens)}
+              aria-expanded={mostrarItens}
+              className="w-full relative overflow-hidden rounded-4xl bg-linear-to-br from-emerald-900 to-emerald-950 border border-emerald-800/60 shadow-lg shadow-emerald-950/15 active:scale-[0.99] transition-all p-5 sm:p-6 text-left group cursor-pointer"
+            >
+              <div
+                aria-hidden="true"
+                className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -left-12 -bottom-16 w-40 h-40 rounded-full bg-teal-400/10 blur-2xl pointer-events-none"
+              />
               <div className="flex justify-between items-start relative z-10 select-none">
                 <div>
-                  <h2 className="text-slate-300 text-[10px] font-medium uppercase tracking-[0.2em] mb-1.5"><span>Total da Mesa</span></h2>
-                  <p className="text-3xl md:text-4xl font-bold tracking-tighter text-white tabular-nums leading-none"><span>{formatarMoeda(valorTotalMenu)}</span></p>
+                  <h2 className="text-emerald-200/80 text-[10px] font-medium uppercase tracking-[0.2em] mb-1.5">
+                    <span>Total da Mesa</span>
+                  </h2>
+                  <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-white tabular-nums leading-none">
+                    <span>{formatarMoeda(valorTotalMenu)}</span>
+                  </p>
                 </div>
-                <div className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center transition-transform duration-300 text-white ${mostrarItens ? 'rotate-180' : ''}`}>
-                  <LucideIcons.ChevronDown size={20} strokeWidth={2.5}/>
+                <div
+                  className={`w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center transition-transform duration-300 ease-out text-emerald-100 ${
+                    mostrarItens ? 'rotate-180' : ''
+                  }`}
+                >
+                  <LucideIcons.ChevronDown size={18} strokeWidth={2} />
                 </div>
               </div>
-              <div className="mt-5 inline-flex items-center gap-2 text-teal-400 text-[10px] font-medium uppercase tracking-widest relative z-10 bg-white/10 px-3 py-1.5 rounded-full select-none">
-                <span className="flex h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
+              <div className="mt-4 inline-flex items-center gap-2 text-emerald-100 text-[10px] font-medium uppercase tracking-widest relative z-10 bg-emerald-500/20 border border-emerald-400/20 px-3 py-1.5 rounded-full select-none">
+                <span className="flex h-2 w-2 rounded-full bg-emerald-300 animate-pulse"></span>
                 <span>{quantidadeTotalItens} {quantidadeTotalItens === 1 ? 'Item Adicionado' : 'Itens Adicionados'}</span>
               </div>
             </button>
 
-            {mostrarItens && (
-              <div className="bg-white rounded-4xl border border-slate-200 p-2 shadow-lg shadow-slate-200/50 animate-in slide-in-from-top-4 duration-300 lg:max-h-[50vh] lg:overflow-y-auto scrollbar-hide">
-                {itensPedidos.length === 0 ? (
-                  <p className="text-center py-8 text-slate-400 text-[11px] font-medium uppercase tracking-widest select-none"><span>Nenhum item na mesa.</span></p>
-                ) : (
-                  <div className="space-y-2">
-                    
-                    {itensPedidos.map(item => {
-                      const itemCatNome = extrairNomeCategoria(item.produto.categoria);
-                      
-                      return (
-                        <div key={item.id} className="flex flex-col p-2 bg-slate-50 rounded-3xl border border-slate-100 relative overflow-hidden">
-                          <div className="flex items-start gap-3">
-                            
-                            <div className="shrink-0">
-                              {item.produto.imagem_url ? (
-                                <img src={item.produto.imagem_url} alt={item.produto.nome} className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm" />
-                              ) : (
-                                <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-                                  <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} className="text-slate-300" size={24} />
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 min-h-16">
-                              
-                              <div className="flex items-start justify-between gap-2 w-full select-none">
-                                <div className="flex flex-col min-w-0">
-                                  <span className="font-medium text-slate-800 text-[12px] leading-tight uppercase truncate">
-                                    <span>{item.produto.nome}</span>
-                                  </span>
-                                  {item.observacao && (
-                                    <span className="text-[9px] text-blue-600 font-medium uppercase tracking-widest bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md truncate max-w-full inline-block mt-1 self-start">
-                                      <span>OBS: {item.observacao}</span>
-                                    </span>
-                                  )}
-                                </div>
-                          
-                                <button type="button" onClick={() => { setItemEditandoObs(item); setTextoObs(item.observacao || ''); }} className="w-4 h-3 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-200 hover:bg-blue-50 transition-colors active:scale-90 shrink-0 ml-2 mt-0.5">
-                                  <LucideIcons.MessageSquarePlus size={11} strokeWidth={2.5}/>
-                                </button>
+            <div
+              className={`grid transition-all duration-300 ease-out ${
+                mostrarItens
+                  ? 'grid-rows-[1fr] opacity-100 translate-y-0 mt-3'
+                  : 'grid-rows-[0fr] opacity-0 -translate-y-1 mt-0 pointer-events-none'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="bg-white rounded-4xl border border-slate-200/80 p-2.5 shadow-sm lg:max-h-[50vh] lg:overflow-y-auto scrollbar-hide">
+                  {itensPedidos.length === 0 ? (
+                    <p className="text-center py-8 text-slate-400 text-[11px] font-medium uppercase tracking-widest select-none">
+                      <span>Nenhum item na mesa.</span>
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {itensPedidos.map((item) => {
+                        const itemCatNome = extrairNomeCategoria(item.produto.categoria);
+                        const produtoCatalogo = cardapioAtivo.find((p) => p.id === item.produto.id);
+                        const tamanhoItem = (
+                          item.produto.subcategoria ||
+                          produtoCatalogo?.subcategoria ||
+                          ''
+                        ).trim();
+
+                        return (
+                          <div key={item.id} className="flex flex-col p-2 bg-slate-50 rounded-3xl border border-slate-100 relative overflow-hidden">
+                            <div className="flex items-start gap-3">
+                              <div className="shrink-0">
+                                {item.produto.imagem_url ? (
+                                  <img
+                                    src={item.produto.imagem_url}
+                                    alt={item.produto.nome}
+                                    className="w-14 h-14 rounded-2xl object-cover border border-slate-200/80 shadow-2xs"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 shadow-2xs">
+                                    <IconeCategoria nomeCategoria={itemCatNome} categorias={categorias} size={20} />
+                                  </div>
+                                )}
                               </div>
 
-                              <div className="flex items-start justify-between w-full mt-0.5 select-none">
-                                <span className="text-[12px] text-slate-500 font-medium uppercase tracking-widest tabular-nums">
-                                  <span>{formatarMoeda(item.produto.preco)}</span>
-                                </span>
-                                
-                                <div className="flex items-center gap-2 bg-white p-1 rounded-full border border-slate-300 shadow-sm shrink-0">
-                                  <button type="button" onClick={() => manipularProduto(item.produto, 'menos')} className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 border border-slate-100 text-black font-black text-lg hover:bg-rose-50 active:scale-95 transition-all">-</button>
-                                  <span className="font-medium text-slate-800 text-[13px] w-5 text-center tabular-nums"><span>{item.quantidade}</span></span>
-                                  <button type="button" onClick={() => manipularProduto(item.produto, 'mais')} className="w-5 h-5 flex items-center justify-center rounded-full bg-teal-50 border border-teal-50 text-black font-black text-lg hover:bg-teal-100 active:scale-95 transition-all">+</button>
+                              <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 min-h-14">
+                                <div className="flex items-start justify-between gap-2 w-full select-none">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-medium text-slate-700 text-xs leading-tight uppercase truncate">
+                                      <span>{item.produto.nome}</span>
+                                    </span>
+                                    {item.observacao && (
+                                      <span className="text-[9px] text-sky-600 font-medium uppercase tracking-wider bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-md truncate max-w-full inline-block mt-1 self-start">
+                                        <span>OBS: {item.observacao}</span>
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setItemEditandoObs(item);
+                                      setTextoObs(item.observacao || '');
+                                    }}
+                                    aria-label="Adicionar observação"
+                                    className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-sky-600 hover:border-sky-200 hover:bg-sky-50 transition-colors active:scale-90 shrink-0 cursor-pointer"
+                                  >
+                                    <LucideIcons.MessageSquarePlus size={12} strokeWidth={2} />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-2 w-full mt-1.5 select-none">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                    <span className="text-xs text-slate-400 font-medium tabular-nums">
+                                      <span>{formatarMoeda(item.produto.preco)}</span>
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full bg-white border border-slate-200/80 text-[9px] font-medium uppercase tracking-wider text-slate-400 truncate max-w-24">
+                                      <span>{tamanhoItem || 'UNID.'}</span>
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-full border border-slate-200/90 shadow-2xs shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => manipularProduto(item.produto, 'menos')}
+                                      aria-label="Diminuir quantidade"
+                                      className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-500 active:scale-95 transition-all cursor-pointer"
+                                    >
+                                      <LucideIcons.Minus size={12} strokeWidth={2} />
+                                    </button>
+                                    <span className="font-medium text-slate-700 text-xs w-5 text-center tabular-nums">
+                                      <span>{item.quantidade}</span>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => manipularProduto(item.produto, 'mais')}
+                                      aria-label="Aumentar quantidade"
+                                      className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all cursor-pointer"
+                                    >
+                                      <LucideIcons.Plus size={12} strokeWidth={2} />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
+
+                            {item.statusCozinha === 'pronto' && (
+                              <button
+                                type="button"
+                                onClick={() => marcarComoEntregue(item.produto.id)}
+                                className="mt-2.5 w-full bg-emerald-700 hover:bg-emerald-800 text-white py-2 rounded-3xl text-[10px] font-medium uppercase tracking-widest transition-all flex items-center justify-center gap-2 select-none shadow-xs cursor-pointer"
+                              >
+                                <LucideIcons.BellRing size={13} strokeWidth={2} className="animate-bounce" />
+                                <span>Entregar na Mesa</span>
+                              </button>
+                            )}
                           </div>
-                          
-                          {item.statusCozinha === 'pronto' && (
-                            <button type="button" onClick={() => marcarComoEntregue(item.produto.id)} className="mt-3 w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-4xl text-[10px] font-medium uppercase tracking-widest transition-all flex items-center justify-center gap-2 select-none shadow-sm">
-                              <span className="animate-bounce text-sm">🔔</span> <span>Entregar na Mesa</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </section>
         </div>
       </main>
 
       {/* BARRA FIXA INFERIOR */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-18 p-3 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-2xl pb-safe select-none">
-        <div className="flex items-center gap-4 max-w-4xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 md:left-18 px-4 md:px-8 pt-3 pb-safe-4 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-lg shadow-slate-900/5 select-none">
+        <div className="flex items-center gap-3 sm:gap-4 max-w-6xl mx-auto">
           <button
             type="button"
             onClick={abrirModalFechamento}
-            className="flex-1 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 h-11 rounded-2xl font-semibold text-[11px] uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-2"
+            className="flex-1 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 h-11 rounded-2xl font-semibold text-xs uppercase tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
           >
             <LucideIcons.Receipt size={16} strokeWidth={2} />
             <span>Fechar Conta</span>
@@ -584,10 +905,16 @@ export function Comanda() {
           <button
             type="button"
             onClick={handleConfirmarPedido}
-            className="flex-1 bg-teal-800 hover:bg-teal-900 text-white h-11 rounded-2xl font-bold text-[12px] uppercase tracking-wider shadow-lg shadow-teal-700/20 px-4 py-2 flex items-center justify-center gap-2 active:scale-95 transition-all"
+            className="flex-1 bg-teal-800 hover:bg-teal-900 text-white h-11 rounded-2xl font-semibold text-xs uppercase tracking-wider shadow-lg shadow-teal-700/20 px-4 py-2 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
           >
             <LucideIcons.Save size={16} strokeWidth={2} />
             <span>{statusSalvo ? 'Salvo!' : 'Salvar'}</span>
+            {temAlteracoesPendentes && !statusSalvo && (
+              <span
+                aria-label="Alterações pendentes"
+                className="w-2 h-2 rounded-full bg-amber-300 animate-pulse shrink-0"
+              />
+            )}
           </button>
         </div>
       </div>
@@ -728,24 +1055,36 @@ export function Comanda() {
                             Nenhum item lançado nesta mesa.
                           </p>
                         ) : (
-                          itensPedidos.map((item) => (
-                            <div
-                              key={item.id}
-                              className="bg-white rounded-xl px-2.5 py-2 border border-slate-100 flex items-center justify-between gap-2 text-xs shadow-2xs"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] flex items-center justify-center shrink-0 tabular-nums">
-                                  {item.quantidade}x
-                                </span>
-                                <span className="font-medium text-slate-700 truncate text-[11px] uppercase">
-                                  {item.produto.nome}
+                          itensPedidos.map((item) => {
+                            const prodCat = cardapioAtivo.find((p) => p.id === item.produto.id);
+                            const tamanhoModal = (
+                              item.produto.subcategoria ||
+                              prodCat?.subcategoria ||
+                              ''
+                            ).trim();
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="bg-white rounded-xl px-2.5 py-2 border border-slate-100 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] flex items-center justify-center shrink-0 tabular-nums">
+                                    {item.quantidade}x
+                                  </span>
+                                  <span className="font-medium text-slate-700 truncate text-[11px] uppercase">
+                                    {item.produto.nome}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200/80 text-[9px] font-medium uppercase tracking-wider text-slate-400 shrink-0">
+                                    {tamanhoModal || 'UNID.'}
+                                  </span>
+                                </div>
+                                <span className="font-semibold text-slate-700 tabular-nums text-[11px] shrink-0">
+                                  {formatarMoeda(item.produto.preco * item.quantidade)}
                                 </span>
                               </div>
-                              <span className="font-semibold text-slate-700 tabular-nums text-[11px] shrink-0">
-                                {formatarMoeda(item.produto.preco * item.quantidade)}
-                              </span>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -837,7 +1176,7 @@ export function Comanda() {
                 {/* RESUMO TOTAL DA CONTA */}
                 <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs space-y-1.5">
                   <div className="flex justify-between items-center text-xs text-slate-500">
-                    <span>Subtotal consumo</span>
+                    <span>Consumo</span>
                     <span className="tabular-nums font-medium">{formatarMoeda(valorTotalMenu)}</span>
                   </div>
                   {taxaDigitada > 0 && (
@@ -855,7 +1194,6 @@ export function Comanda() {
                   <div className="border-t border-slate-100 pt-2 flex items-baseline justify-between">
                     <div>
                       <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total a Cobrar</p>
-                      <p className="text-[10px] text-slate-400">Pronto para dar baixa</p>
                     </div>
                     <span className="text-2xl font-bold text-slate-800 tabular-nums">
                       {formatarMoeda(totalCobrarFinal)}

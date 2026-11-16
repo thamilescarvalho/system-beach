@@ -111,14 +111,14 @@ export function MenuFiltroMetricaDropdown({
     alinhamento === 'esquerda'
       ? 'left-0'
       : alinhamento === 'responsivo'
-        ? 'left-0 sm:left-auto sm:right-0'
+        ? 'left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0'
         : alinhamento === 'card-esquerda'
           ? '-right-28 sm:right-0'
           : 'right-0';
 
   const classeAlturaBotao =
     tamanho === 'md'
-      ? 'h-8 px-3 text-xs gap-1.5'
+      ? 'h-8 px-2 sm:px-3 text-xs gap-1 sm:gap-1.5'
       : 'h-6 sm:h-7 px-2 sm:px-2.5 text-[10px] sm:text-[11px] gap-1 sm:gap-1.5';
 
   return (
@@ -150,7 +150,7 @@ export function MenuFiltroMetricaDropdown({
             className={temFiltroAtivo ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'}
           />
         )}
-        <span className="truncate max-w-16 sm:max-w-40">{textoBotao}</span>
+        <span className="truncate max-w-20 sm:max-w-40">{textoBotao}</span>
         <ChevronDown
           size={11}
           className={`shrink-0 transition-transform duration-150 ${
@@ -163,7 +163,7 @@ export function MenuFiltroMetricaDropdown({
         <div
           role="dialog"
           aria-label="Filtrar métricas"
-          className={`absolute ${classePosicaoMenu} top-full mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans`}
+          className={`absolute ${classePosicaoMenu} top-full mt-1.5 w-56 sm:w-60 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans`}
         >
           {/* Cabeçalho do Dropdown */}
           <div className="px-3 pt-2.5 pb-2 border-b border-slate-100">
@@ -362,7 +362,7 @@ export function MenuContaDropdown({
         aria-haspopup="listbox"
         aria-expanded={aberto}
         onClick={() => setAberto((v) => !v)}
-        className={`h-8 px-3 rounded-full border text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+        className={`h-8 px-2 sm:px-3 rounded-full border text-xs font-medium inline-flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
           filtrando
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100/70'
             : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50 shadow-2xs'
@@ -372,7 +372,7 @@ export function MenuContaDropdown({
           size={13}
           className={filtrando ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'}
         />
-        <span className="truncate max-w-32 sm:max-w-44">
+        <span className="truncate max-w-24 sm:max-w-44">
           {contaAtiva ? contaAtiva.nome : 'Todas as contas'}
         </span>
         <ChevronDown
@@ -387,7 +387,7 @@ export function MenuContaDropdown({
         <div
           role="listbox"
           aria-label="Selecionar conta financeira"
-          className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans"
+          className="absolute left-0 top-full mt-1.5 w-56 sm:w-60 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans"
         >
           <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-800">Conta de análise</span>
@@ -489,7 +489,7 @@ export function MenuSimplesDropdown<T extends string>({
         className="h-8 px-3 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
       >
         <SlidersHorizontal size={12} className="text-slate-400 shrink-0" />
-        <span className="truncate max-w-36">{ativoObj?.label}</span>
+        <span className="truncate max-w-28 sm:max-w-36">{ativoObj?.label}</span>
         <ChevronDown
           size={12}
           className={`shrink-0 text-slate-400 transition-transform duration-150 ${
@@ -502,7 +502,7 @@ export function MenuSimplesDropdown<T extends string>({
         <div
           role="listbox"
           aria-label={tituloMenu}
-          className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans"
+          className="absolute right-0 top-full mt-1.5 w-52 sm:w-56 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans"
         >
           <div className="px-3 py-2 border-b border-slate-100">
             <span className="text-xs font-semibold text-slate-800">{tituloMenu}</span>

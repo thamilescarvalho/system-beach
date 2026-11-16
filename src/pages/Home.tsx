@@ -97,11 +97,10 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-100/80 font-sans flex flex-col justify-between relative antialiased text-slate-800 overflow-x-hidden">
+    <div className="min-h-dvh bg-slate-200/40 font-sans flex flex-col justify-between relative antialiased text-slate-800 overflow-x-hidden">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64"
-        style={{ background: 'radial-gradient(ellipse at top, rgba(226, 232, 240, 0.55) 0%, rgba(226, 232, 240, 0) 70%)' }}
+        className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-radial from-slate-200/55 to-transparent blur-2xl"
       />
 
       {/* HEADER */}
@@ -160,12 +159,12 @@ export function Home() {
                 </h2>
               </div>
 
-              <section className="bg-slate-200/60 border border-slate-200/90 rounded-4xl p-2 space-y-1.5 shadow-inner">
+              <section className="bg-slate-200/90 border border-slate-200/90 rounded-3xl p-4 space-y-2 shadow-inner">
                 {/* 1. Mesas Ocupadas */}
                 <button
                   type="button"
                   onClick={() => navigate('/mesas')}
-                  className="group w-full flex items-center justify-between px-3.5 py-2.5 rounded-4xl bg-white hover:bg-white border border-slate-200/60 hover:border-slate-300/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer"
+                  className="group w-full flex items-center justify-between px-3.5 py-2 rounded-4xl bg-white hover:bg-white border border-slate-200/60 hover:border-slate-300/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-slate-50 border border-slate-200/80 text-slate-600 shadow-2xs flex items-center justify-center shrink-0">
@@ -174,7 +173,7 @@ export function Home() {
                     <p className="text-[14px] tracking-wider font-sans text-slate-800 truncate uppercase">
                       {mesasOcupadas.length === 1
                         ? '1 mesa ocupada'
-                        : `${mesasOcupadas.length} ocupados`}
+                        : `${mesasOcupadas.length} mesas ocupadas`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 pl-2">
@@ -272,65 +271,89 @@ export function Home() {
                 <button
                   type="button"
                   onClick={() => navigate('/mesas')}
-                  className="text-xs text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  className="text-xs font-medium text-slate-500 hover:text-slate-800 inline-flex items-center gap-0.5 transition-colors cursor-pointer"
                 >
-                  Ver todas
+                  <span>Ver todas</span>
+                  <LucideIcons.ChevronRight size={13} strokeWidth={1.8} />
                 </button>
               </div>
 
-              <section className="bg-slate-200/60 border border-slate-200/90 rounded-4xl p-2 space-y-1.5 shadow-inner">
+              <section className="bg-slate-200/80 border border-slate-200/90 rounded-3xl p-3 shadow-inner">
                 {mesasOcupadas.length === 0 ? (
-                  <div className="px-4 py-8 rounded-4xl bg-white/85 border border-dashed border-slate-200 flex flex-col items-center justify-center text-center gap-2">
+                  <div className="px-4 py-8 rounded-3xl bg-white/85 border border-dashed border-slate-200 flex flex-col items-center justify-center text-center gap-2">
                     <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200/80 text-slate-400 flex items-center justify-center">
                       <LucideIcons.Umbrella size={17} strokeWidth={1.8} />
                     </div>
                     <p className="text-xs text-slate-400">Nenhuma comanda aberta agora</p>
                   </div>
                 ) : (
-                  mesasOcupadas.slice(0, 5).map((mesa) => {
-                    const totalParcial = (mesa.itens || []).reduce(
-                      (acc, item) => acc + item.produto.preco * item.quantidade,
-                      0
-                    );
-                    const qtdProntos = (mesa.itens || []).filter(
-                      (i) => i.statusCozinha === 'pronto'
-                    ).length;
+                  <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                    {mesasOcupadas.slice(0, 6).map((mesa) => {
+                      const totalParcial = (mesa.itens || []).reduce(
+                        (acc, item) => acc + item.produto.preco * item.quantidade,
+                        0
+                      );
+                      const qtdProntos = (mesa.itens || []).filter(
+                        (i) => i.statusCozinha === 'pronto'
+                      ).length;
 
-                    return (
-                      <button
-                        key={mesa.id}
-                        type="button"
-                        onClick={() => navigate(`/comanda/${mesa.numero}`)}
-                        className="group w-full flex items-center justify-between px-3.5 py-2.5 rounded-4xl bg-white hover:bg-white border border-slate-200/60 hover:border-slate-300/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Bolinha preta com o número da mesa  */}
-                          <span className="w-9 h-9 rounded-full bg-slate-500 text-white text-[14px] font-medium flex items-center justify-center shrink-0 tabular-nums shadow-2xs">
-                            {String(mesa.numero).padStart(2)}
-                          </span>
-                          <p className="text-[13px] uppercase font-medium text-slate-700 truncate">
-                            {mesa.nomeCliente?.trim() || 'Sem Nome'}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0 pl-2">
-                          {qtdProntos > 0 && (
-                            <span className="px-2 py-0.5 uppercase rounded-full tracking-wider bg-amber-100 border border-amber-300 text-amber-800 text-[9px] font-medium">
-                              Pronto
-                            </span>
-                          )}
-                          <span className="text-xs font-medium text-slate-700 tabular-nums">
-                            {formatarMoeda(totalParcial)}
-                          </span>
-                          <LucideIcons.ChevronRight
-                            size={15}
-                            strokeWidth={1.8}
-                            className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all"
+                      return (
+                        <button
+                          key={mesa.id}
+                          type="button"
+                          onClick={() => navigate(`/comanda/${mesa.numero}`)}
+                          className={`group relative aspect-square rounded-3xl p-2.5 sm:p-3 flex flex-col justify-between text-left overflow-hidden border transition-all duration-300 ease-out hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer ${
+                            qtdProntos > 0
+                              ? 'bg-linear-to-b from-white via-amber-50/30 to-amber-50/70 border-amber-300/90 ring-1 ring-white/90 shadow-xs hover:shadow-md hover:border-amber-400'
+                              : 'bg-linear-to-b from-white via-white to-slate-50/90 border-slate-200/90 ring-1 ring-white/80 shadow-xs hover:shadow-md hover:border-slate-300'
+                          }`}
+                        >
+                          {/* Brilho especular 3D superior */}
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-3 top-0 h-px bg-linear-to-r from-transparent via-white to-transparent"
                           />
-                        </div>
-                      </button>
-                    );
-                  })
+
+                          {/* Topo do quadrado: Número da mesa + indicador */}
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-2xl bg-slate-100 border border-slate-200/80 shadow-2xs flex items-center justify-center text-xs sm:text-[13px] font-semibold text-slate-700 tabular-nums group-hover:bg-emerald-900 group-hover:text-white group-hover:border-emerald-800 transition-colors duration-200 shrink-0">
+                              {String(mesa.numero).padStart(2, '0')}
+                            </span>
+
+                            {qtdProntos > 0 ? (
+                              <span
+                                title="Pedido pronto para servir"
+                                className="w-6 h-6 rounded-full bg-amber-100 border border-amber-200/90 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs"
+                              >
+                                <LucideIcons.BellRing size={11} strokeWidth={2} className="animate-bounce" />
+                              </span>
+                            ) : (
+                              <span className="w-6 h-6 rounded-full bg-slate-50 border border-slate-200/60 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 flex items-center justify-center transition-all shrink-0">
+                                <LucideIcons.ArrowUpRight size={12} strokeWidth={1.8} />
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Base do quadrado: Nome do cliente + Valor em slate-400 */}
+                          <div className="w-full min-w-0">
+                            <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-tight text-slate-700 truncate leading-tight">
+                              {mesa.nomeCliente?.trim() || 'Sem Nome'}
+                            </p>
+                            <div className="mt-1 pt-1 border-t border-slate-100/90 flex items-center justify-between gap-1">
+                              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 tabular-nums truncate leading-none">
+                                {formatarMoeda(totalParcial)}
+                              </span>
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  qtdProntos > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </section>
             </div>

@@ -50,8 +50,7 @@ export function VitrineSistemaDesktop() {
         {/* Luz sutil de profundidade */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(241, 245, 249, 0.9) 0%, rgba(241, 245, 249, 0) 70%)' }}
+          className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-radial from-slate-100/90 to-transparent blur-2xl"
         />
 
         {/* TOPO DA VITRINE */}

@@ -24,8 +24,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <div className="min-h-dvh bg-slate-50 flex flex-col items-center justify-center font-sans relative overflow-hidden p-4 pt-safe pb-safe">
         <div
           aria-hidden="true"
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(224, 231, 255, 0.7) 0%, rgba(255, 241, 242, 0) 70%)' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none bg-radial from-indigo-100/70 to-transparent blur-2xl"
         />
 
         <div className="relative z-10 flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-500">

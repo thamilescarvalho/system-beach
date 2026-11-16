@@ -114,15 +114,15 @@ export function GraficoComparativoBarras({
               style={{
                 left: `${Math.min(82, Math.max(18, (coordAtiva.x / largura) * 100))}%`
               }}
-              className="pointer-events-none absolute -top-1 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white border border-slate-200/90 shadow-[0_6px_18px_-4px_rgba(15,23,42,0.12)] text-[11px] whitespace-nowrap transition-all duration-200"
+              className="pointer-events-none absolute -top-1 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white border border-slate-200/90 shadow-md shadow-slate-200/80 text-[11px] whitespace-nowrap transition-all duration-200"
             >
-              <span className="font-semibold text-slate-500">{pontoAtivo.label}</span>
+              <span className="font-medium text-slate-400">{pontoAtivo.label}</span>
               <span className="h-3 w-px bg-slate-200" />
-              <span className="font-bold text-slate-900 tabular-nums">
+              <span className="font-semibold text-slate-600 tabular-nums">
                 {ocultarValores ? 'R$ •••' : formatarMoeda(pontoAtivo.entradas)}
               </span>
               {pontoAtivo.saidas > 0 && (
-                <span className="text-[10px] font-medium text-amber-600 tabular-nums">
+                <span className="text-[10px] font-medium text-amber-500 tabular-nums">
                   (-{ocultarValores ? '•••' : formatarMoeda(pontoAtivo.saidas)})
                 </span>
               )}
@@ -137,8 +137,8 @@ export function GraficoComparativoBarras({
           >
             <defs>
               <linearGradient id="gradAreaEntradas" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.16" />
-                <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.16" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -174,7 +174,7 @@ export function GraficoComparativoBarras({
             <path
               d={pathEntradas}
               fill="none"
-              stroke="#38bdf8"
+              stroke="#10b981"
               strokeWidth="2.6"
               strokeLinecap="round"
             />
@@ -196,7 +196,7 @@ export function GraficoComparativoBarras({
               cy={coordAtiva.y}
               r="4.5"
               fill="#ffffff"
-              stroke="#0284c7"
+              stroke="#059669"
               strokeWidth="2.5"
             />
 
@@ -231,7 +231,7 @@ export function GraficoComparativoBarras({
                   type="button"
                   onClick={() => setIndiceHover(idx)}
                   className={`text-[10px] tabular-nums transition-colors cursor-pointer ${
-                    ativo ? 'font-bold text-slate-800' : 'font-medium text-slate-400'
+                    ativo ? 'font-semibold text-slate-600' : 'font-medium text-slate-400'
                   } ${mostrar ? 'opacity-100' : 'opacity-0 sm:opacity-60'}`}
                 >
                   {p.label}

@@ -333,13 +333,11 @@ export function Login() {
       {/* ILUMINAÇÃO ATMOSFÉRICA SUTIL DE FUNDO (EFEITO PROFUNDIDADE) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed -top-32 left-1/4 w-96 h-96 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(226, 232, 240, 0.85) 0%, rgba(226, 232, 240, 0) 70%)' }}
+        className="pointer-events-none fixed -top-32 left-1/4 w-96 h-96 rounded-full bg-radial from-slate-200/85 to-transparent blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed -bottom-32 right-1/4 w-96 h-96 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 70%)' }}
+        className="pointer-events-none fixed -bottom-32 right-1/4 w-96 h-96 rounded-full bg-radial from-emerald-500/10 to-transparent blur-2xl"
       />
 
       {/* MODAL DE CONFIRMAÇÃO DE E-MAIL */}

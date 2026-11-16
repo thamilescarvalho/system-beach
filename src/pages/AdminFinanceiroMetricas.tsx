@@ -38,15 +38,15 @@ import {
 type AbaRanking = 'produtos' | 'categorias' | 'equipe' | 'saidas' | 'contas';
 
 const OPCOES_ABA_RANKING: { chave: AbaRanking; label: string }[] = [
-  { chave: 'produtos', label: 'Top Produtos' },
+  { chave: 'produtos', label: 'Produtos + vendidos' },
   { chave: 'categorias', label: 'Categorias de Venda' },
-  { chave: 'equipe', label: 'Atendimentos por Equipe' },
+  { chave: 'equipe', label: 'Atendimentos' },
   { chave: 'saidas', label: 'Maiores Saídas' },
   { chave: 'contas', label: 'Saldos por Conta' }
 ];
 
 const TITULOS_ABA_RANKING: Record<AbaRanking, string> = {
-  produtos: 'Top Produtos Vendidos',
+  produtos: 'Produtos + vendidos',
   categorias: 'Receita por Categoria',
   equipe: 'Atendimentos por Operador',
   saidas: 'Saídas por Categoria',
@@ -67,6 +67,36 @@ function resolverIntervaloEstado(estado: EstadoFiltroPeriodo, hoje: string): Int
   return calcularIntervaloPreset(estado.preset, hoje);
 }
 
+function MoedaSutil({
+  valor,
+  ocultar = false,
+  classNamePrefixo = 'text-[0.65em] font-normal text-slate-400 mr-0.5'
+}: {
+  valor: number;
+  ocultar?: boolean;
+  classNamePrefixo?: string;
+}) {
+  if (ocultar) {
+    return (
+      <>
+        <span className={classNamePrefixo}>R$</span>
+        <span>••••</span>
+      </>
+    );
+  }
+
+  const negativo = valor < 0;
+  const formatadoAbs = formatarMoeda(Math.abs(valor)).replace(/^R\$\s?/i, '');
+
+  return (
+    <>
+      {negativo && <span>-</span>}
+      <span className={classNamePrefixo}>R$</span>
+      <span>{formatadoAbs}</span>
+    </>
+  );
+}
+
 function AnelProgressoCircular({
   percentual,
   corHex
@@ -76,7 +106,7 @@ function AnelProgressoCircular({
 }) {
   const pctLimpo = Math.min(100, Math.max(0, Number.isFinite(percentual) ? percentual : 0));
   const tamanho = 120;
-  const espessura = 12;
+  const espessura = 9;
   const raio = (tamanho - espessura) / 2;
   const circunferencia = 2 * Math.PI * raio;
   const offset = circunferencia - (pctLimpo / 100) * circunferencia;
@@ -109,8 +139,9 @@ function AnelProgressoCircular({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-base sm:text-xl font-bold text-slate-900 tabular-nums">
-          {Math.round(pctLimpo)}%
+        <span className="text-base sm:text-xl font-medium text-slate-500 tabular-nums tracking-tight">
+          {Math.round(pctLimpo)}
+          <span className="text-[0.68em] font-normal text-slate-400 ml-0.5">%</span>
         </span>
       </div>
     </div>
@@ -138,22 +169,6 @@ export function AdminFinanceiroMetricas() {
     preset: 'hoje',
     custom: { inicio: dataHoje, fim: dataHoje }
   });
-  const [periodoCardVendas, setPeriodoCardVendas] = useState<EstadoFiltroPeriodo>({
-    preset: 'hoje',
-    custom: { inicio: dataHoje, fim: dataHoje }
-  });
-  const [periodoCardRecebimentos, setPeriodoCardRecebimentos] = useState<EstadoFiltroPeriodo>({
-    preset: 'hoje',
-    custom: { inicio: dataHoje, fim: dataHoje }
-  });
-  const [periodoCardGuardaSol, setPeriodoCardGuardaSol] = useState<EstadoFiltroPeriodo>({
-    preset: 'hoje',
-    custom: { inicio: dataHoje, fim: dataHoje }
-  });
-  const [periodoCardLucro, setPeriodoCardLucro] = useState<EstadoFiltroPeriodo>({
-    preset: 'hoje',
-    custom: { inicio: dataHoje, fim: dataHoje }
-  });
   const [metodoSelecionado, setMetodoSelecionado] = useState<MetodoPagamentoChave>('todos');
   const [abaRanking, setAbaRanking] = useState<AbaRanking>('produtos');
   const [modalMetricaAtiva, setModalMetricaAtiva] = useState<TipoMetricaModal | null>(null);
@@ -165,27 +180,15 @@ export function AdminFinanceiroMetricas() {
   }, [contaFiltroNormalizada, contasFinanceiras]);
 
   const aoMudarPeriodoGlobal = (novoPreset: PresetPeriodo) => {
-    setPeriodoGlobal((prev) => {
-      const proximo = { ...prev, preset: novoPreset };
-      setPeriodoCardVendas(proximo);
-      setPeriodoCardRecebimentos(proximo);
-      setPeriodoCardGuardaSol(proximo);
-      setPeriodoCardLucro(proximo);
-      return proximo;
-    });
+    setPeriodoGlobal((prev) => ({ ...prev, preset: novoPreset }));
   };
 
   const aoMudarCustomGlobal = (campo: 'inicio' | 'fim', valor: string) => {
     if (!valor) return;
-    setPeriodoGlobal((prev) => {
-      const custom = { ...prev.custom, [campo]: valor };
-      const proximo: EstadoFiltroPeriodo = { preset: 'custom', custom };
-      setPeriodoCardVendas(proximo);
-      setPeriodoCardRecebimentos(proximo);
-      setPeriodoCardGuardaSol(proximo);
-      setPeriodoCardLucro(proximo);
-      return proximo;
-    });
+    setPeriodoGlobal((prev) => ({
+      preset: 'custom',
+      custom: { ...prev.custom, [campo]: valor }
+    }));
   };
 
   const aoAtualizarDados = async () => {
@@ -202,33 +205,17 @@ export function AdminFinanceiroMetricas() {
     () => resolverIntervaloEstado(periodoGlobal, dataHoje),
     [periodoGlobal, dataHoje]
   );
-  const intervaloCardVendas = useMemo(
-    () => resolverIntervaloEstado(periodoCardVendas, dataHoje),
-    [periodoCardVendas, dataHoje]
-  );
-  const intervaloCardRecebimentos = useMemo(
-    () => resolverIntervaloEstado(periodoCardRecebimentos, dataHoje),
-    [periodoCardRecebimentos, dataHoje]
-  );
-  const intervaloCardGuardaSol = useMemo(
-    () => resolverIntervaloEstado(periodoCardGuardaSol, dataHoje),
-    [periodoCardGuardaSol, dataHoje]
-  );
-  const intervaloCardLucro = useMemo(
-    () => resolverIntervaloEstado(periodoCardLucro, dataHoje),
-    [periodoCardLucro, dataHoje]
-  );
 
   const resumoVendas = useMemo(
     () =>
       calcularResumoVendasPeriodo({
         vendas: historicoVendas,
         contasFinanceiras,
-        inicio: intervaloCardVendas.inicio,
-        fim: intervaloCardVendas.fim,
+        inicio: intervaloGlobal.inicio,
+        fim: intervaloGlobal.fim,
         contaFiltroId: contaFiltroNormalizada
       }),
-    [historicoVendas, contasFinanceiras, intervaloCardVendas, contaFiltroNormalizada]
+    [historicoVendas, contasFinanceiras, intervaloGlobal, contaFiltroNormalizada]
   );
 
   const resumoRecebimentos = useMemo(
@@ -237,8 +224,8 @@ export function AdminFinanceiroMetricas() {
         vendas: historicoVendas,
         movimentacoes: movimentacoesCaixa,
         contasFinanceiras,
-        inicio: intervaloCardRecebimentos.inicio,
-        fim: intervaloCardRecebimentos.fim,
+        inicio: intervaloGlobal.inicio,
+        fim: intervaloGlobal.fim,
         metodoSelecionado,
         contaFiltroId: contaFiltroNormalizada
       }),
@@ -246,7 +233,7 @@ export function AdminFinanceiroMetricas() {
       historicoVendas,
       movimentacoesCaixa,
       contasFinanceiras,
-      intervaloCardRecebimentos,
+      intervaloGlobal,
       metodoSelecionado,
       contaFiltroNormalizada
     ]
@@ -258,15 +245,15 @@ export function AdminFinanceiroMetricas() {
         vendas: historicoVendas,
         movimentacoes: movimentacoesCaixa,
         contasFinanceiras,
-        inicio: intervaloCardGuardaSol.inicio,
-        fim: intervaloCardGuardaSol.fim,
+        inicio: intervaloGlobal.inicio,
+        fim: intervaloGlobal.fim,
         contaFiltroId: contaFiltroNormalizada
       }),
     [
       historicoVendas,
       movimentacoesCaixa,
       contasFinanceiras,
-      intervaloCardGuardaSol,
+      intervaloGlobal,
       contaFiltroNormalizada
     ]
   );
@@ -277,11 +264,11 @@ export function AdminFinanceiroMetricas() {
         vendas: historicoVendas,
         produtos,
         contasFinanceiras,
-        inicio: intervaloCardLucro.inicio,
-        fim: intervaloCardLucro.fim,
+        inicio: intervaloGlobal.inicio,
+        fim: intervaloGlobal.fim,
         contaFiltroId: contaFiltroNormalizada
       }),
-    [historicoVendas, produtos, contasFinanceiras, intervaloCardLucro, contaFiltroNormalizada]
+    [historicoVendas, produtos, contasFinanceiras, intervaloGlobal, contaFiltroNormalizada]
   );
 
   const resumoBI = useMemo(
@@ -366,29 +353,7 @@ export function AdminFinanceiroMetricas() {
     [metodoSelecionado]
   );
 
-  const mascarar = (valor: string) => (ocultarValores ? 'R$ ••••' : valor);
-
   const rotuloGlobal = formatarRotuloIntervalo(intervaloGlobal.inicio, intervaloGlobal.fim, dataHoje);
-  const rotuloCardVendas = formatarRotuloIntervalo(
-    intervaloCardVendas.inicio,
-    intervaloCardVendas.fim,
-    dataHoje
-  );
-  const rotuloCardRecebimentos = formatarRotuloIntervalo(
-    intervaloCardRecebimentos.inicio,
-    intervaloCardRecebimentos.fim,
-    dataHoje
-  );
-  const rotuloCardGuardaSol = formatarRotuloIntervalo(
-    intervaloCardGuardaSol.inicio,
-    intervaloCardGuardaSol.fim,
-    dataHoje
-  );
-  const rotuloCardLucro = formatarRotuloIntervalo(
-    intervaloCardLucro.inicio,
-    intervaloCardLucro.fim,
-    dataHoje
-  );
 
   const percentualAnelVendas = useMemo(() => {
     const totalPedidos = resumoVendas.quantidadeConcluidas + resumoVendas.quantidadeCanceladas;
@@ -397,13 +362,13 @@ export function AdminFinanceiroMetricas() {
   }, [resumoVendas]);
 
   return (
-    <div className="min-h-dvh bg-[#f5f7fb] text-slate-800 font-sans antialiased md:pl-18">
+    <div className="min-h-dvh bg-[#e0e3ea] text-slate-800 font-sans antialiased md:pl-18">
       <Header />
 
-      <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 md:px-8 pt-20 pb-28 md:pt-22 md:pb-12 space-y-3.5 sm:space-y-5">
+      <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 md:px-8 pt-22 sm:pt-24 md:pt-24 pb-28 md:pb-12 space-y-3.5 sm:space-y-5">
         {/* BARRA SUPERIOR */}
-        <section className="relative z-40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <section className="relative z-20 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-nowrap w-full min-w-0">
             <MenuContaDropdown
               contas={contasFinanceiras}
               contaSelecionadaId={contaFiltroId}
@@ -427,7 +392,7 @@ export function AdminFinanceiroMetricas() {
               onClick={() => setOcultarValores((v) => !v)}
               title={ocultarValores ? 'Mostrar valores' : 'Ocultar valores'}
               aria-label="Alternar visibilidade de valores"
-              className="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-slate-800 flex items-center justify-center shadow-2xs transition-colors cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-slate-700 hover:shadow-sm active:scale-95 flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
             >
               {ocultarValores ? <LucideIcons.EyeOff size={14} /> : <LucideIcons.Eye size={14} />}
             </button>
@@ -438,51 +403,35 @@ export function AdminFinanceiroMetricas() {
               disabled={atualizando}
               title="Atualizar métricas"
               aria-label="Atualizar métricas"
-              className="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-emerald-600 flex items-center justify-center shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+              className="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-emerald-600 hover:shadow-sm active:scale-95 flex items-center justify-center shadow-2xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
             >
               <LucideIcons.RefreshCw size={14} className={atualizando ? 'animate-spin' : ''} />
             </button>
           </div>
         </section>
 
-        {/* LINHA 1: 4 CARDS HORIZONTAIS MINIMALISTAS (2 POR LINHA NO CELULAR, 4 NO DESKTOP) */}
-        <section className="relative z-30 grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4">
+        {/* LINHA 1: 4 CARDS HORIZONTAIS  */}
+        <section className="relative z-10 grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4">
           {/* CARD 1: QUANTIDADE DE VENDAS FECHADAS */}
           <Card5D
             onClick={() => setModalMetricaAtiva('vendas')}
             title="Clique para analisar vendas"
             innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
           >
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-medium text-slate-400 truncate">
                 <span className="sm:hidden">Vendas</span>
                 <span className="hidden sm:inline">Vendas Fechadas</span>
               </span>
-
-              <MenuFiltroMetricaDropdown
-                opcoesPeriodo={OPCOES_PERIODO_GLOBAL}
-                presetPeriodo={periodoCardVendas.preset}
-                rotuloPeriodo={rotuloCardVendas}
-                customDatas={periodoCardVendas.custom}
-                dataMaxima={dataHoje}
-                onChangePreset={(preset) => setPeriodoCardVendas((prev) => ({ ...prev, preset }))}
-                onChangeCustomData={(campo, valor) =>
-                  setPeriodoCardVendas((prev) => ({
-                    preset: 'custom',
-                    custom: { ...prev.custom, [campo]: valor }
-                  }))
-                }
-                alinhamento="card-esquerda"
-              />
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="text-xl sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
+              <div className="text-lg sm:text-2xl xl:text-2xl font-medium text-slate-500 tracking-tight tabular-nums truncate">
                 {resumoVendas.quantidadeConcluidas}
               </div>
 
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-500 shrink-0">
-                <LucideIcons.ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-4xl sm:rounded-2xl bg-sky-50 border border-sky-100/90 shadow-2xs flex items-center justify-center text-sky-500 shrink-0">
+                <LucideIcons.ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1} />
               </div>
             </div>
           </Card5D>
@@ -494,40 +443,33 @@ export function AdminFinanceiroMetricas() {
             innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
           >
             <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+              <span className="text-[11px] sm:text-xs font-medium text-slate-400 truncate">
                 <span className="sm:hidden">Recebido</span>
                 <span className="hidden sm:inline">Valor Recebido</span>
               </span>
 
-              <MenuFiltroMetricaDropdown
-                opcoesPeriodo={OPCOES_PERIODO_GLOBAL}
-                presetPeriodo={periodoCardRecebimentos.preset}
-                rotuloPeriodo={rotuloCardRecebimentos}
-                customDatas={periodoCardRecebimentos.custom}
-                dataMaxima={dataHoje}
-                onChangePreset={(preset) =>
-                  setPeriodoCardRecebimentos((prev) => ({ ...prev, preset }))
-                }
-                onChangeCustomData={(campo, valor) =>
-                  setPeriodoCardRecebimentos((prev) => ({
-                    preset: 'custom',
-                    custom: { ...prev.custom, [campo]: valor }
-                  }))
-                }
-                opcoesMetodo={OPCOES_METODO_EMOJI}
-                metodoSelecionado={metodoSelecionado}
-                onChangeMetodo={setMetodoSelecionado}
-                alinhamento="direita"
-              />
+              {metodoSelecionado !== 'todos' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMetodoSelecionado('todos');
+                  }}
+                  title="Limpar filtro de forma de pagamento"
+                  className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100/70 transition-colors cursor-pointer shrink-0 truncate max-w-24"
+                >
+                  {metodoAtivoMeta.label} ×
+                </button>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="text-lg sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
-                {mascarar(formatarMoeda(resumoRecebimentos.totalSelecionado))}
+              <div className="text-lg sm:text-2xl xl:text-2xl font-medium text-slate-500 tracking-tight tabular-nums truncate">
+                <MoedaSutil valor={resumoRecebimentos.totalSelecionado} ocultar={ocultarValores} />
               </div>
 
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                <LucideIcons.Wallet className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-4xl sm:rounded-2xl bg-emerald-50 border border-emerald-100/90 shadow-2xs flex items-center justify-center text-emerald-500 shrink-0">
+                <LucideIcons.Wallet className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1} />
               </div>
             </div>
           </Card5D>
@@ -538,42 +480,24 @@ export function AdminFinanceiroMetricas() {
             title="Clique para analisar lucro por comanda e produto"
             innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
           >
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-medium text-slate-400 truncate">
                 <span className="sm:hidden">Lucro</span>
                 <span className="hidden sm:inline">Lucro de Produtos</span>
               </span>
-
-              <MenuFiltroMetricaDropdown
-                opcoesPeriodo={OPCOES_PERIODO_GLOBAL}
-                presetPeriodo={periodoCardLucro.preset}
-                rotuloPeriodo={rotuloCardLucro}
-                customDatas={periodoCardLucro.custom}
-                dataMaxima={dataHoje}
-                onChangePreset={(preset) =>
-                  setPeriodoCardLucro((prev) => ({ ...prev, preset }))
-                }
-                onChangeCustomData={(campo, valor) =>
-                  setPeriodoCardLucro((prev) => ({
-                    preset: 'custom',
-                    custom: { ...prev.custom, [campo]: valor }
-                  }))
-                }
-                alinhamento="card-esquerda"
-              />
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <div
-                className={`text-lg sm:text-2xl xl:text-3xl font-bold tracking-tight tabular-nums truncate ${
-                  resumoLucro.lucroTotal < 0 ? 'text-rose-600' : 'text-slate-900'
+                className={`text-lg sm:text-2xl xl:text-2xl font-medium tracking-tight tabular-nums truncate ${
+                  resumoLucro.lucroTotal < 0 ? 'text-rose-400' : 'text-slate-500'
                 }`}
               >
-                {mascarar(formatarMoeda(resumoLucro.lucroTotal))}
+                <MoedaSutil valor={resumoLucro.lucroTotal} ocultar={ocultarValores} />
               </div>
 
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
-                <LucideIcons.BadgeDollarSign className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-4xl sm:rounded-2xl bg-emerald-50 border border-emerald-100/90 shadow-2xs flex items-center justify-center text-emerald-500 shrink-0">
+                <LucideIcons.BadgeDollarSign className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1} />
               </div>
             </div>
           </Card5D>
@@ -584,46 +508,28 @@ export function AdminFinanceiroMetricas() {
             title="Clique para analisar taxas de guarda-sol"
             innerClassName="p-3.5 sm:p-5 flex flex-col justify-between gap-3 sm:gap-4"
           >
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] sm:text-xs font-medium text-slate-400 truncate">
                 <span className="sm:hidden">Guarda-Sol</span>
                 <span className="hidden sm:inline">Taxa Guarda-Sol</span>
               </span>
-
-              <MenuFiltroMetricaDropdown
-                opcoesPeriodo={OPCOES_PERIODO_GLOBAL}
-                presetPeriodo={periodoCardGuardaSol.preset}
-                rotuloPeriodo={rotuloCardGuardaSol}
-                customDatas={periodoCardGuardaSol.custom}
-                dataMaxima={dataHoje}
-                onChangePreset={(preset) =>
-                  setPeriodoCardGuardaSol((prev) => ({ ...prev, preset }))
-                }
-                onChangeCustomData={(campo, valor) =>
-                  setPeriodoCardGuardaSol((prev) => ({
-                    preset: 'custom',
-                    custom: { ...prev.custom, [campo]: valor }
-                  }))
-                }
-                alinhamento="direita"
-              />
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="text-lg sm:text-2xl xl:text-3xl font-bold text-slate-900 tracking-tight tabular-nums truncate">
-                {mascarar(formatarMoeda(resumoGuardaSol.valorTotal))}
+              <div className="text-lg sm:text-2xl xl:text-2xl font-medium text-slate-500 tracking-tight tabular-nums truncate">
+                <MoedaSutil valor={resumoGuardaSol.valorTotal} ocultar={ocultarValores} />
               </div>
 
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                <LucideIcons.Umbrella className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-4xl sm:rounded-2xl bg-amber-50 border border-amber-100/90 shadow-2xs flex items-center justify-center text-amber-500 shrink-0">
+                <LucideIcons.Umbrella className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.3} />
               </div>
             </div>
           </Card5D>
         </section>
 
-        {/* LINHA 2: ESTATÍSTICAS (2 CARDS LADO A LADO NO CELULAR/DESKTOP + GRÁFICO DE CURVAS SUAVES) */}
+        {/* LINHA 2 */}
         <section className="grid grid-cols-2 lg:grid-cols-12 gap-2.5 sm:gap-4 items-stretch">
-          {/* CARD 5: VENDAS CONCLUÍDAS (ANEL CIRCULAR) */}
+          {/* CARD 5: VENDAS CONCLUÍDAS */}
           <Card5D
             onClick={() => setModalMetricaAtiva('vendas')}
             title="Clique para analisar vendas"
@@ -631,22 +537,19 @@ export function AdminFinanceiroMetricas() {
             innerClassName="p-3.5 sm:p-5 flex flex-col justify-between items-center text-center"
           >
             <div className="w-full text-left">
-              <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">
-                Estatísticas
-              </span>
-              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 mt-0.5 truncate">
+              <h2 className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
                 Vendas Concluídas
               </h2>
             </div>
 
-            <AnelProgressoCircular percentual={percentualAnelVendas} corHex="#38bdf8" />
+            <AnelProgressoCircular percentual={percentualAnelVendas} corHex="#10b981" />
 
             <div className="w-full">
-              <span className="text-[10px] sm:text-xs font-medium text-slate-400 block truncate">
-                {`Faturamento (${rotuloCardVendas})`}
+              <span className="text-[10px] sm:text-xs font-normal text-slate-400 block truncate">
+                {`(${rotuloGlobal})`}
               </span>
-              <span className="text-sm sm:text-base font-bold text-slate-900 tabular-nums mt-0.5 block truncate">
-                {mascarar(formatarMoeda(resumoVendas.faturamentoConcluidas))}
+              <span className="text-sm sm:text-base font-medium text-slate-500 tabular-nums tracking-tight mt-0.5 block truncate">
+                <MoedaSutil valor={resumoVendas.faturamentoConcluidas} ocultar={ocultarValores} />
               </span>
             </div>
           </Card5D>
@@ -660,50 +563,55 @@ export function AdminFinanceiroMetricas() {
           >
             <div className="flex items-start justify-between gap-1.5">
               <div className="min-w-0">
-                <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 block">
-                  Estatísticas
-                </span>
-                <h2 className="text-xs sm:text-sm font-semibold text-slate-900 mt-0.5 truncate">
-                  <span className="sm:hidden">Resultado</span>
-                  <span className="hidden sm:inline">Resultado Líquido</span>
+                <h2 className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5 truncate">
+                  <span className="sm:hidden">Resumo</span>
+                  <span className="hidden sm:inline">Resumo Líquido</span>
                 </h2>
               </div>
-              <span className="h-5 sm:h-6 px-2 rounded-full bg-slate-100 border border-slate-200/80 text-[10px] font-medium text-slate-600 inline-flex items-center shrink-0">
+              <span className="h-5 sm:h-6 px-2 rounded-full bg-slate-50 border border-slate-200/70 text-[10px] font-medium text-slate-400 inline-flex items-center shrink-0">
                 {rotuloGlobal}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-2">
               <div
-                className={`text-lg sm:text-2xl font-bold tracking-tight tabular-nums truncate ${
-                  resumoBI.resultadoLiquido < 0 ? 'text-rose-600' : 'text-slate-900'
+                className={`text-lg sm:text-2xl font-medium tracking-tight tabular-nums truncate ${
+                  resumoBI.resultadoLiquido < 0 ? 'text-rose-400' : 'text-slate-500'
                 }`}
               >
-                {mascarar(formatarMoeda(resumoBI.resultadoLiquido))}
+                <MoedaSutil valor={resumoBI.resultadoLiquido} ocultar={ocultarValores} />
               </div>
 
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 shrink-0">
-                <LucideIcons.TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-4xl sm:rounded-2xl bg-indigo-50 border border-indigo-100/90 shadow-2xs flex items-center justify-center text-indigo-400 shrink-0">
+                <LucideIcons.TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.2} />
               </div>
             </div>
 
             <div className="pt-2 sm:pt-2.5 border-t border-slate-100 space-y-1 text-[10px] sm:text-[11px] text-slate-400 tabular-nums">
               <div className="flex items-center justify-between gap-1">
                 <span>Entradas:</span>
-                <span className="font-semibold text-slate-600 truncate">
-                  {mascarar(formatarMoeda(resumoBI.entradasTotal))}
+                <span className="font-medium text-slate-500 truncate">
+                  <MoedaSutil valor={resumoBI.entradasTotal} ocultar={ocultarValores} />
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1">
                 <span>Saídas:</span>
-                <span className="font-semibold text-rose-500 truncate">
-                  {mascarar(formatarMoeda(resumoBI.saidasTotal))}
+                <span className="font-medium text-rose-400 truncate">
+                  <MoedaSutil
+                    valor={resumoBI.saidasTotal}
+                    ocultar={ocultarValores}
+                    classNamePrefixo="text-[0.82em] font-normal opacity-75 mr-0.5"
+                  />
                 </span>
               </div>
               <div className="flex items-center justify-between gap-1">
                 <span>Contas:</span>
-                <span className="font-semibold text-emerald-600 truncate">
-                  {mascarar(formatarMoeda(saldosContas.saldoConsolidado))}
+                <span className="font-medium text-emerald-500 truncate">
+                  <MoedaSutil
+                    valor={saldosContas.saldoConsolidado}
+                    ocultar={ocultarValores}
+                    classNamePrefixo="text-[0.82em] font-normal opacity-75 mr-0.5"
+                  />
                 </span>
               </div>
             </div>
@@ -712,20 +620,19 @@ export function AdminFinanceiroMetricas() {
           <Card5D interativo={false} className="col-span-2 lg:col-span-6" innerClassName="p-4 sm:p-5 flex flex-col justify-between gap-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <span className="text-[11px] font-medium text-slate-400 block">Estatísticas</span>
-                <h2 className="text-sm font-semibold text-slate-900 mt-0.5">
+                <h2 className="text-sm font-medium text-slate-600 mt-0.5">
                   Fluxo de Receita ({rotuloGlobal})
                 </h2>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium">
-                <span className="inline-flex items-center gap-1.5 text-sky-600">
-                  <span className="w-2 h-2 rounded-full bg-sky-400" />
-                  Entradas ({mascarar(formatarMoeda(resumoBI.entradasTotal))})
+              <div className="flex flex-wrap items-center gap-3 text-[11px] font-sans">
+                <span className="inline-flex items-center gap-1.5 text-slate-500">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Entradas
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-amber-600">
+                <span className="inline-flex items-center gap-1.5 text-slate-500">
                   <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                  Saídas ({mascarar(formatarMoeda(resumoBI.saidasTotal))})
+                  Saídas
                 </span>
               </div>
             </div>
@@ -737,14 +644,14 @@ export function AdminFinanceiroMetricas() {
           </Card5D>
         </section>
 
-        {/* LINHA 3: BARRAS MINIMALISTAS DE MEIOS DE PAGAMENTO + TABELA LIMPA */}
+        {/* LINHA 3: BARRAS DE MEIOS DE PAGAMENTO + TABELA */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           <Card5D interativo={false} className="lg:col-span-4" innerClassName="p-5 space-y-5">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Por Forma de Pagamento</h3>
+                <h3 className="text-sm font-medium text-slate-700">Formas de Pagamento</h3>
                 <p className="text-[11px] text-slate-400">
-                  Toque para filtrar ({rotuloCardRecebimentos})
+                  Toque para filtrar ({rotuloGlobal})
                 </p>
               </div>
               {metodoSelecionado !== 'todos' && (
@@ -784,9 +691,9 @@ export function AdminFinanceiroMetricas() {
                     }`}
                   >
                     <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="font-medium text-slate-700">{item.label}</span>
-                      <span className="font-bold text-slate-900 tabular-nums">
-                        {mascarar(formatarMoeda(item.total))}
+                      <span className="font-medium text-slate-600">{item.label}</span>
+                      <span className="font-medium text-slate-500 tabular-nums">
+                        <MoedaSutil valor={item.total} ocultar={ocultarValores} />
                       </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -808,34 +715,16 @@ export function AdminFinanceiroMetricas() {
               })}
             </div>
 
-            <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2.5">
-              <div className="p-3 rounded-xl bg-[#f8fafc] border border-slate-100">
-                <span className="text-[10px] font-medium text-slate-400 block">Salão em Aberto</span>
-                <span className="text-sm font-bold text-slate-900 tabular-nums mt-0.5 block">
-                  {mascarar(formatarMoeda(salaoEmAberto.valorEmAberto))}
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  {salaoEmAberto.mesasOcupadas}/{salaoEmAberto.totalMesas} mesas
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#f8fafc] border border-slate-100">
-                <span className="text-[10px] font-medium text-slate-400 block truncate">
-                  {resumoLucro.descontoTotal > 0 ? 'Descontos Comandas' : 'Taxa Serviço 10%'}
-                </span>
-                <span className="text-sm font-bold text-slate-900 tabular-nums mt-0.5 block truncate">
-                  {mascarar(
-                    formatarMoeda(
-                      resumoLucro.descontoTotal > 0
-                        ? resumoLucro.descontoTotal
-                        : resumoBI.taxaServicoTotal
-                    )
-                  )}
-                </span>
-                <span className="text-[10px] text-slate-400 truncate block">
-                  {resumoLucro.descontoTotal > 0
-                    ? `${resumoLucro.qtdComandasComDesconto} comanda(s) c/ desc.`
-                    : `${resumoVendas.itensPorVenda.toFixed(1).replace('.', ',')} itens/venda`}
+            <div className="pt-4 border-t border-slate-100">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-medium text-slate-400 block">Salão em Aberto</span>
+                  <span className="text-[10px] text-slate-400">
+                    {salaoEmAberto.mesasOcupadas}/{salaoEmAberto.totalMesas} mesas
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-slate-500 tabular-nums">
+                  <MoedaSutil valor={salaoEmAberto.valorEmAberto} ocultar={ocultarValores} />
                 </span>
               </div>
             </div>
@@ -844,11 +733,11 @@ export function AdminFinanceiroMetricas() {
           <Card5D interativo={false} className="lg:col-span-8" innerClassName="p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-slate-900 truncate">
+                <h3 className="text-sm font-medium text-slate-700 truncate">
                   {TITULOS_ABA_RANKING[abaRanking]}
                 </h3>
                 <p className="text-[11px] text-slate-400 truncate">
-                  Detalhamento por volume e participação ({rotuloGlobal})
+                  ({rotuloGlobal})
                 </p>
               </div>
 
@@ -880,17 +769,17 @@ export function AdminFinanceiroMetricas() {
                     {listaRankingAtivo.map((item, idx) => {
                       const corBadge =
                         abaRanking === 'saidas'
-                          ? 'bg-rose-50 text-rose-600'
+                          ? 'bg-rose-50/80 text-rose-500'
                           : idx === 0
-                            ? 'bg-amber-50 text-amber-600'
-                            : 'bg-sky-50 text-sky-600';
+                            ? 'bg-amber-50/80 text-amber-600'
+                            : 'bg-sky-50/80 text-sky-600';
 
                       return (
                         <tr key={`${item.nome}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="py-3 pr-3 font-semibold text-slate-400 tabular-nums">
+                          <td className="py-3 pr-3 font-medium text-slate-400 tabular-nums">
                             #{String(idx + 1).padStart(2, '0')}
                           </td>
-                          <td className="py-3 px-3 font-medium text-slate-800 max-w-44 truncate">
+                          <td className="py-3 px-3 font-medium text-slate-600 max-w-44 truncate">
                             <div>{item.nome}</div>
                             <div className="text-[10px] text-slate-400 sm:hidden truncate">
                               {item.subtitulo}
@@ -899,8 +788,8 @@ export function AdminFinanceiroMetricas() {
                           <td className="py-3 px-3 text-slate-400 truncate max-w-44 hidden sm:table-cell">
                             {item.subtitulo}
                           </td>
-                          <td className="py-3 px-3 text-right font-bold text-slate-900 tabular-nums whitespace-nowrap">
-                            {mascarar(formatarMoeda(item.valor))}
+                          <td className="py-3 px-3 text-right font-medium text-slate-500 tabular-nums whitespace-nowrap">
+                            <MoedaSutil valor={item.valor} ocultar={ocultarValores} />
                           </td>
                           <td className="py-3 pl-3 text-right whitespace-nowrap">
                             <span
@@ -943,10 +832,10 @@ export function AdminFinanceiroMetricas() {
         contaRotulo={contaRotulo}
         rotulosPeriodo={{
           global: rotuloGlobal,
-          vendas: rotuloCardVendas,
-          recebido: rotuloCardRecebimentos,
-          lucro: rotuloCardLucro,
-          guardasol: rotuloCardGuardaSol
+          vendas: rotuloGlobal,
+          recebido: rotuloGlobal,
+          lucro: rotuloGlobal,
+          guardasol: rotuloGlobal
         }}
         metodoLabel={metodoAtivoMeta.label}
         resumoVendas={resumoVendas}

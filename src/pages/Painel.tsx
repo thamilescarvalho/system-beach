@@ -2,6 +2,7 @@
 import { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext, NOME_PADRAO_SISTEMA } from '../context/AppContext';
 import { Header } from '../components/Header';
+import { obterDataLocalYYYYMMDD } from '../components/financeiro/financeiroUtils';
 import { imprimirCupomTermico } from '../utils/impressoraTermica';
 import type { VendaFechada, PagamentoGarcom } from '../types';
 import * as LucideIcons from 'lucide-react';
@@ -10,9 +11,11 @@ export function Painel() {
   const contexto = useContext(AppContext);
 
   // ESTADOS DE DATA E VISIBILIDADE
-  const dataHoje = new Date().toISOString().split('T')[0];
+  const dataHoje = obterDataLocalYYYYMMDD();
   const [dataInicio, setDataInicio] = useState(dataHoje);
   const [dataFim, setDataFim] = useState(dataHoje);
+  const [periodoPreset, setPeriodoPreset] = useState<'hoje' | 'ontem' | '7dias' | 'custom'>('hoje');
+  const [mostrarDatasCustom, setMostrarDatasCustom] = useState(false);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaFechada | null>(null);
   const [mostrarValores, setMostrarValores] = useState(true);
 
@@ -25,9 +28,7 @@ export function Painel() {
   const [modalPagamentosAberto, setModalPagamentosAberto] = useState(false);
   const [modalRecebimentosAberto, setModalRecebimentosAberto] = useState(false);
 
-  const primeiroDiaDoMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString()
-    .split('T')[0];
+  const primeiroDiaDoMes = `${dataHoje.slice(0, 7)}-01`;
   const [modalDataInicio, setModalDataInicio] = useState(primeiroDiaDoMes);
   const [modalDataFim, setModalDataFim] = useState(dataHoje);
 
@@ -39,7 +40,7 @@ export function Painel() {
 
   // FILTRAGEM DAS VENDAS PARA O EXTRATO DO PAINEL
   const vendasFiltradas = historico.filter((venda) => {
-    const dataVenda = venda.dataFechamento.split('T')[0];
+    const dataVenda = obterDataLocalYYYYMMDD(venda.dataFechamento);
     const dataValida = dataVenda >= dataInicio && dataVenda <= dataFim;
     const isAdmin = garcomLogado?.cargo === 'admin' || garcomLogado?.cargo === 'super_admin';
     const privacidadeValida = isAdmin ? true : venda.garcomNome === garcomLogado?.nome;
@@ -160,8 +161,6 @@ export function Painel() {
     });
   };
 
-  const filtroEhHoje = dataInicio === dataHoje && dataFim === dataHoje;
-
   // RESUMO POR MÉTODOS DE PAGAMENTO RECEBIDOS NO PERÍODO
   const resumoMetodos = vendasValidas.reduce(
     (acc, venda) => {
@@ -203,23 +202,28 @@ export function Painel() {
   );
 
   const setFiltroPeriodo = (tipo: 'hoje' | 'ontem' | '7dias') => {
-    const hoje = new Date();
-    const strHoje = hoje.toISOString().split('T')[0];
+    const strHoje = obterDataLocalYYYYMMDD();
 
     if (tipo === 'hoje') {
       setDataInicio(strHoje);
       setDataFim(strHoje);
+      setPeriodoPreset('hoje');
+      setMostrarDatasCustom(false);
     } else if (tipo === 'ontem') {
       const ontem = new Date();
       ontem.setDate(ontem.getDate() - 1);
-      const strOntem = ontem.toISOString().split('T')[0];
+      const strOntem = obterDataLocalYYYYMMDD(ontem);
       setDataInicio(strOntem);
       setDataFim(strOntem);
+      setPeriodoPreset('ontem');
+      setMostrarDatasCustom(false);
     } else if (tipo === '7dias') {
       const seteDiasAtras = new Date();
       seteDiasAtras.setDate(seteDiasAtras.getDate() - 6);
-      setDataInicio(seteDiasAtras.toISOString().split('T')[0]);
+      setDataInicio(obterDataLocalYYYYMMDD(seteDiasAtras));
       setDataFim(strHoje);
+      setPeriodoPreset('7dias');
+      setMostrarDatasCustom(false);
     }
   };
 
@@ -228,58 +232,109 @@ export function Painel() {
       <div className="print:hidden">
         <Header />
 
-        <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-20 md:pt-24">
-          {/* DATA / PERÍODO */}
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+        <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-22 sm:pt-24 md:pt-24">
+          {/* DATA / PERÍODO (PADRÃO COMPACTO ADMIN FINANCEIRO) */}
+          <div className="mb-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+                <button
+                  type="button"
+                  onClick={() => setFiltroPeriodo('hoje')}
+                  className={`h-8 px-3 rounded-full text-xs font-medium border transition-all cursor-pointer shrink-0 ${
+                    periodoPreset === 'hoje'
+                      ? 'bg-emerald-800 border-emerald-800 text-white shadow-2xs'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200/80 shadow-2xs'
+                  }`}
+                >
+                  Hoje
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFiltroPeriodo('ontem')}
+                  className={`h-8 px-3 rounded-full text-xs font-medium border transition-all cursor-pointer shrink-0 ${
+                    periodoPreset === 'ontem'
+                      ? 'bg-emerald-800 border-emerald-800 text-white shadow-2xs'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200/80 shadow-2xs'
+                  }`}
+                >
+                  Ontem
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFiltroPeriodo('7dias')}
+                  className={`h-8 px-3 rounded-full text-xs font-medium border transition-all cursor-pointer shrink-0 ${
+                    periodoPreset === '7dias'
+                      ? 'bg-emerald-800 border-emerald-800 text-white shadow-2xs'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200/80 shadow-2xs'
+                  }`}
+                >
+                  7 dias
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setFiltroPeriodo('hoje')}
-                className={`h-8 px-3.5 rounded-full text-xs font-medium transition-all cursor-pointer shrink-0 ${
-                  filtroEhHoje
-                    ? 'bg-emerald-800 text-white shadow-2xs'
-                    : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80 shadow-2xs'
+                onClick={() => setMostrarDatasCustom((v) => !v)}
+                aria-label="Selecionar período personalizado"
+                className={`h-8 px-3 rounded-full inline-flex items-center gap-1.5 text-xs font-medium border transition-all cursor-pointer shrink-0 ${
+                  mostrarDatasCustom || periodoPreset === 'custom'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200/80 shadow-2xs'
                 }`}
               >
-                Hoje
+                <LucideIcons.CalendarDays size={13} className="shrink-0" />
+                {periodoPreset === 'custom' && (
+                  <span className="tabular-nums whitespace-nowrap">
+                    {formatarDataBR(dataInicio).slice(0, 5)}–{formatarDataBR(dataFim).slice(0, 5)}
+                  </span>
+                )}
               </button>
-
-              <button
-                type="button"
-                onClick={() => setFiltroPeriodo('ontem')}
-                className="h-8 px-3 rounded-full text-xs font-normal bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80 shadow-2xs transition-all cursor-pointer hidden sm:inline-flex items-center shrink-0"
-              >
-                Ontem
-              </button>
-
-              <div className="inline-flex items-center bg-white border border-slate-200/80 rounded-full px-3 h-8 gap-1.5 shadow-2xs shrink-0">
-                <LucideIcons.Calendar size={13} className="text-slate-400 shrink-0" />
-                <input
-                  type="date"
-                  value={dataInicio}
-                  onChange={(e) => setDataInicio(e.target.value)}
-                  className="bg-transparent text-slate-700 text-xs font-normal outline-none cursor-pointer w-24 text-center"
-                />
-                <span className="text-slate-300 text-[10px]">até</span>
-                <input
-                  type="date"
-                  value={dataFim}
-                  onChange={(e) => setDataFim(e.target.value)}
-                  className="bg-transparent text-slate-700 text-xs font-normal outline-none cursor-pointer w-24 text-center"
-                />
-              </div>
             </div>
+
+            {mostrarDatasCustom && (
+              <div className="grid grid-cols-2 gap-2 p-2.5 bg-white border border-slate-200/80 rounded-2xl shadow-2xs animate-in fade-in slide-in-from-top-1 duration-150">
+                <label className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
+                  <span className="text-[10px] font-medium text-slate-400">De</span>
+                  <input
+                    type="date"
+                    value={dataInicio}
+                    max={dataHoje}
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      setDataInicio(e.target.value);
+                      setPeriodoPreset('custom');
+                    }}
+                    className="w-full bg-transparent text-slate-700 text-xs font-medium outline-none cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-100 min-w-0">
+                  <span className="text-[10px] font-medium text-slate-400">Até</span>
+                  <input
+                    type="date"
+                    value={dataFim}
+                    max={dataHoje}
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      setDataFim(e.target.value);
+                      setPeriodoPreset('custom');
+                    }}
+                    className="w-full bg-transparent text-slate-700 text-xs font-medium outline-none cursor-pointer"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* CARD: VENDAS CONCLUÍDAS*/}
           <div className="relative overflow-hidden rounded-3xl sm:rounded-4xl bg-linear-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-5 sm:p-6 shadow-lg shadow-emerald-950/15 border border-emerald-600/30 mb-4">
             <div
-              className="absolute -top-12 -right-12 w-64 h-64 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(52, 211, 153, 0.18) 0%, transparent 70%)' }}
+              className="absolute -top-12 -right-12 w-64 h-64 rounded-full pointer-events-none bg-radial from-emerald-400/20 to-transparent blur-2xl"
             />
             <div
-              className="absolute -bottom-12 -left-10 w-52 h-52 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(45, 212, 191, 0.14) 0%, transparent 70%)' }}
+              className="absolute -bottom-12 -left-10 w-52 h-52 rounded-full pointer-events-none bg-radial from-teal-400/15 to-transparent blur-2xl"
             />
 
             <div className="relative z-10 flex flex-col justify-between gap-4">
@@ -523,11 +578,10 @@ export function Painel() {
 
       {/* MODAL: FORMAS DE PAGAMENTO RECEBIDAS NO PERÍODO */}
       {modalPagamentosAberto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200 font-sans print:hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalPagamentosAberto(false)} />
 
-          <div className="bg-white rounded-t-4xl sm:rounded-3xl w-full sm:max-w-sm shadow-2xl border border-slate-100 relative z-10 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 p-5 pb-7 sm:pb-5">
-            <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-4 sm:hidden" />
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl border border-slate-100 relative z-10 animate-in zoom-in-95 duration-200 p-5">
 
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
               <div className="flex items-center gap-2.5">
@@ -653,11 +707,11 @@ export function Painel() {
 
       {/* MODAL: VALES & REPASSES */}
       {modalRecebimentosAberto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200 font-sans print:hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200 font-sans print:hidden">
           <div className="absolute inset-0" onClick={() => setModalRecebimentosAberto(false)} />
 
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[88vh] shadow-2xl border border-slate-100 relative z-10 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col overflow-hidden">
-            <div className="p-5 pb-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md max-h-[85dvh] shadow-2xl border border-slate-100 relative z-10 animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700">
                   <LucideIcons.HandCoins size={17} strokeWidth={1.8} />
@@ -677,23 +731,25 @@ export function Painel() {
             </div>
 
             {/* Filtro de Data do Modal */}
-            <div className="px-5 py-3 bg-slate-50/70 border-b border-slate-100 shrink-0">
-              <div className="bg-white rounded-full border border-slate-200/80 flex items-center justify-center gap-2 px-3 h-9">
-                <LucideIcons.Calendar size={14} className="text-slate-400 shrink-0" />
+            <div className="px-4 sm:px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 shrink-0 grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-0.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200/80 min-w-0">
+                <span className="text-[10px] font-medium text-slate-400">De</span>
                 <input
                   type="date"
                   value={modalDataInicio}
                   onChange={(e) => setModalDataInicio(e.target.value)}
-                  className="bg-transparent text-slate-700 text-xs font-normal outline-none w-28 text-center cursor-pointer"
+                  className="w-full bg-transparent text-slate-700 text-xs font-medium outline-none cursor-pointer"
                 />
-                <span className="text-slate-400 text-[10px]">até</span>
+              </label>
+              <label className="flex flex-col gap-0.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200/80 min-w-0">
+                <span className="text-[10px] font-medium text-slate-400">Até</span>
                 <input
                   type="date"
                   value={modalDataFim}
                   onChange={(e) => setModalDataFim(e.target.value)}
-                  className="bg-transparent text-slate-700 text-xs font-normal outline-none w-28 text-center cursor-pointer"
+                  className="w-full bg-transparent text-slate-700 text-xs font-medium outline-none cursor-pointer"
                 />
-              </div>
+              </label>
             </div>
 
             <div className="p-5 overflow-y-auto flex-1 space-y-4">

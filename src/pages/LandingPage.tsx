@@ -450,13 +450,11 @@ export function LandingPage() {
       <section id="inicio" className="relative py-12 lg:py-20 overflow-hidden bg-white">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 right-1/4 w-96 h-96 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(241, 245, 249, 0.85) 0%, rgba(241, 245, 249, 0) 70%)' }}
+          className="pointer-events-none absolute -top-24 right-1/4 w-96 h-96 rounded-full bg-radial from-slate-100/85 to-transparent blur-2xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-10 w-80 h-80 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(254, 243, 199, 0.5) 0%, rgba(254, 243, 199, 0) 70%)' }}
+          className="pointer-events-none absolute bottom-0 left-10 w-80 h-80 rounded-full bg-radial from-amber-100/50 to-transparent blur-2xl"
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
