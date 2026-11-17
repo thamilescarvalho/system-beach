@@ -10,7 +10,8 @@ const BEACH_SCENES = [
     title: 'Gestão de Equipe e Permissões de Acesso',
     description:
       'Cadastre garçons, barmans e administradores com avatares e permissões individuais em segundos.',
-    image: '/drinks-camarao-5d.png',
+    image: '/gestao-acesso-barraca.jpg',
+    focalClass: 'object-left sm:object-center',
   },
   {
     id: 'barman-luva',
@@ -20,6 +21,7 @@ const BEACH_SCENES = [
     description:
       '1º toque coloca o drink em preparo e o 2º toque avisa o celular do garçom que já está pronto para servir.',
     image: '/barman-luva-caipirinha.png',
+    focalClass: 'object-center',
   },
   {
     id: 'peixe-coco-5d',
@@ -29,6 +31,7 @@ const BEACH_SCENES = [
     description:
       'Acompanhe o faturamento ao vivo, formas de pagamento, métricas, vales e histórico detalhado de cada mesa.',
     image: '/peixe-coco-5d.png',
+    focalClass: 'object-center',
   },
   {
     id: 'guarda-sois',
@@ -38,6 +41,7 @@ const BEACH_SCENES = [
     description:
       'Visualize todas as mesas livres, ocupadas ou piscando em amarelo quando há pedido pronto para entrega.',
     image: '/guarda-sois-mar-azul.png',
+    focalClass: 'object-center',
   },
 ];
 
@@ -50,11 +54,37 @@ const MODULOS_SOLUCOES_ORDEM: ('garcom' | 'cardapio' | 'pdv' | 'qrcode')[] = [
   'qrcode',
 ];
 
+const PILARES_ENGENHARIA = [
+  {
+    id: 'cloud',
+    titulo: 'Arquitetura Cloud Full-Stack',
+    detalhe: 'Alta disponibilidade e escala em nuvem',
+    Icon: LucideIcons.Cpu,
+  },
+  {
+    id: 'seguranca',
+    titulo: 'Segurança & Banco PostgreSQL',
+    detalhe: 'Dados blindados por empresa via RLS',
+    Icon: LucideIcons.ShieldCheck,
+  },
+  {
+    id: 'realtime',
+    titulo: 'Tempo Real WebSocket',
+    detalhe: 'Sincronização instantânea entre areia e bar',
+    Icon: LucideIcons.Activity,
+  },
+  {
+    id: 'mobile',
+    titulo: 'Produto Mobile-First',
+    detalhe: 'Leve e fluido no celular do garçom',
+    Icon: LucideIcons.Smartphone,
+  },
+];
+
 export function LandingPage() {
   const [heroStep, setHeroStep] = useState<0 | 1>(0);
   const [logoSpin, setLogoSpin] = useState<boolean>(false);
   const [activeSceneIndex, setActiveSceneIndex] = useState<number>(0);
-  const [captionPinned, setCaptionPinned] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +137,11 @@ export function LandingPage() {
 
   // Estado do carrossel de pequenas telas do Card 1 (Gestão Financeira)
   const [financeSlide, setFinanceSlide] = useState<number>(0);
+  const [financePausado, setFinancePausado] = useState<boolean>(false);
+
+  // Estado da vitrine 5D de pilares técnicos (#ancora-dev)
+  const [pilarEngenhariaIdx, setPilarEngenhariaIdx] = useState<number>(0);
+  const [engenhariaPausado, setEngenhariaPausado] = useState<boolean>(false);
 
   // Efeito 3D no Hero
   const [tilt, setTilt] = useState<{ rx: number; ry: number }>({ rx: 0, ry: 0 });
@@ -156,11 +191,12 @@ export function LandingPage() {
 
   // Transição automática das pequenas telas de Gestão Financeira (Card 1)
   useEffect(() => {
+    if (financePausado) return;
     const finTimer = setInterval(() => {
       setFinanceSlide((prev) => (prev + 1) % 4);
     }, 3800);
     return () => clearInterval(finTimer);
-  }, []);
+  }, [financePausado]);
 
   // Alternância automática entre Financeiro e Métricas dentro do Notebook (#dispositivos)
   useEffect(() => {
@@ -181,6 +217,15 @@ export function LandingPage() {
     }, 3800);
     return () => clearInterval(solucoesTimer);
   }, [solucoesPausado]);
+
+  // Transição 5D futurista dos pilares técnicos (#ancora-dev)
+  useEffect(() => {
+    if (engenhariaPausado) return;
+    const engTimer = setInterval(() => {
+      setPilarEngenhariaIdx((prev) => (prev + 1) % PILARES_ENGENHARIA.length);
+    }, 3400);
+    return () => clearInterval(engTimer);
+  }, [engenhariaPausado]);
 
   const dispositivosOrdem: ('iphone' | 'notebook' | 'tablet')[] = ['iphone', 'notebook', 'tablet'];
   const descricaoDispositivos: Record<
@@ -990,7 +1035,6 @@ export function LandingPage() {
 
       {/* HERO SECTION: PRIMEIRO CARD EM FORMATO IPHONE + FUNDO 5D WIREFRAME */}
       <section id="inicio" className="relative py-12 lg:py-20 overflow-hidden bg-white">
-        {/* Desenho 5D em linhas slate integrado diretamente ao fundo do bloco */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -998,7 +1042,7 @@ export function LandingPage() {
           <img
             src="/praia-wireframe-hero.jpg"
             alt=""
-            className="w-full h-full object-cover object-right-bottom opacity-65 sm:opacity-90 mix-blend-multiply"
+            className="w-full h-full object-cover object-bottom-right opacity-65 sm:opacity-90 mix-blend-multiply"
           />
           <div className="absolute inset-0 bg-linear-to-r from-white/95 via-white/60 sm:via-white/35 to-transparent" />
           <div className="absolute inset-0 bg-linear-to-t from-white/85 via-transparent to-white/75" />
@@ -1008,7 +1052,6 @@ export function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             {/* Coluna Esquerda */}
             <div className="lg:col-span-6 space-y-5">
-              {/* Contêiner com altura reservada para evitar deslocamento dos blocos durante a digitação */}
               <div className="grid">
                 {TYPEWRITER_WORDS.map((word) => (
                   <p
@@ -1397,7 +1440,7 @@ export function LandingPage() {
           className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
         />
 
-        {/* Gradientes sutis localizados: leitura nítida sem escurecer o brilho da praia e do mar */}
+        {/* Gradientes localizados: leitura nítida sem escurecer */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-linear-to-r from-slate-950/55 via-slate-950/20 to-transparent"
@@ -1408,7 +1451,7 @@ export function LandingPage() {
         />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 min-h-128 sm:min-h-136 lg:min-h-144 flex flex-col justify-between gap-10 lg:gap-16">
-          {/* Título e Descrição Sobrepostos */}
+          {/* Título e Descrição */}
           <div className="max-w-2xl">
             <h2 className="text-xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white drop-shadow-sm">
               Agilidade na areia.{' '}
@@ -1419,7 +1462,7 @@ export function LandingPage() {
             </p>
           </div>
 
-          {/* Grade de 4 Cards Minimalistas com Spotlight Progressivo e Desfoque nos Demais */}
+          {/* Grade de 4 Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {[
               {
@@ -1519,7 +1562,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* SEÇÃO MULTI-PLATAFORMA INTERATIVA: VITRINE 5D DESKTOP + CARROSSEL MOBILE */}
+      {/* SEÇÃO MULTI-PLATAFORMA */}
       <section id="dispositivos" className="py-14 lg:py-20 bg-linear-to-b from-slate-50/75 via-slate-50/40 to-white border-t border-slate-200/60 overflow-x-clip">
         <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
@@ -1573,9 +1616,8 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* VITRINE DESKTOP 5D: APARELHO ATIVO CENTRALIZADO + OUTROS 2 MENORES DESFOCADOS SEM CORTES LATERAIS */}
+          {/* VITRINE DESKTOP */}
           <div className="hidden md:block relative w-full mx-auto">
-            {/* Atmosfera e Holofote 5D Central */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-160 h-96 rounded-full bg-radial from-emerald-100/50 via-slate-200/35 to-transparent blur-3xl"
@@ -1585,7 +1627,7 @@ export function LandingPage() {
               className="pointer-events-none absolute left-1/2 bottom-10 -translate-x-1/2 w-96 h-4 rounded-full bg-radial from-slate-300/45 to-transparent blur-md"
             />
 
-            {/* Seta Esquerda (pequena e quase transparente) */}
+            {/* Seta Esquerda */}
             <button
               type="button"
               onClick={irParaDispositivoAnterior}
@@ -1595,7 +1637,7 @@ export function LandingPage() {
               <LucideIcons.ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={1.8} />
             </button>
 
-            {/* Seta Direita (pequena e quase transparente) */}
+            {/* Seta Direita */}
             <button
               type="button"
               onClick={irParaProximoDispositivo}
@@ -1673,7 +1715,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* CARROSSEL MOBILE (< md): 1 POR VEZ COM DESLIZE E SETAS SUTIS */}
+          {/* CARROSSEL MOBILE: 1 POR VEZ COM E SETAS */}
           <div
             onTouchStart={(e) => {
               touchStartXRef.current = e.touches[0].clientX;
@@ -1732,7 +1774,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Indicadores Discretos do Carrossel */}
+          {/* Indicadores */}
           <div className="flex items-center justify-center gap-2 mt-4">
             {dispositivosOrdem.map((disp) => {
               const ativo = activeDevice === disp;
@@ -1754,302 +1796,24 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* FLUXO SINCRONIZADO DE PONTA A PONTA */}
-      <section id="fluxo-sincronizado" className="py-14 lg:py-20 bg-white border-t border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Painel Principal: Benefícios Operacionais à Esquerda + Demonstração Ao Vivo do Módulo Selecionado à Direita */}
-          <div className="bg-slate-50/90 border border-slate-200/80 rounded-3xl p-6 sm:p-8 lg:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Coluna Esquerda: Benefícios de Operação Integrada */}
-              <div className="lg:col-span-6 space-y-5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium">
-                  <LucideIcons.Zap className="w-3.5 h-3.5 text-emerald-600" />
-                  Fluxo sincronizado de ponta a ponta
-                </div>
 
-                <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-800 leading-snug">
-                  Da mesa para a cozinha em segundos, sem papel e sem desencontro de informações
-                </h3>
 
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  Seja pelo lançamento rápido no <strong>App de Garçom</strong> ou pelo{' '}
-                  <strong>QR Code da Mesa</strong>, cada item entra automaticamente na fila do bar e
-                  da cozinha e já fica contabilizado no <strong>Frente de Caixa (PDV)</strong>.
-                </p>
-
-                {/* Os 3 Benefícios Chave Solicitados */}
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <LucideIcons.CheckCircle2 className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
-                        Atendimento mais rápido e sem erros
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Pedidos padronizados chegam na hora à cozinha e ao bar, eliminando letra
-                        ilegível e esquecimentos no salão ou na areia.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <LucideIcons.TrendingDown className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
-                        Redução de retrabalho e custos operacionais
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Menos deslocamento desnecessário da equipe, maior giro por mesa e controle
-                        automático de estoque a cada venda.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                      <LucideIcons.ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
-                        Fechamento de contas seguro no PDV
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Conferência transparente de todos os itens consumidos, divisão por pessoa,
-                        múltiplos pagamentos e emissão de cupom térmico.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Coluna Direita: Simulador */}
-              <div className="lg:col-span-6 flex justify-center">
-                <div className="w-full max-w-md bg-white rounded-3xl p-5 border border-slate-200/90 shadow-lg min-h-88 flex flex-col justify-between">
-                  {/* Cabeçalho do Simulador de Módulo */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1 h-1 rounded-full bg-emerald-600 animate-ping" />
-                      <span className="text-xs font-semibold text-slate-800">
-                        {activeModule === 'garcom' && 'App de Garçom'}
-                        {activeModule === 'cardapio' && 'Cardápio Digital'}
-                        {activeModule === 'pdv' && 'Frente de Caixa (PDV) Integrado'}
-                        {activeModule === 'qrcode' && 'QR Code Exclusivo por Mesa'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                      Online
-                    </span>
-                  </div>
-
-                  {/* MÓDULO 1: APP DE GARÇOM */}
-                  {activeModule === 'garcom' && (
-                    <div className="space-y-3 my-auto">
-                      <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
-                        <div>
-                          <span className="text-[9px] text-amber-400 font-semibold uppercase tracking-wider block">
-                            Registro Direto na areia
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-semibold tracking-wider">
-                            Garçom Lucas lançou 2 itens
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-xl bg-amber-600/70 text-white font-sans flex items-center justify-center">
-                              1x
-                            </span>
-                            <div>
-                              <p className="font-semibold text-[9px] text-slate-800">CAMARÃO CROCANTE</p>
-                              <span className="text-[10px] text-slate-400">
-                                Enviado para Cozinha • Sem cebola
-                              </span>
-                            </div>
-                          </div>
-                          <span className="px-1.5 py-0.5 rounded-full uppercase bg-slate-200 border border-slate-200 text-slate-600 text-[9px] font-medium">
-                            Em preparo
-                          </span>
-                        </div>
-
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-xl bg-slate-800/80 text-white font-sans flex items-center justify-center">
-                              2x
-                            </span>
-                            <div>
-                              <p className="font-semibold text-[9px] text-slate-800">CAIPIRINHA DE LIMÃO</p>
-                              <span className="text-[10px] text-slate-400">
-                                Enviado para Fila do Bar • Pouco gelo
-                              </span>
-                            </div>
-                          </div>
-                          <span className="px-1.5 py-0.5 rounded-full uppercase bg-emerald-50 border border-emerald-300 text-emerald-800 text-[9px] font-medium">
-                            Pronto
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* MÓDULO 2: CARDÁPIO DIGITAL */}
-                  {activeModule === 'cardapio' && (
-                    <div className="space-y-2.5 my-auto">
-                      <div className="flex items-center gap-1.5 pb-1">
-                        <span className="px-3 py-1 rounded-full bg-slate-800 text-white text-[11px] font-medium">
-                          🍹 Drinks & Cervejas
-                        </span>
-                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">
-                          🍤 Petiscos da Praia
-                        </span>
-                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">
-                          🥥 Naturais
-                        </span>
-                      </div>
-
-                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src="/drinks-camarao-5d.png"
-                            alt="Camarão Empanado"
-                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-[10px] uppercase font-semibold text-slate-800 truncate">
-                              Porção de camarão empanado
-                            </p>
-                            <p className="text-[11px] text-slate-400 truncate">
-                              Acompanha molho especial da casa e limão
-                            </p>
-                            <span className="text-xs font-bold text-amber-600">R$ 108,00</span>
-                          </div>
-                        </div>
-                        <span className="px-2 py-1 rounded-xl bg-slate-600 text-white text-[11px] font-semibold shrink-0">
-                          + Pedir
-                        </span>
-                      </div>
-
-                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src="/barman-luva-caipirinha.png"
-                            alt="Caipirinha"
-                            className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase text-slate-800 truncate">
-                              Caipirinha artesanal de limão Taiti
-                            </p>
-                            <p className="text-[11px] text-slate-400 truncate">
-                              Preparada na hora com fruta fresca selecionada
-                            </p>
-                            <span className="text-xs font-bold text-amber-600">R$ 28,00</span>
-                          </div>
-                        </div>
-                        <span className="px-2 py-1 rounded-xl bg-slate-600 text-white text-[11px] font-semibold shrink-0">
-                          + Pedir
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* MÓDULO 3: FRENTE DE CAIXA (PDV) */}
-                  {activeModule === 'pdv' && (
-                    <div className="space-y-5 my-auto">
-                      <div className="p-3.5 rounded-2xl bg-slate-800 text-white flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-slate-300 uppercase tracking-wider block">
-                            Mesa 04
-                          </span>
-                          <span className="text-xl font-bold tabular-nums">R$ 246,00</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-emerald-500 block">Divisão (3 pessoas)</span>
-                          <span className="text-xs font-semibold">R$ 82,00 / pessoa</span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="p-2 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
-                          <LucideIcons.QrCode className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-emerald-800">
-                            PIX QR
-                          </span>
-                        </div>
-                        <div className="p-2 rounded-2xl bg-slate-100 border border-slate-200 text-center">
-                          <LucideIcons.CreditCard className="w-4 h-4 text-slate-700 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-slate-700">
-                            Cartão
-                          </span>
-                        </div>
-                        <div className="p-2 rounded-2xl bg-slate-100 border border-slate-200 text-center">
-                          <LucideIcons.Printer className="w-4 h-4 text-amber-600 mx-auto mb-1" />
-                          <span className="text-[11px] font-semibold text-slate-700">
-                            Imprimir
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* MÓDULO 4: QR CODE DE MESAS */}
-                  {activeModule === 'qrcode' && (
-                    <div className="space-y-3 my-auto">
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-4">
-                        <div className="w-20 h-20 rounded-2xl bg-white border-2 border-slate-800 p-2 flex flex-col items-center justify-center shrink-0 shadow-xs">
-                          <LucideIcons.QrCode className="w-12 h-12 text-slate-800" />
-                          <span className="text-[9px] font-extrabold tracking-widest text-amber-600 mt-0.5">
-                            MESA 04
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <span className="px-3 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-semibold">
-                            Autoatendimento
-                          </span>
-                          <h4 className="text-sm font-semibold text-slate-700">
-                            Aponte a câmera e peça na hora
-                          </h4>
-                          <p className="text-xs text-slate-500 leading-relaxed">
-                            O cliente abre o cardápio digital pelo QR Code do guarda-sol e o
-                            pedido já cai identificado na comanda dele.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="p-2 rounded-4xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between text-xs">
-                        <span className="text-emerald-800 font-sans">
-                          ✓ Sem precisar baixar aplicativo
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* BLOCO 3 */}
-      <section id="ambiente" className="py-12 lg:py-16 bg-slate-50/70 border-y border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      {/* BLOCO 3: AMBIENTE */}
+      <section id="ambiente" className="bg-slate-50/70 border-y border-slate-200/60">
+        {/* Cabeçalho e Seletores de Setor */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 lg:pt-14 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-lg sm:text-2xl font-medium tracking-tight text-slate-800">
                 Feito para o ritmo do sol, da areia e do mar.
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Interaja com o card do sistema à direita para testar cada setor na prática.
+                Interaja com a tela do iPhone para testar cada setor da operação na prática.
               </p>
             </div>
 
             {/* Botões Seletores */}
-            <div className="inline-flex flex-wrap items-center gap-1 bg-slate-100/90 border border-slate-200/70 p-1 rounded-full self-start md:self-auto">
+            <div className="grid grid-cols-2 sm:inline-flex items-center gap-1 bg-slate-100/90 border border-slate-200/70 p-1 rounded-2xl sm:rounded-full self-stretch md:self-auto">
               {BEACH_SCENES.map((scene, index) => {
                 const isActive = activeSceneIndex === index;
                 return (
@@ -2057,11 +1821,8 @@ export function LandingPage() {
                     key={scene.id}
                     type="button"
                     onMouseEnter={() => setActiveSceneIndex(index)}
-                    onClick={() => {
-                      setActiveSceneIndex(index);
-                      setCaptionPinned(true);
-                    }}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                    onClick={() => setActiveSceneIndex(index)}
+                    className={`px-3 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-xs font-medium flex items-center justify-center sm:justify-start gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                       isActive
                         ? 'bg-white text-slate-800 shadow-2xs border border-slate-200/60'
                         : 'text-slate-500 hover:text-slate-700'
@@ -2074,671 +1835,1237 @@ export function LandingPage() {
               })}
             </div>
           </div>
+        </div>
 
-          {/* INTERAÇÃO  NO MINI CARD À DIREITA */}
+        {/* fundo Panorâmico */}
+        <div className="group relative w-full overflow-hidden bg-slate-900 min-h-136 lg:min-h-148 flex items-stretch">
+          {/* Fotos de Fundo com Transição */}
+          {BEACH_SCENES.map((scene, index) => (
+            <img
+              key={scene.id}
+              src={scene.image}
+              alt={scene.title}
+              className={`absolute inset-0 w-full h-full object-cover ${scene.focalClass} transition-all duration-700 ease-out pointer-events-none ${
+                activeSceneIndex === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+              }`}
+            />
+          ))}
+
+          {/* Véus */}
           <div
-            onClick={() => setCaptionPinned((prev) => !prev)}
-            className="group relative w-full min-h-112 sm:min-h-124 lg:min-h-136 rounded-3xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-xl select-none flex items-center justify-end p-4 sm:p-6 lg:p-8"
-          >
-            {BEACH_SCENES.map((scene, index) => (
-              <img
-                key={scene.id}
-                src={scene.image}
-                alt={scene.title}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none ${
-                  activeSceneIndex === index ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            ))}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-linear-to-r from-slate-950/65 via-slate-950/20 to-transparent"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-linear-to-t from-slate-950/85 via-slate-950/25 to-slate-950/15"
+          />
 
-            {/* MINI CARD DIREITO */}
+          {/* Setas Laterais */}
+          <button
+            type="button"
+            onClick={() =>
+              setActiveSceneIndex((prev) => (prev - 1 + BEACH_SCENES.length) % BEACH_SCENES.length)
+            }
+            aria-label="Cena anterior"
+            className="absolute left-1.5 sm:left-4 lg:left-6 top-56 sm:top-1/2 sm:-translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-950/35 hover:bg-slate-950/65 backdrop-blur-md border border-white/20 text-white/90 hover:text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+          >
+            <LucideIcons.ChevronLeft className="w-4 h-4" strokeWidth={1.8} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSceneIndex((prev) => (prev + 1) % BEACH_SCENES.length)}
+            aria-label="Próxima cena"
+            className="absolute right-1.5 sm:right-4 lg:right-6 top-56 sm:top-1/2 sm:-translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-950/35 hover:bg-slate-950/65 backdrop-blur-md border border-white/20 text-white/90 hover:text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+          >
+            <LucideIcons.ChevronRight className="w-4 h-4" strokeWidth={1.8} />
+          </button>
+
+          <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12 flex flex-col lg:grid lg:grid-cols-12 items-center lg:items-end justify-between gap-7 lg:gap-10">
+            {/* LEGENDA FOTO */}
             <div
-              onClick={(e) => e.stopPropagation()}
-              className="relative z-20 w-full max-w-xs sm:max-w-sm bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-5 border border-white shadow-2xl cursor-default transition-all duration-300 hover:-translate-y-1"
+              key={activeScene.id}
+              className="w-full max-w-md lg:col-span-6 lg:pb-2 order-2 lg:order-1 text-center lg:text-left animate-in fade-in slide-in-from-bottom-2 duration-500"
             >
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                    {activeSceneIndex === 0 && 'Gestão de Usuários'}
-                    {activeSceneIndex === 1 && 'Fila do Bar & Cozinha'}
-                    {activeSceneIndex === 2 && 'Painel Financeiro'}
-                    {activeSceneIndex === 3 && 'Mapa de Guarda-sóis'}
-                  </span>
-                </div>
-                <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  Interativo
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950/35 backdrop-blur-md border border-white/20 mb-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="text-[11px] font-medium tracking-wider uppercase text-amber-200">
+                  {activeScene.step} / 04 • {activeScene.shortLabel}
                 </span>
               </div>
+              <h3 className="text-base sm:text-xl font-semibold tracking-tight text-white drop-shadow-sm">
+                {activeScene.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-200/95 mt-1.5 leading-relaxed">
+                {activeScene.description}
+              </p>
+              <div className="h-0.5 w-10 rounded-full bg-amber-400/90 mt-3 mx-auto lg:mx-0" />
+            </div>
 
-              {/* CENA 01 */}
-              {activeSceneIndex === 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-                      <LucideIcons.UserPlus className="w-4 h-4" />
+            {/* APARELHO IPHONE UNIFICADO À DIREITA */}
+            <div className="w-full lg:col-span-6 flex justify-center lg:justify-end order-1 lg:order-2">
+              <div className="relative z-20 w-68 sm:w-72 bg-slate-700 rounded-4xl p-2 shadow-2xl border-2 border-slate-500 transition-transform duration-300 hover:-translate-y-1">
+                {/* Botões Físicos Laterais do iPhone */}
+                <div className="absolute -left-1 top-14 w-1 h-4 bg-slate-500 rounded-l-sm" />
+                <div className="absolute -left-1 top-22 w-1 h-8 bg-slate-500 rounded-l-sm" />
+                <div className="absolute -left-1 top-32 w-1 h-8 bg-slate-500 rounded-l-sm" />
+                <div className="absolute -right-1 top-24 w-1 h-11 bg-slate-500 rounded-r-sm" />
+
+                {/* Tela Interna do iPhone */}
+                <div className="bg-white rounded-3xl p-2.5 sm:p-3 pt-2 flex flex-col justify-between h-112 overflow-hidden">
+                  {/* Barra de Status iOS */}
+                  <div className="flex items-center justify-between px-1 mb-2 shrink-0">
+                    <span className="text-xs font-bold text-slate-800 tracking-tight">9:41</span>
+                    <div className="w-20 h-4 bg-slate-800 rounded-full flex items-center justify-end px-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        Novo Usuário
-                      </p>
-                      <p className="text-[11px] text-slate-400">Permissões por cargo</p>
+                    <div className="flex items-center gap-1 text-slate-800">
+                      <LucideIcons.Signal className="w-3 h-3" />
+                      <LucideIcons.Wifi className="w-3 h-3" />
+                      <LucideIcons.BatteryFull className="w-3.5 h-3.5" />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="bg-slate-50 px-3 py-2 rounded-full border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <LucideIcons.User className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs font-semibold text-slate-700">MATEUS SILVA</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-600 font-semibold">Ativo</span>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block mb-1 pl-1">
-                        Permissão (Toque para alternar)
-                      </span>
-                      <div className="flex gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                        <button
-                          type="button"
-                          onClick={() => setUserRoleSim('garcom')}
-                          className={`relative flex-1 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            userRoleSim === 'garcom'
-                              ? 'bg-white text-slate-800 shadow-xs border border-slate-200'
-                              : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          Garçom
-                          {userRoleSim === 'garcom' && (
-                            <LucideIcons.MousePointerClick className="w-3.5 h-3.5 text-amber-500 absolute right-2 top-1.5 animate-bounce" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUserRoleSim('admin')}
-                          className={`relative flex-1 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            userRoleSim === 'admin'
-                              ? 'bg-indigo-50 text-indigo-700 shadow-xs border border-indigo-200'
-                              : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          Admin
-                          {userRoleSim === 'admin' && (
-                            <LucideIcons.MousePointerClick className="w-3.5 h-3.5 text-indigo-600 absolute right-2 top-1.5 animate-bounce" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-1 space-y-1.5">
-                    <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-700">🏖️ Lucas (Garçom)</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
-                        Online
+                  {/* Cabeçalho Interno do App */}
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 shrink-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 truncate">
+                        {activeSceneIndex === 0 && 'Gestão de Usuários'}
+                        {activeSceneIndex === 1 && 'Fila do Bar & Cozinha'}
+                        {activeSceneIndex === 2 && 'Painel Financeiro'}
+                        {activeSceneIndex === 3 && 'Mapa de Guarda-sóis'}
                       </span>
                     </div>
-                    <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-700">🍹 Rafael (Barman)</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
-                        Online
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* CENA 02: FILA DO BAR / COZINHA INTERATIVA (Cozinha.tsx) */}
-              {activeSceneIndex === 1 && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-slate-800 block">
-                        MESA 05 • LUCAS
-                      </span>
-                      <span className="text-[11px] text-slate-400">
-                        Clique na bolinha para avançar o preparo
-                      </span>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold">
-                      Fila Ao Vivo
+                    <span className="text-[9px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full shrink-0">
+                      Interativo
                     </span>
                   </div>
 
+                  {/* Corpo Dinâmico das 4 Cenas */}
                   <div
-                    onClick={() => setBarItem1Stage((s) => ((s + 1) % 3) as 0 | 1 | 2)}
-                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2.5 cursor-pointer hover:bg-white transition-all"
+                    key={activeScene.id}
+                    className="flex-1 min-h-0 flex flex-col justify-center overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-center shrink-0">
-                        2x
-                      </span>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-xs font-semibold truncate uppercase ${
-                            barItem1Stage === 2 ? 'line-through text-slate-400' : 'text-slate-800'
-                          }`}
-                        >
-                          CAIPIRINHA DE LIMÃO
-                        </p>
-                        <span className="text-[10px] font-medium flex items-center gap-1 mt-0.5">
-                          {barItem1Stage === 0 && (
-                            <span className="text-slate-400">Aguardando toque</span>
-                          )}
-                          {barItem1Stage === 1 && (
-                            <span className="text-amber-600 font-semibold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                              Em preparo no bar
+                    {/* CENA 01: GESTÃO DE ACESSO */}
+                    {activeSceneIndex === 0 && (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                            <LucideIcons.UserPlus className="w-4 h-4" strokeWidth={1.8} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 uppercase tracking-wider leading-tight">
+                              Novo Usuário
+                            </p>
+                            <p className="text-[10px] text-slate-400">Permissões por cargo</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <LucideIcons.User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="text-[11px] font-semibold text-slate-700 truncate">
+                                MATEUS SILVA
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-emerald-600 font-semibold shrink-0">
+                              Ativo
                             </span>
-                          )}
-                          {barItem1Stage === 2 && (
-                            <span className="text-emerald-600 font-semibold">
-                              Pronto para servir 🔔
+                          </div>
+
+                          <div>
+                            <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1 pl-1">
+                              Permissão (Toque para alternar)
                             </span>
-                          )}
-                        </span>
+                            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => setUserRoleSim('garcom')}
+                                className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  userRoleSim === 'garcom'
+                                    ? 'bg-white text-slate-800 shadow-xs border border-slate-200'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                              >
+                                Garçom
+                                {userRoleSim === 'garcom' && (
+                                  <LucideIcons.MousePointerClick className="w-3 h-3 text-amber-500 absolute right-1.5 top-1.5 animate-bounce" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setUserRoleSim('admin')}
+                                className={`relative flex-1 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  userRoleSim === 'admin'
+                                    ? 'bg-indigo-50 text-indigo-700 shadow-xs border border-indigo-200'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                              >
+                                Admin
+                                {userRoleSim === 'admin' && (
+                                  <LucideIcons.MousePointerClick className="w-3 h-3 text-indigo-600 absolute right-1.5 top-1.5 animate-bounce" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-0.5">
+                          <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="inline-flex items-center gap-1.5 font-medium text-slate-700 truncate">
+                              <LucideIcons.Umbrella className="w-3.5 h-3.5 text-slate-500 shrink-0" strokeWidth={1.8} />
+                              <span className="truncate">Lucas (Garçom)</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-semibold shrink-0">
+                              Online
+                            </span>
+                          </div>
+                          <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="inline-flex items-center gap-1.5 font-medium text-slate-700 truncate">
+                              <LucideIcons.Martini className="w-3.5 h-3.5 text-slate-500 shrink-0" strokeWidth={1.8} />
+                              <span className="truncate">Rafael (Barman)</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-semibold shrink-0">
+                              Online
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    <button
-                      type="button"
-                      aria-label="Alternar status do preparo"
-                      className={`relative w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
-                        barItem1Stage === 2
-                          ? 'bg-emerald-500 text-white shadow-xs'
-                          : barItem1Stage === 1
-                            ? 'bg-amber-400 text-slate-900 border-2 border-amber-500 shadow-xs'
-                            : 'bg-white border-2 border-slate-300 text-slate-400'
-                      }`}
-                    >
-                      {barItem1Stage === 2 && <LucideIcons.Check className="w-4 h-4" />}
-                      {barItem1Stage === 1 && <LucideIcons.Flame className="w-4 h-4" />}
-                      {barItem1Stage === 0 && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
-                      )}
-                      <LucideIcons.MousePointerClick className="w-3.5 h-3.5 text-slate-700 absolute -bottom-1 -right-1 animate-bounce" />
-                    </button>
-                  </div>
-
-                  <div
-                    onClick={() => setBarItem2Stage((s) => ((s + 1) % 3) as 0 | 1 | 2)}
-                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2.5 cursor-pointer hover:bg-white transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-center shrink-0">
-                        1x
-                      </span>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-xs font-semibold truncate uppercase ${
-                            barItem2Stage === 2 ? 'line-through text-slate-400' : 'text-slate-800'
-                          }`}
-                        >
-                          BALDE CERVEJA CORONA
-                        </p>
-                        <span className="text-[10px] font-medium block mt-0.5">
-                          {barItem2Stage === 0 && (
-                            <span className="text-slate-400">Aguardando toque</span>
-                          )}
-                          {barItem2Stage === 1 && (
-                            <span className="text-amber-600 font-semibold">Em preparo</span>
-                          )}
-                          {barItem2Stage === 2 && (
-                            <span className="text-emerald-600 font-semibold">
-                              Pronto para servir 🔔
+                    {/* CENA 02: FILA DO BAR / COZINHA  */}
+                    {activeSceneIndex === 1 && (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-bold text-slate-800 block truncate">
+                              MESA 05 • LUCAS
                             </span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      aria-label="Alternar status"
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
-                        barItem2Stage === 2
-                          ? 'bg-emerald-500 text-white'
-                          : barItem2Stage === 1
-                            ? 'bg-amber-400 text-slate-900 border-2 border-amber-500'
-                            : 'bg-white border-2 border-slate-300 text-slate-400'
-                      }`}
-                    >
-                      {barItem2Stage === 2 && <LucideIcons.Check className="w-4 h-4" />}
-                      {barItem2Stage === 1 && <LucideIcons.Flame className="w-4 h-4" />}
-                      {barItem2Stage === 0 && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* CENA 03: PAINEL FINANCEIRO (AdminFinanceiro.tsx) */}
-              {activeSceneIndex === 2 && (
-                <div className="space-y-3">
-                  <div className="bg-linear-to-br from-emerald-800 to-emerald-950 text-white rounded-2xl p-4 shadow-md">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-widest">
-                            Faturamento
+                            <span className="text-[10px] text-slate-400 block truncate">
+                              Toque no botão para avançar
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-semibold shrink-0">
+                            Fila Ao Vivo
                           </span>
+                        </div>
+
+                        <div
+                          onClick={() => setBarItem1Stage((s) => ((s + 1) % 3) as 0 | 1 | 2)}
+                          className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-100/70 transition-all"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-7 h-7 rounded-xl bg-white border border-slate-200 font-bold text-[11px] text-slate-700 flex items-center justify-center shrink-0">
+                              2x
+                            </span>
+                            <div className="min-w-0">
+                              <p
+                                className={`text-[11px] font-semibold truncate uppercase ${
+                                  barItem1Stage === 2 ? 'line-through text-slate-400' : 'text-slate-800'
+                                }`}
+                              >
+                                CAIPIRINHA DE LIMÃO
+                              </p>
+                              <span className="text-[9px] font-medium flex items-center gap-1 mt-0.5">
+                                {barItem1Stage === 0 && (
+                                  <span className="text-slate-400">Aguardando toque</span>
+                                )}
+                                {barItem1Stage === 1 && (
+                                  <span className="text-amber-600 font-semibold flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                    Em preparo no bar
+                                  </span>
+                                )}
+                                {barItem1Stage === 2 && (
+                                  <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                                    <span>Pronto para servir</span>
+                                    <LucideIcons.Bell className="w-3 h-3" />
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
                           <button
                             type="button"
-                            onClick={() => setShowFinanceValues((v) => !v)}
-                            className="text-emerald-200 hover:text-white cursor-pointer"
-                            title="Mostrar/Ocultar valor"
+                            aria-label="Alternar status do preparo"
+                            className={`relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                              barItem1Stage === 2
+                                ? 'bg-emerald-500 text-white shadow-xs'
+                                : barItem1Stage === 1
+                                  ? 'bg-amber-400 text-slate-900 border-2 border-amber-500 shadow-xs'
+                                  : 'bg-white border-2 border-slate-300 text-slate-400'
+                            }`}
                           >
-                            {showFinanceValues ? (
-                              <LucideIcons.EyeOff className="w-3.5 h-3.5" />
-                            ) : (
-                              <LucideIcons.Eye className="w-3.5 h-3.5" />
+                            {barItem1Stage === 2 && <LucideIcons.Check className="w-3.5 h-3.5" />}
+                            {barItem1Stage === 1 && <LucideIcons.Flame className="w-3.5 h-3.5" />}
+                            {barItem1Stage === 0 && (
+                              <span className="w-2 h-2 rounded-full bg-slate-200" />
+                            )}
+                            <LucideIcons.MousePointerClick className="w-3 h-3 text-slate-700 absolute -bottom-1 -right-1 animate-bounce" />
+                          </button>
+                        </div>
+
+                        <div
+                          onClick={() => setBarItem2Stage((s) => ((s + 1) % 3) as 0 | 1 | 2)}
+                          className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-100/70 transition-all"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-7 h-7 rounded-xl bg-white border border-slate-200 font-bold text-[11px] text-slate-700 flex items-center justify-center shrink-0">
+                              1x
+                            </span>
+                            <div className="min-w-0">
+                              <p
+                                className={`text-[11px] font-semibold truncate uppercase ${
+                                  barItem2Stage === 2 ? 'line-through text-slate-400' : 'text-slate-800'
+                                }`}
+                              >
+                                BALDE CERVEJA CORONA
+                              </p>
+                              <span className="text-[9px] font-medium block mt-0.5">
+                                {barItem2Stage === 0 && (
+                                  <span className="text-slate-400">Aguardando toque</span>
+                                )}
+                                {barItem2Stage === 1 && (
+                                  <span className="text-amber-600 font-semibold">Em preparo</span>
+                                )}
+                                {barItem2Stage === 2 && (
+                                  <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                                    <span>Pronto para servir</span>
+                                    <LucideIcons.Bell className="w-3 h-3" />
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            aria-label="Alternar status"
+                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                              barItem2Stage === 2
+                                ? 'bg-emerald-500 text-white'
+                                : barItem2Stage === 1
+                                  ? 'bg-amber-400 text-slate-900 border-2 border-amber-500'
+                                  : 'bg-white border-2 border-slate-300 text-slate-400'
+                            }`}
+                          >
+                            {barItem2Stage === 2 && <LucideIcons.Check className="w-3.5 h-3.5" />}
+                            {barItem2Stage === 1 && <LucideIcons.Flame className="w-3.5 h-3.5" />}
+                            {barItem2Stage === 0 && (
+                              <span className="w-2 h-2 rounded-full bg-slate-200" />
                             )}
                           </button>
                         </div>
-                        <p className="text-2xl font-semibold tracking-tight tabular-nums mt-0.5">
-                          {showFinanceValues ? 'R$ 8.490,00' : 'R$ •••••'}
-                        </p>
                       </div>
-                      <span className="bg-white/10 border border-white/15 px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1">
-                        <LucideIcons.PieChart className="w-3 h-3" />
-                        Pagtos.
-                      </span>
-                    </div>
+                    )}
+
+                    {/* CENA 03: PAINEL FINANCEIRO */}
+                    {activeSceneIndex === 2 && (
+                      <div className="space-y-2.5">
+                        <div className="bg-linear-to-br from-emerald-800 to-emerald-950 text-white rounded-2xl p-3.5 shadow-md">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-emerald-300 text-[9px] font-semibold uppercase tracking-widest">
+                                  Faturamento
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowFinanceValues((v) => !v)}
+                                  className="text-emerald-200 hover:text-white cursor-pointer"
+                                  title="Mostrar/Ocultar valor"
+                                >
+                                  {showFinanceValues ? (
+                                    <LucideIcons.EyeOff className="w-3 h-3" />
+                                  ) : (
+                                    <LucideIcons.Eye className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-xl font-semibold tracking-tight tabular-nums mt-0.5">
+                                {showFinanceValues ? 'R$ 8.490,00' : 'R$ •••••'}
+                              </p>
+                            </div>
+                            <span className="bg-white/10 border border-white/15 px-2 py-0.5 rounded-full text-[9px] font-medium flex items-center gap-1 shrink-0">
+                              <LucideIcons.PieChart className="w-2.5 h-2.5" />
+                              Pagtos.
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-1.5">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-purple-600">
+                              <LucideIcons.Umbrella className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-[9px] text-slate-500">Mesas</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-amber-500">
+                              <LucideIcons.Clock className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-[9px] text-slate-500">Abertas</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-green-700">
+                              <LucideIcons.Banknote className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-[9px] text-slate-500">Vales</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
+                              <LucideIcons.BarChart3 className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-[9px] text-slate-500">Métricas</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">
+                            Extrato de Comandas
+                          </span>
+                          <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="font-semibold text-slate-700 truncate">
+                              MESA 04 • THAMILES
+                            </span>
+                            <span className="font-bold text-emerald-700 shrink-0">
+                              R$ 138,00 (PIX)
+                            </span>
+                          </div>
+                          <div className="p-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="font-semibold text-slate-700 truncate">
+                              MESA 07 • CARLOS
+                            </span>
+                            <span className="font-bold text-emerald-700 shrink-0">
+                              R$ 310,00 (Cartão)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CENA 04: MAPA DE GUARDA-SÓIS */}
+                    {activeSceneIndex === 3 && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="aspect-square rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center p-2">
+                            <span className="text-sm font-bold text-slate-700">01</span>
+                            <span className="text-[9px] font-semibold text-slate-400">LIVRE</span>
+                          </div>
+                          <div className="aspect-square rounded-2xl bg-linear-to-br from-green-500 to-green-600 text-white flex flex-col items-center justify-center p-2">
+                            <span className="text-sm font-bold">04</span>
+                            <span className="text-[9px] font-semibold">MARINA</span>
+                          </div>
+                          <div
+                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 transition-all ${
+                              simTick % 2 === 0
+                                ? 'bg-linear-to-br from-yellow-400 to-amber-500 text-white scale-105 shadow-md'
+                                : 'bg-linear-to-br from-green-500 to-green-600 text-white'
+                            }`}
+                          >
+                            <span className="text-sm font-bold">05</span>
+                            <span className="text-[9px] font-semibold inline-flex items-center gap-0.5">
+                              {simTick % 2 === 0 ? (
+                                <>
+                                  <span>PRONTO</span>
+                                  <LucideIcons.Bell className="w-2.5 h-2.5" />
+                                </>
+                              ) : (
+                                'ENTREGUE'
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 flex items-center justify-between">
+                          <span>Sincronização na areia</span>
+                          <span className="font-semibold text-slate-800">Instantânea</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 pt-0.5">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-purple-600">
-                        <LucideIcons.Umbrella className="w-4 h-4" />
-                      </div>
-                      <span className="text-[10px] text-slate-500">Mesas</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-amber-500">
-                        <LucideIcons.Clock className="w-4 h-4" />
-                      </div>
-                      <span className="text-[10px] text-slate-500">Abertas</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-green-700">
-                        <LucideIcons.Banknote className="w-4 h-4" />
-                      </div>
-                      <span className="text-[10px] text-slate-500">Vales</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
-                        <LucideIcons.BarChart3 className="w-4 h-4" />
-                      </div>
-                      <span className="text-[10px] text-slate-500">Métricas</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
-                      Extrato de Comandas
-                    </span>
-                    <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700">MESA 04 • THAMILES</span>
-                      <span className="font-bold text-emerald-700">R$ 138,00 (PIX)</span>
-                    </div>
-                    <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700">MESA 07 • CARLOS</span>
-                      <span className="font-bold text-emerald-700">R$ 310,00 (Cartão)</span>
-                    </div>
+                  {/* Barra de Navegação Inferior */}
+                  <div className="mt-2 bg-slate-800 rounded-full p-1 flex items-center justify-between shrink-0">
+                    {[
+                      { idx: 0, label: 'Gestão de Acesso', Icon: LucideIcons.Users },
+                      { idx: 1, label: 'Bar e Cozinha', Icon: LucideIcons.Flame },
+                      { idx: 2, label: 'Painel Financeiro', Icon: LucideIcons.Wallet },
+                      { idx: 3, label: 'Mapa de Guarda-sóis', Icon: LucideIcons.Umbrella },
+                    ].map((tab) => {
+                      const TabIcon = tab.Icon;
+                      const tabAtivo = activeSceneIndex === tab.idx;
+                      return (
+                        <button
+                          key={tab.idx}
+                          type="button"
+                          onClick={() => setActiveSceneIndex(tab.idx)}
+                          aria-label={tab.label}
+                          title={tab.label}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            tabAtivo
+                              ? 'bg-amber-500 text-white'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <TabIcon className="w-3.5 h-3.5" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
-
-              {/* CENA 04: MAPA DE GUARDA-SÓIS EM TEMPO REAL */}
-              {activeSceneIndex === 3 && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="aspect-square rounded-2xl bg-white border border-slate-200 flex flex-col items-center justify-center p-2">
-                      <span className="text-base font-bold text-slate-700">01</span>
-                      <span className="text-[10px] font-semibold text-slate-400">LIVRE</span>
-                    </div>
-                    <div className="aspect-square rounded-2xl bg-linear-to-br from-green-500 to-green-600 text-white flex flex-col items-center justify-center p-2">
-                      <span className="text-base font-bold">04</span>
-                      <span className="text-[10px] font-semibold">MARINA</span>
-                    </div>
-                    <div
-                      className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 transition-all ${
-                        simTick % 2 === 0
-                          ? 'bg-linear-to-br from-yellow-400 to-amber-500 text-white scale-105 shadow-md'
-                          : 'bg-linear-to-br from-green-500 to-green-600 text-white'
-                      }`}
-                    >
-                      <span className="text-base font-bold">05</span>
-                      <span className="text-[10px] font-semibold">
-                        {simTick % 2 === 0 ? 'PRONTO 🔔' : 'ENTREGUE'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex items-center justify-between">
-                    <span>Sincronização na areia</span>
-                    <span className="font-semibold text-slate-800">Instantânea</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Setas Laterais Discretas */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveSceneIndex(
-                  (prev) => (prev - 1 + BEACH_SCENES.length) % BEACH_SCENES.length
-                );
-              }}
-              aria-label="Cena anterior"
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 border border-slate-200/80 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-            >
-              <LucideIcons.ChevronLeft className="w-4 h-4" />
-            </button>
-
-            {/* LEGENDA */}
-            <div
-              className={`absolute left-4 bottom-4 sm:left-6 sm:bottom-6 max-w-md z-20 bg-white/95 backdrop-blur-xl px-5 py-4 rounded-2xl border border-slate-200/80 shadow-lg transition-all duration-300 ${
-                captionPinned
-                  ? 'opacity-100 translate-y-0'
-                  : 'opacity-0 translate-y-3 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-slate-800">{activeScene.title}</h3>
-                <span className="text-xs text-slate-400 shrink-0">{activeScene.step} / 04</span>
               </div>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                {activeScene.description}
-              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CARD 6: GESTÃO FINANCEIRA COM PEQUENAS TELAS PASSANDO EM TEMPO REAL */}
-      <section id="gestao-financeira" className="py-14 lg:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-slate-50/80 border border-slate-200/80 rounded-3xl p-6 sm:p-8 lg:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Coluna Esquerda: Explicação para Proprietário e Gerente */}
-              <div className="lg:col-span-6 space-y-5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-600 text-xs font-medium">
-                  <LucideIcons.Wallet className="w-3.5 h-3.5 text-amber-500" />
-                  Controle Financeiro para Proprietários e Gerentes
-                </div>
+      {/* GESTÃO FINANCEIRA */}
+      <section
+        id="gestao-financeira"
+        onMouseEnter={() => setFinancePausado(true)}
+        onMouseLeave={() => setFinancePausado(false)}
+        className="relative w-full overflow-hidden py-14 sm:py-16 lg:py-24 bg-linear-to-b from-white via-emerald-50/35 to-slate-50/75 border-t border-slate-200/60"
+      >
+        {/* Brilhos */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 right-0 w-md h-112 rounded-full bg-radial from-emerald-100/55 via-transparent to-transparent blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 left-0 w-96 h-96 rounded-full bg-radial from-amber-100/40 via-transparent to-transparent blur-3xl"
+        />
 
-                <h2 className="text-xl sm:text-3xl font-medium tracking-tight text-slate-800 leading-snug">
-                  Visão completa do caixa, comandas, vales e métricas na palma da mão
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Coluna Esquerda */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200/90 text-slate-600 text-xs font-medium shadow-2xs">
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-slate-800 leading-tight">
+                  Zero furos no caixa.{' '}
+                  <span className="text-emerald-800">Lucro real na palma da mão.</span>
                 </h2>
-
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  Acompanhe cada real que entra no estabelecimento em tempo real, mesmo à distância.
-                  Saiba exatamente quanto entrou em PIX, cartão ou dinheiro, quanto ainda está em
-                  aberto nas mesas da areia e gerencie adiantamentos da equipe sem planilhas de papel.
+                <p className="text-sm text-slate-500 leading-relaxed max-w-md">
+                  Acompanhe entradas, lucro líquido, vales e cancelamentos em tempo real à distância — sem depender de caderninhos ou planilhas no fim do turno.
                 </p>
+              </div>
 
-                {/* Botões Seletores das 4 Telas Financeiras */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {[
-                    { id: 0, label: '1. Faturamento', icon: LucideIcons.TrendingUp },
-                    { id: 1, label: '2. Pagamentos', icon: LucideIcons.PieChart },
-                    { id: 2, label: '3. Na Areia', icon: LucideIcons.Clock },
-                    { id: 3, label: '4. Vales & Diárias', icon: LucideIcons.HandCoins },
-                  ].map((tab) => {
-                    const IconComp = tab.icon;
-                    const isActive = financeSlide === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onMouseEnter={() => setFinanceSlide(tab.id)}
-                        onClick={() => setFinanceSlide(tab.id)}
-                        className={`px-3 py-2.5 rounded-2xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+              {/* 4 Seletores */}
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-2.5 pt-1">
+                {[
+                  {
+                    id: 0,
+                    title: 'Caixa & Auditoria ao Vivo',
+                    pain: 'Todo estorno ou cancelamento fica registrado com autor e horário.',
+                    icon: LucideIcons.ShieldCheck,
+                  },
+                  {
+                    id: 1,
+                    title: 'Conferência em 1 Toque',
+                    pain: 'PIX, crédito, débito e dinheiro separados sem fechar conta na mão.',
+                    icon: LucideIcons.PieChart,
+                  },
+                  {
+                    id: 2,
+                    title: 'Lucro Líquido por Item',
+                    pain: 'Veja o ganho real descontando custo do estoque, taxas e descontos.',
+                    icon: LucideIcons.BadgeDollarSign,
+                  },
+                  {
+                    id: 3,
+                    title: 'Consumo na Areia & Vales',
+                    pain: 'Controle mesas abertas, guarda-sóis e adiantamentos da equipe.',
+                    icon: LucideIcons.HandCoins,
+                  },
+                ].map((tab) => {
+                  const IconComp = tab.icon;
+                  const isActive = financeSlide === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onMouseEnter={() => setFinanceSlide(tab.id)}
+                      onClick={() => setFinanceSlide(tab.id)}
+                      className={`text-left px-3.5 py-3 rounded-2xl border transition-all duration-300 cursor-pointer flex items-start gap-3 ${
+                        isActive
+                          ? 'bg-white text-slate-800 border-emerald-200 shadow-md -translate-y-0.5 ring-1 ring-emerald-500/15'
+                          : 'bg-white/60 hover:bg-white text-slate-500 border-slate-200/70'
+                      }`}
+                    >
+                      <span
+                        className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 transition-colors ${
                           isActive
-                            ? 'bg-white text-slate-800 border-slate-300 shadow-xs'
-                            : 'bg-slate-100/70 text-slate-500 border-slate-200/60 hover:bg-white'
+                            ? 'bg-emerald-900 text-white border-emerald-900'
+                            : 'bg-slate-50 text-emerald-700 border-slate-200/80'
                         }`}
                       >
-                        <IconComp className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span className="truncate">{tab.label}</span>
-                      </button>
+                        <IconComp className="w-4 h-4" strokeWidth={1.8} />
+                      </span>
+                      <div className="min-w-0">
+                        <span
+                          className={`text-xs font-semibold block truncate ${
+                            isActive ? 'text-slate-800' : 'text-slate-600'
+                          }`}
+                        >
+                          {tab.title}
+                        </span>
+                        <span className="hidden sm:block text-[11px] text-slate-400 mt-0.5 leading-snug">
+                          {tab.pain}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Coluna Direita: Vitrine 3D Interativa Fiel a AdminFinanceiro e Métricas */}
+            <div className="lg:col-span-7 perspective-distant">
+              <div className="group relative w-full max-w-xl mx-auto lg:ml-auto">
+                {/* Camada 3D Flutuante Superior (Auditoria) */}
+                <div className="hidden sm:flex items-center gap-2.5 absolute -top-4 -right-3 lg:-right-5 z-30 bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-2xl px-3.5 py-2 shadow-xl transition-transform duration-500 ease-out group-hover:-translate-y-1.5">
+                  <span className="w-7 h-7 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                    <LucideIcons.Lock className="w-3.5 h-3.5" />
+                  </span>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-800 block leading-tight">
+                      Auditoria Anti-Furo
+                    </span>
+                    <span className="text-[9px] text-emerald-700 font-medium">
+                      Cancelamentos rastreados
+                    </span>
+                  </div>
+                </div>
+
+                {/* Camada Inferior (Lucro) */}
+                <div className="hidden sm:flex items-center gap-2.5 absolute -bottom-4 -left-3 lg:-left-5 z-30 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl px-3.5 py-2.5 shadow-2xl transition-transform duration-500 ease-out group-hover:translate-y-1.5">
+                  <span className="w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 flex items-center justify-center shrink-0">
+                    <LucideIcons.TrendingUp className="w-3.5 h-3.5" />
+                  </span>
+                  <div>
+                    <span className="text-[9px] text-slate-400 block leading-tight">
+                      Lucro Líquido Hoje
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400 tabular-nums">
+                      + R$ 2.190,00
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cartão Principal */}
+                <div className="relative z-20 bg-white rounded-4xl border border-slate-200/90 shadow-2xl overflow-hidden transition-all duration-700 ease-out lg:rotate-y-3 lg:group-hover:rotate-y-0">
+                  <div className="bg-linear-to-br from-emerald-900 to-emerald-950 text-white p-4 sm:p-5 relative overflow-hidden">
+                    <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-emerald-500/15 blur-2xl pointer-events-none" />
+                    <div className="relative z-10 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-100 text-[10px] font-medium">
+                            Hoje
+                          </span>
+                          <span className="p-1 rounded-full bg-black/20 border border-white/10 text-emerald-200">
+                            <LucideIcons.CalendarDays className="w-3 h-3" />
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-emerald-100 text-[10px] font-medium inline-flex items-center gap-1">
+                            <LucideIcons.Landmark className="w-3 h-3" />
+                            <span>Todas as contas</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-emerald-300/90 text-[11px] font-medium">
+                              Saldo em contas
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowFinanceValues((v) => !v)}
+                              aria-label={showFinanceValues ? 'Ocultar valores' : 'Mostrar valores'}
+                              className="text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                            >
+                              {showFinanceValues ? (
+                                <LucideIcons.EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <LucideIcons.Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-white mt-0.5">
+                            {showFinanceValues ? 'R$ 8.490,00' : 'R$ •••••'}
+                          </p>
+                        </div>
+
+                        {/* Navegador 4 telas */}
+                        <div className="flex items-center gap-1.5 bg-black/20 border border-white/10 px-2.5 py-1.5 rounded-full">
+                          {[0, 1, 2, 3].map((dot) => (
+                            <button
+                              key={dot}
+                              type="button"
+                              onClick={() => setFinanceSlide(dot)}
+                              aria-label={`Ver painel financeiro ${dot + 1}`}
+                              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                financeSlide === dot ? 'w-5 bg-emerald-400' : 'w-1.5 bg-white/30 hover:bg-white/60'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 sm:p-5 bg-slate-50/75 min-h-72 flex flex-col justify-between">
+                    <div
+                      key={financeSlide}
+                      className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    >
+                      {/* SLIDE 0: EXTRATO & AUDITORIA */}
+                      {financeSlide === 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+                            <span className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shrink-0">
+                              <LucideIcons.ArrowDownLeft className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="w-7 h-7 rounded-full bg-rose-50 border border-rose-200/80 text-rose-600 flex items-center justify-center shrink-0">
+                              <LucideIcons.ArrowUpRight className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="w-7 h-7 rounded-full bg-white border border-slate-200 text-amber-600 flex items-center justify-center shrink-0">
+                              <LucideIcons.Umbrella className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="w-7 h-7 rounded-full bg-white border border-slate-200 text-emerald-600 flex items-center justify-center shrink-0">
+                              <LucideIcons.Banknote className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="ml-auto px-3 py-1 rounded-full bg-slate-900 text-white text-[10px] font-medium inline-flex items-center gap-1.5 shrink-0">
+                              <LucideIcons.BarChart3 className="w-3 h-3 text-emerald-400" />
+                              <span>44 Comandas</span>
+                            </span>
+                          </div>
+
+                          <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 shadow-2xs">
+                            <div className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-800 truncate">
+                                  MESA 04 • THAMILES
+                                </p>
+                                <span className="text-[10px] text-slate-400">
+                                  15:40 • PIX • Balde Corona + 2x Coco
+                                </span>
+                              </div>
+                              <span className="font-semibold text-emerald-600 tabular-nums shrink-0">
+                                {showFinanceValues ? '+ R$ 138,00' : '••••'}
+                              </span>
+                            </div>
+                            <div className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-800 truncate">
+                                  MESA 07 • CARLOS
+                                </p>
+                                <span className="text-[10px] text-slate-400">
+                                  16:12 • Crédito • Camarão + Drinks
+                                </span>
+                              </div>
+                              <span className="font-semibold text-emerald-600 tabular-nums shrink-0">
+                                {showFinanceValues ? '+ R$ 310,00' : '••••'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="px-3.5 py-2 rounded-2xl bg-emerald-50/70 border border-emerald-200/60 flex items-center justify-between text-[11px]">
+                            <span className="inline-flex items-center gap-1.5 text-emerald-800 font-medium">
+                              <LucideIcons.ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>0 cancelamentos sem justificativa</span>
+                            </span>
+                            <span className="text-emerald-700 font-semibold">Auditado</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SLIDE 1: CONFERÊNCIA POR FORMA DE PAGAMENTO */}
+                      {financeSlide === 1 && (
+                        <div className="space-y-2.5">
+                          {[
+                            {
+                              metodo: 'PIX Instantâneo',
+                              valor: 'R$ 5.120,00',
+                              pct: '60%',
+                              barra: 'w-3/5 bg-emerald-500',
+                            },
+                            {
+                              metodo: 'Cartão de Crédito',
+                              valor: 'R$ 2.180,00',
+                              pct: '26%',
+                              barra: 'w-1/4 bg-slate-700',
+                            },
+                            {
+                              metodo: 'Cartão de Débito',
+                              valor: 'R$ 890,00',
+                              pct: '10%',
+                              barra: 'w-1/12 bg-sky-500',
+                            },
+                            {
+                              metodo: 'Dinheiro no Caixa',
+                              valor: 'R$ 300,00',
+                              pct: '4%',
+                              barra: 'w-4 bg-amber-500',
+                            },
+                          ].map((item) => (
+                            <div
+                              key={item.metodo}
+                              className="bg-white px-3.5 py-2.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-[10px] font-bold text-slate-700 tabular-nums">
+                                    {item.pct}
+                                  </span>
+                                  <span className="font-medium text-slate-700">{item.metodo}</span>
+                                </div>
+                                <span className="font-semibold text-slate-800 tabular-nums">
+                                  {showFinanceValues ? item.valor : 'R$ •••••'}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                <div className={`h-full rounded-full ${item.barra}`} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* SLIDE 2: LUCRO LÍQUIDO & MÉTRICAS (Fiel a AdminFinanceiroMetricas.tsx) */}
+                      {financeSlide === 2 && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs">
+                              <span className="text-[10px] text-slate-400 block">Vendas</span>
+                              <div className="flex items-center justify-between gap-1 mt-1">
+                                <span className="text-sm sm:text-base font-medium text-slate-600 tabular-nums">
+                                  24
+                                </span>
+                                <span className="w-7 h-7 rounded-xl bg-sky-50 border border-sky-100 text-sky-500 flex items-center justify-center shrink-0">
+                                  <LucideIcons.ShoppingBag className="w-3.5 h-3.5" />
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs">
+                              <span className="text-[10px] text-slate-400 block">Lucro</span>
+                              <div className="flex items-center justify-between gap-1 mt-1">
+                                <span className="text-sm sm:text-base font-medium text-emerald-700 tabular-nums truncate">
+                                  {showFinanceValues ? 'R$ 2.190' : '••••'}
+                                </span>
+                                <span className="w-7 h-7 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center justify-center shrink-0">
+                                  <LucideIcons.BadgeDollarSign className="w-3.5 h-3.5" />
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs">
+                              <span className="text-[10px] text-slate-400 block">Guarda-Sol</span>
+                              <div className="flex items-center justify-between gap-1 mt-1">
+                                <span className="text-sm sm:text-base font-medium text-slate-600 tabular-nums truncate">
+                                  {showFinanceValues ? 'R$ 640' : '••••'}
+                                </span>
+                                <span className="w-7 h-7 rounded-xl bg-amber-50 border border-amber-100 text-amber-500 flex items-center justify-center shrink-0">
+                                  <LucideIcons.Umbrella className="w-3.5 h-3.5" />
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-12 gap-2.5">
+                            <div className="col-span-5 bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs flex flex-col items-center justify-between text-center">
+                              <span className="text-[10px] font-medium text-slate-600 self-start">
+                                Concluídas
+                              </span>
+                              <div className="relative w-14 h-14 my-1 flex items-center justify-center">
+                                <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
+                                  <circle
+                                    cx="18"
+                                    cy="18"
+                                    r="14"
+                                    fill="none"
+                                    stroke="#f1f5f9"
+                                    strokeWidth="3.5"
+                                  />
+                                  <circle
+                                    cx="18"
+                                    cy="18"
+                                    r="14"
+                                    fill="none"
+                                    stroke="#10b981"
+                                    strokeWidth="3.5"
+                                    strokeDasharray="88 100"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                                <span className="absolute text-[11px] font-semibold text-slate-700 tabular-nums">
+                                  100%
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-medium text-slate-500 tabular-nums">
+                                {showFinanceValues ? 'R$ 4.280,00' : 'R$ •••••'}
+                              </span>
+                            </div>
+
+                            <div className="col-span-7 bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs flex flex-col justify-between">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[10px] font-medium text-slate-600">
+                                  Fluxo de Receita
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-[9px] text-emerald-600 font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Em alta
+                                </span>
+                              </div>
+                              <svg viewBox="0 0 180 54" className="w-full h-14 mt-1">
+                                <path
+                                  d="M 5 44 L 38 36 L 72 28 L 106 31 L 140 16 L 175 9"
+                                  fill="none"
+                                  stroke="#10b981"
+                                  strokeWidth="2.4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M 5 50 L 38 48 L 72 49 L 106 46 L 140 47 L 175 44"
+                                  fill="none"
+                                  stroke="#facc15"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <circle cx="175" cy="9" r="3" fill="#059669" />
+                              </svg>
+                              <div className="flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-100 pt-1">
+                                <span>09h</span>
+                                <span>12h</span>
+                                <span>15h</span>
+                                <span>18h</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SLIDE 3: CONSUMO NA AREIA & VALES DA EQUIPE */}
+                      {financeSlide === 3 && (
+                        <div className="space-y-2.5">
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/80">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 block">
+                                Em Aberto na Areia
+                              </span>
+                              <span className="text-lg sm:text-xl font-semibold text-amber-600 tabular-nums mt-0.5 block">
+                                {showFinanceValues ? 'R$ 1.840,00' : 'R$ •••••'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">18 Mesas Ocupadas</span>
+                            </div>
+                            <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200/80">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700 block">
+                                Taxa Guarda-sol
+                              </span>
+                              <span className="text-lg sm:text-xl font-semibold text-indigo-700 tabular-nums mt-0.5 block">
+                                {showFinanceValues ? 'R$ 640,00' : 'R$ •••••'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">32 Locações Hoje</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 shadow-2xs">
+                            <div className="px-3.5 py-2 flex items-center justify-between text-xs">
+                              <span className="font-medium text-slate-700">
+                                Garçom Mateus • Adiantamento
+                              </span>
+                              <span className="font-semibold text-slate-700 tabular-nums">
+                                R$ 80,00 (Pago)
+                              </span>
+                            </div>
+                            <div className="px-3.5 py-2 flex items-center justify-between text-xs">
+                              <span className="font-medium text-slate-700">
+                                Barman Rafael • Diária Extra
+                              </span>
+                              <span className="font-semibold text-slate-700 tabular-nums">
+                                R$ 150,00 (Pago)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="px-3.5 py-2 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-between text-xs">
+                            <span className="text-slate-500">Previsão Total de Fechamento</span>
+                            <span className="font-bold text-emerald-700 tabular-nums">
+                              {showFinanceValues ? 'R$ 10.330,00' : 'R$ •••••'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rodapé Sutil do Cartão */}
+                    <div className="pt-3 mt-3 border-t border-slate-200/70 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                      <span className="inline-flex items-center gap-1.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        <span className="truncate">
+                          {financeSlide === 0 && 'Auditoria automática de cancelamentos e estornos'}
+                          {financeSlide === 1 && 'Fechamento de turno por forma de pagamento'}
+                          {financeSlide === 2 && 'Margem líquida real por produto vendido'}
+                          {financeSlide === 3 && 'Controle de comandas abertas, vales e diárias'}
+                        </span>
+                      </span>
+                      <span className="font-medium text-emerald-700 shrink-0">Tempo Real</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BLOCO DE CREDIBILIDADE E ENGENHARIA: ÂNCORA-DEV & THAMILES (CARD CLEAN + PILARES 5D) */}
+      <section
+        id="ancora-dev"
+        className="relative w-full overflow-hidden py-16 sm:py-20 lg:py-24 bg-linear-to-br from-slate-950 via-emerald-950 to-slate-950 text-white border-t border-emerald-900/40"
+      >
+        {/* Atmosfera Luminosa de Alta Tecnologia */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -left-24 w-md h-112 rounded-full bg-radial from-emerald-500/20 via-transparent to-transparent blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 right-0 w-md h-112 rounded-full bg-radial from-amber-500/15 via-transparent to-transparent blur-3xl"
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Coluna Esquerda: Identidade Âncora-Dev + Stack Tecnológica */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="space-y-3">
+                <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
+                  Desenvolvido pela{' '}
+                  <span className="bg-linear-to-r from-amber-300 via-amber-400 to-emerald-300 bg-clip-text text-transparent">
+                    Âncora-Dev
+                  </span>
+                </h2>
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
+                  Empresa de Software especializada em plataformas SaaS críticas e operação em tempo real, unindo arquitetura em nuvem, segurança de dados bancários e design fluido para operações comerciais de alto volume.
+                </p>
+              </div>
+
+              {/* Stack Tecnológica Real do Projeto */}
+              <div className="space-y-2.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+                  Stack & Referências de Engenharia
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { label: 'React 19', Icon: LucideIcons.Code2 },
+                    { label: 'TypeScript', Icon: LucideIcons.FileCode },
+                    { label: 'Tailwind CSS v4', Icon: LucideIcons.Layers },
+                    { label: 'Vite', Icon: LucideIcons.Zap },
+                    { label: 'PostgreSQL', Icon: LucideIcons.Database },
+                    { label: 'Supabase Realtime', Icon: LucideIcons.Activity },
+                    { label: 'Row-Level Security (RLS)', Icon: LucideIcons.ShieldCheck },
+                    { label: 'Cloud SaaS Multi-tenant', Icon: LucideIcons.Cloud },
+                    { label: 'PWA Mobile-First', Icon: LucideIcons.Smartphone },
+                    { label: 'Impressão ESC/POS', Icon: LucideIcons.Printer },
+                  ].map((tech) => {
+                    const TechIcon = tech.Icon;
+                    return (
+                      <span
+                        key={tech.label}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-emerald-400/50 text-xs font-medium text-slate-200 transition-all duration-300 hover:-translate-y-0.5 cursor-default"
+                      >
+                        <TechIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
+                        <span>{tech.label}</span>
+                      </span>
                     );
                   })}
                 </div>
               </div>
-
-              {/* Coluna Direita: Carrossel Automático de Pequenas Telas Fiéis ao AdminFinanceiro.tsx */}
-              <div className="lg:col-span-6 flex justify-center">
-                <div className="w-full max-w-md bg-white rounded-3xl p-5 border border-slate-200/90 shadow-lg min-h-80 flex flex-col justify-between">
-                  {/* Topo do Mini Painel Financeiro */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-medium text-slate-700">
-                        {financeSlide === 0 && 'Visão Geral de Faturamento'}
-                        {financeSlide === 1 && 'Receitas por Forma de Pagamento'}
-                        {financeSlide === 2 && 'Saldo em Atendimento & Guarda-sóis'}
-                        {financeSlide === 3 && 'Controle de Vales & Diárias da Equipe'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[0, 1, 2, 3].map((dot) => (
-                        <button
-                          key={dot}
-                          type="button"
-                          onClick={() => setFinanceSlide(dot)}
-                          aria-label={`Ver tela financeira ${dot + 1}`}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            financeSlide === dot ? 'w-5 bg-slate-700' : 'w-1.5 bg-slate-200'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* TELA FINANCEIRA 1: FATURAMENTO & EXTRATO */}
-                  {financeSlide === 0 && (
-                    <div className="space-y-3 my-auto">
-                      <div className="bg-linear-to-br from-emerald-800 to-emerald-950 text-white rounded-2xl p-4 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300 block">
-                            Saldo Líquido do Dia
-                          </span>
-                          <span className="text-2xl font-semibold tabular-nums">
-                            R$ 8.490,00
-                          </span>
-                        </div>
-                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[10px] font-medium">
-                          44 Comandas Fechadas
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-semibold text-slate-800">MESA 04 • THAMILES</p>
-                            <span className="text-[10px] text-slate-400">Fechada às 15:40 • PIX</span>
-                          </div>
-                          <span className="font-semibold text-emerald-700">+ R$ 138,00</span>
-                        </div>
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-semibold text-slate-800">MESA 07 • CARLOS</p>
-                            <span className="text-[10px] text-slate-400">
-                              Fechada às 16:12 • Crédito
-                            </span>
-                          </div>
-                          <span className="font-semibold text-emerald-700">+ R$ 310,00</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TELA FINANCEIRA 2: FORMAS DE PAGAMENTO (Fiel ao Modal Pagamentos) */}
-                  {financeSlide === 1 && (
-                    <div className="space-y-2.5 my-auto">
-                      {[
-                        { metodo: 'PIX Instantâneo', valor: 'R$ 5.120,00', pct: '60%' },
-                        { metodo: 'Cartão de Crédito', valor: 'R$ 2.180,00', pct: '26%' },
-                        { metodo: 'Cartão de Débito', valor: 'R$ 890,00', pct: '10%' },
-                        { metodo: 'Dinheiro no Caixa', valor: 'R$ 300,00', pct: '4%' },
-                      ].map((item) => (
-                        <div
-                          key={item.metodo}
-                          className="bg-slate-50 px-3.5 py-2.5 rounded-full border border-slate-200/80 flex items-center justify-between text-xs"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-700">
-                              {item.pct}
-                            </span>
-                            <span className="font-medium text-slate-700">{item.metodo}</span>
-                          </div>
-                          <span className="font-semibold text-slate-800 tabular-nums">
-                            {item.valor}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* TELA FINANCEIRA 3: MESAS ABERTAS NA AREIA & GUARDA-SÓIS */}
-                  {financeSlide === 2 && (
-                    <div className="space-y-3 my-auto">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 block">
-                            Valor em Aberto
-                          </span>
-                          <span className="text-xl font-semibold text-amber-600 tabular-nums mt-0.5 block">
-                            R$ 1.840,00
-                          </span>
-                          <span className="text-[10px] text-slate-500">18 Mesas Ocupadas</span>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200/80">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 block">
-                            Taxa Guarda-sol
-                          </span>
-                          <span className="text-xl font-semibold text-purple-700 tabular-nums mt-0.5 block">
-                            R$ 640,00
-                          </span>
-                          <span className="text-[10px] text-slate-500">32 Locações Hoje</span>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                        <span className="text-slate-600">Previsão Total de Fechamento</span>
-                        <span className="font-bold text-slate-800">R$ 10.330,00</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TELA FINANCEIRA 4: VALES E DIÁRIAS DE COLABORADORES */}
-                  {financeSlide === 3 && (
-                    <div className="space-y-3 my-auto">
-                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700">Total Repassado no Dia</span>
-                          <span className="font-semibold text-emerald-700">
-                            R$ 230,00 (2 lançamentos)
-                          </span>
-                        </div>
-                        <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                          <div className="w-full h-full bg-emerald-500 rounded-full" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
-                          Vales e Diárias Registradas
-                        </span>
-                        <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700">
-                            Garçom Mateus • Adiantamento
-                          </span>
-                          <span className="font-semibold text-slate-700">R$ 80,00 (Pago)</span>
-                        </div>
-                        <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-700">
-                            Barman Rafael • Diária Extra
-                          </span>
-                          <span className="font-semibold text-slate-700">R$ 150,00 (Pago)</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Auditoria completa de cancelamentos e estornos</span>
-                    <span className="font-medium text-slate-600">Tempo Real</span>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* BLOCO 3: SOBRE A EMPRESA CRIADORA*/}
-      <section id="ancora-dev" className="py-14 lg:py-20 bg-white border-t border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-slate-100/75 border border-slate-200/70 rounded-3xl p-6 sm:p-8 lg:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Identidade Âncora Dev */}
-              <div className="lg:col-span-7 space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-medium">
-                  <LucideIcons.Anchor className="w-3.5 h-3.5 text-emerald-400" />
-                  Engenharia de software de última geração
+            {/* Coluna Direita: Card Clean da Fundadora Thamiles + Vitrine 5D dos Pilares */}
+            <div className="lg:col-span-6 space-y-5">
+              {/* Card Clean e Compacto da Fundadora & CEO */}
+              <div className="max-w-md mx-auto lg:ml-auto rounded-3xl bg-white/95 backdrop-blur-xl border border-white/90 text-slate-800 p-5 sm:p-6 shadow-2xl space-y-3.5 transition-transform duration-500 hover:-translate-y-1">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative shrink-0">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs">
+                      <img
+                        src="/thamiles-avatar.jpg"
+                        alt="Avatar cartoon de Thamiles, Fundadora e CEO da Âncora-Dev"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
+                      Fundadora & CEO
+                    </span>
+                    <h3 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 mt-1 truncate">
+                      Thamiles
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Engenheira de Software
+                    </p>
+                  </div>
                 </div>
 
-                <h2 className="text-[16px] sm:text-2xl font-sans tracking-normal text-slate-800">
-                  Desenvolvido pela Empresa: <span className="text-[20px] font-bold tracking-normal uppercase">Âncora-dev</span>
-                </h2>
-
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  É uma empresa de desenvolvimento de software focada
-                  na construção de plataformas comerciais de alta performance, combinando código
-                  limpo, estabilidade em nuvem e design intuitivo para operações reais.
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                  À frente da Âncora-Dev, transforma desafios reais da orla em tecnologia simples, rápida e segura para gerar resultado imediato.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                  <span className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-medium text-slate-600">
-                    Arquitetura Cloud SaaS
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+                    <LucideIcons.CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Assinatura Âncora-Dev</span>
                   </span>
-                  <span className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-medium text-slate-600">
-                    Alta Disponibilidade
-                  </span>
-                  <span className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-medium text-slate-600">
-                    UI/UX Mobile-First
-                  </span>
+                  <span className="text-slate-400 font-medium">Enterprise SaaS</span>
                 </div>
               </div>
 
-              {/* Card da Fundadora e CEO */}
-              <div className="lg:col-span-5">
-                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-4xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
-                      <LucideIcons.Code2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 block">
-                        Fundadora & CEO
-                      </span>
-                      <h3 className="text-lg font-semibold text-slate-800">Thamiles</h3>
-                      <p className="text-xs text-slate-500">
-                        Engenheira de Software Especialista em SaaS Modernos
-                      </p>
-                    </div>
-                  </div>
+              {/* Vitrine 5D Futurista com Foco Central e Demais Desfocados */}
+              <div
+                onMouseEnter={() => setEngenhariaPausado(true)}
+                onMouseLeave={() => setEngenhariaPausado(false)}
+                className="max-w-md mx-auto lg:ml-auto"
+              >
+                <div className="relative h-24 sm:h-26 flex items-center justify-center perspective-distant overflow-hidden">
+                  {/* Brilho 5D Sutil Atrás do Item Focado */}
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute w-56 h-12 rounded-full bg-radial from-emerald-400/30 via-transparent to-transparent blur-xl"
+                  />
 
-                  <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3.5">
-                    Liderando a engenharia da Âncora Dev, Thamiles projeta sistemas SaaS modernos de
-                    última geração com padrões rigorosos de segurança, velocidade em tempo real e
-                    experiência de uso pensada para gerar resultado imediato ao empreendedor.
-                  </p>
+                  {/* Setas Discretas */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPilarEngenhariaIdx(
+                        (prev) => (prev - 1 + PILARES_ENGENHARIA.length) % PILARES_ENGENHARIA.length
+                      )
+                    }
+                    aria-label="Pilar anterior"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                  >
+                    <LucideIcons.ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPilarEngenhariaIdx((prev) => (prev + 1) % PILARES_ENGENHARIA.length)
+                    }
+                    aria-label="Próximo pilar"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                  >
+                    <LucideIcons.ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Cartões em Transição 5D */}
+                  {PILARES_ENGENHARIA.map((pilar, idx) => {
+                    const total = PILARES_ENGENHARIA.length;
+                    const diff = (idx - pilarEngenhariaIdx + total) % total;
+                    const estaNoCentro = diff === 0;
+                    const estaNaEsquerda = diff === total - 1;
+                    const estaNaDireita = diff === 1;
+                    const PilarIcon = pilar.Icon;
+
+                    return (
+                      <div
+                        key={pilar.id}
+                        role={estaNoCentro ? undefined : 'button'}
+                        tabIndex={estaNoCentro ? undefined : 0}
+                        aria-label={estaNoCentro ? undefined : `Focar em ${pilar.titulo}`}
+                        onClick={!estaNoCentro ? () => setPilarEngenhariaIdx(idx) : undefined}
+                        onKeyDown={
+                          !estaNoCentro
+                            ? (e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  setPilarEngenhariaIdx(idx);
+                                }
+                              }
+                            : undefined
+                        }
+                        className={`absolute w-60 sm:w-68 transition-all duration-700 ease-out will-change-transform ${
+                          estaNoCentro
+                            ? 'translate-x-0 scale-100 rotate-y-0 opacity-100 blur-none z-30'
+                            : estaNaEsquerda
+                              ? '-translate-x-36 sm:-translate-x-44 scale-75 rotate-y-12 opacity-40 blur-xs hover:opacity-75 z-10 cursor-pointer'
+                              : estaNaDireita
+                                ? 'translate-x-36 sm:translate-x-44 scale-75 -rotate-y-12 opacity-40 blur-xs hover:opacity-75 z-10 cursor-pointer'
+                                : 'translate-x-0 scale-50 opacity-0 blur-sm pointer-events-none z-0'
+                        }`}
+                      >
+                        <div
+                          className={`rounded-2xl px-3.5 py-2.5 border backdrop-blur-xl flex items-center gap-3 transition-colors ${
+                            estaNoCentro
+                              ? 'bg-white/95 border-emerald-200/90 text-slate-800 shadow-xl'
+                              : 'bg-white/10 border-white/15 text-white'
+                          }`}
+                        >
+                          <span
+                            className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
+                              estaNoCentro
+                                ? 'bg-emerald-900 border-emerald-900 text-amber-300'
+                                : 'bg-white/10 border-white/20 text-emerald-300'
+                            }`}
+                          >
+                            <PilarIcon className="w-4 h-4" strokeWidth={1.8} />
+                          </span>
+                          <div className="min-w-0">
+                            <span
+                              className={`text-xs font-semibold block truncate ${
+                                estaNoCentro ? 'text-slate-900' : 'text-white'
+                              }`}
+                            >
+                              {pilar.titulo}
+                            </span>
+                            <span
+                              className={`text-[10px] block truncate ${
+                                estaNoCentro ? 'text-slate-500' : 'text-slate-300'
+                              }`}
+                            >
+                              {pilar.detalhe}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Indicadores Futuristas Discretos */}
+                <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                  {PILARES_ENGENHARIA.map((pilar, idx) => (
+                    <button
+                      key={pilar.id}
+                      type="button"
+                      onClick={() => setPilarEngenhariaIdx(idx)}
+                      aria-label={`Selecionar ${pilar.titulo}`}
+                      className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                        pilarEngenhariaIdx === idx
+                          ? 'w-6 bg-amber-400'
+                          : 'w-1.5 bg-white/25 hover:bg-white/50'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -2748,8 +3075,8 @@ export function LandingPage() {
 
       {/* RODAPÉ */}
       <footer className="bg-white border-t border-slate-200/80 py-8 pb-safe-8">
-        <div className="max-w-7xl mx-auto px-4 tracking-normal sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
-          <span>Desenvolvido por Âncora Dev • Plataforma Digital de Atendimento e Gestão na Praia</span>
+        <div className="max-w-7xl mx-auto px-4 tracking-wider sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
+          <span>Plataforma digital ideal para gestão de barracas e quiosques de praia </span>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium">      
           </div>
         </div>
