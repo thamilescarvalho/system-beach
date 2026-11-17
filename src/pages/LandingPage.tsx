@@ -56,30 +56,245 @@ const MODULOS_SOLUCOES_ORDEM: ('garcom' | 'cardapio' | 'pdv' | 'qrcode')[] = [
 
 const PILARES_ENGENHARIA = [
   {
-    id: 'cloud',
-    titulo: 'Arquitetura Cloud Full-Stack',
-    detalhe: 'Alta disponibilidade e escala em nuvem',
-    Icon: LucideIcons.Cpu,
+    id: 'implantacao',
+    titulo: 'Implantação Assistida',
+    detalhe: 'Cardápio e mesas prontos em poucas horas',
+    Icon: LucideIcons.Zap,
   },
   {
-    id: 'seguranca',
-    titulo: 'Segurança & Banco PostgreSQL',
-    detalhe: 'Dados blindados por empresa via RLS',
-    Icon: LucideIcons.ShieldCheck,
+    id: 'suporte',
+    titulo: 'Suporte Humano',
+    detalhe: 'Atendimento ágil via WhatsApp',
+    Icon: LucideIcons.MessageCircle,
+  },
+  {
+    id: 'fidelidade',
+    titulo: 'Ativação Sem Fidelidade',
+    detalhe: 'Sem multa contratual e com teste guiado',
+    Icon: LucideIcons.CheckCircle2,
+  },
+  {
+    id: 'evolucao',
+    titulo: 'Evolução Contínua',
+    detalhe: 'Atualizações automáticas sem custo extra',
+    Icon: LucideIcons.RefreshCw,
+  },
+];
+
+type CategoriaStack = 'todas' | 'interface' | 'dados' | 'operacao';
+
+interface ItemStackEngenharia {
+  id: string;
+  label: string;
+  categoria: Exclude<CategoriaStack, 'todas'>;
+  camadaLabel: string;
+  resumo: string;
+  Icon: LucideIcons.LucideIcon;
+}
+
+const CATEGORIAS_STACK: { id: CategoriaStack; label: string }[] = [
+  { id: 'todas', label: 'Todas' },
+  { id: 'interface', label: 'UI' },
+  { id: 'dados', label: 'Cloud' },
+  { id: 'operacao', label: 'PDV' },
+];
+
+const STACK_ENGENHARIA: ItemStackEngenharia[] = [
+  {
+    id: 'react',
+    label: 'React 19',
+    categoria: 'interface',
+    camadaLabel: 'Interface',
+    resumo: 'Renderização concorrente e interface responsiva instantânea para operação contínua.',
+    Icon: LucideIcons.Code2,
+  },
+  {
+    id: 'typescript',
+    label: 'TypeScript',
+    categoria: 'interface',
+    camadaLabel: 'Interface',
+    resumo: 'Tipagem estrita ponta a ponta para máxima confiabilidade em produção.',
+    Icon: LucideIcons.FileCode,
+  },
+  {
+    id: 'tailwind',
+    label: 'Tailwind CSS v4',
+    categoria: 'interface',
+    camadaLabel: 'Interface',
+    resumo: 'Sistema visual nativo, leve e consistente do celular ao desktop.',
+    Icon: LucideIcons.Layers,
+  },
+  {
+    id: 'vite',
+    label: 'Vite',
+    categoria: 'interface',
+    camadaLabel: 'Interface',
+    resumo: 'Empacotamento otimizado para carregamento rápido mesmo no 4G da praia.',
+    Icon: LucideIcons.Zap,
+  },
+  {
+    id: 'postgres',
+    label: 'PostgreSQL',
+    categoria: 'dados',
+    camadaLabel: 'Cloud & Dados',
+    resumo: 'Banco relacional transacional com integridade financeira rigorosa.',
+    Icon: LucideIcons.Database,
   },
   {
     id: 'realtime',
-    titulo: 'Tempo Real WebSocket',
-    detalhe: 'Sincronização instantânea entre areia e bar',
+    label: 'Supabase Realtime',
+    categoria: 'dados',
+    camadaLabel: 'Cloud & Dados',
+    resumo: 'Sincronização em tempo real via WebSocket entre areia, bar e caixa.',
     Icon: LucideIcons.Activity,
   },
   {
-    id: 'mobile',
-    titulo: 'Produto Mobile-First',
-    detalhe: 'Leve e fluido no celular do garçom',
+    id: 'rls',
+    label: 'Row-Level Security (RLS)',
+    categoria: 'dados',
+    camadaLabel: 'Cloud & Dados',
+    resumo: 'Isolamento estrito de dados por empresa garantido direto no banco.',
+    Icon: LucideIcons.ShieldCheck,
+  },
+  {
+    id: 'cloud',
+    label: 'Cloud SaaS Multi-tenant',
+    categoria: 'dados',
+    camadaLabel: 'Cloud & Dados',
+    resumo: 'Arquitetura escalável preparada para picos de feriados e alta temporada.',
+    Icon: LucideIcons.Cloud,
+  },
+  {
+    id: 'pwa',
+    label: 'PWA Mobile-First',
+    categoria: 'operacao',
+    camadaLabel: 'Campo & PDV',
+    resumo: 'Experiência de aplicativo instalável direto no celular do garçom.',
     Icon: LucideIcons.Smartphone,
   },
+  {
+    id: 'escpos',
+    label: 'Impressão ESC/POS',
+    categoria: 'operacao',
+    camadaLabel: 'Campo & PDV',
+    resumo: 'Impressão direta de comandas e pedidos para bobinas térmicas de 80mm e 58mm.',
+    Icon: LucideIcons.Printer,
+  },
 ];
+
+const WHATSAPP_NUMERO_OFICIAL = '5585920008349';
+
+function criarLinkWhatsapp(mensagem: string): string {
+  return `https://wa.me/${WHATSAPP_NUMERO_OFICIAL}?text=${encodeURIComponent(mensagem)}`;
+}
+
+const REDES_SOCIAIS_RODAPE = [
+  {
+    id: 'instagram',
+    nome: 'Instagram',
+    url: '',
+    aviso: '📸 Instagram oficial da Âncora-Dev em breve! Fale conosco pelo WhatsApp.',
+  },
+  {
+    id: 'youtube',
+    nome: 'YouTube (Videoaulas)',
+    url: '',
+    aviso: '🎬 Canal de Videoaulas no YouTube em criação — em breve tutoriais completos!',
+  },
+  {
+    id: 'linkedin',
+    nome: 'LinkedIn',
+    url: '',
+    aviso: '💼 LinkedIn institucional da Âncora-Dev em atualização.',
+  },
+] as const;
+
+const LINKS_NEGOCIOS_RODAPE = [
+  {
+    label: 'Seja Nosso Parceiro',
+    mensagem: 'Olá! Tenho interesse em ser parceiro comercial da Âncora-Dev / T-System Beach.',
+  },
+  {
+    label: 'Trabalhe Conosco',
+    mensagem: 'Olá! Gostaria de enviar meu contato para trabalhar na Âncora-Dev.',
+  },
+];
+
+const LINKS_ATENDIMENTO_RODAPE = [
+  {
+    label: 'Fale Conosco',
+    mensagem: 'Olá! Gostaria de falar com a equipe do T-System Beach / Âncora-Dev.',
+  },
+  {
+    label: 'Suporte',
+    mensagem: 'Olá! Preciso de suporte técnico no sistema T-System Beach.',
+  },
+  {
+    label: 'SAC',
+    mensagem: 'Olá! Gostaria de atendimento pelo SAC da Âncora-Dev.',
+  },
+];
+
+const SELOS_CERTIFICACAO_RODAPE = [
+  { emoji: '🔐', texto: 'Criptografia TLS/HTTPS 256-bit' },
+  { emoji: '🛡️', texto: 'Isolamento PostgreSQL RLS' },
+  { emoji: '✅', texto: 'Conformidade LGPD' },
+  { emoji: '💳', texto: 'Checkout Homologado Mercado Pago' },
+];
+
+function IconeRedeSocial({ id }: { id: 'instagram' | 'linkedin' | 'youtube' }) {
+  if (id === 'instagram') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-4 h-4 shrink-0"
+        aria-hidden="true"
+      >
+        <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+        <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+      </svg>
+    );
+  }
+  if (id === 'linkedin') {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-4 h-4 shrink-0"
+        aria-hidden="true"
+      >
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+        <rect width="4" height="12" x="2" y="9" />
+        <circle cx="4" cy="4" r="2" />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4 shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" />
+      <path d="m10 15 5-3-5-3z" />
+    </svg>
+  );
+}
 
 export function LandingPage() {
   const [heroStep, setHeroStep] = useState<0 | 1>(0);
@@ -139,9 +354,93 @@ export function LandingPage() {
   const [financeSlide, setFinanceSlide] = useState<number>(0);
   const [financePausado, setFinancePausado] = useState<boolean>(false);
 
-  // Estado da vitrine 5D de pilares técnicos (#ancora-dev)
+  // Estado da vitrine 5D e seletor espacial de stack (#ancora-dev)
   const [pilarEngenhariaIdx, setPilarEngenhariaIdx] = useState<number>(0);
   const [engenhariaPausado, setEngenhariaPausado] = useState<boolean>(false);
+  const [stackMenuAberto, setStackMenuAberto] = useState<boolean>(false);
+  const [stackMenuFixado, setStackMenuFixado] = useState<boolean>(false);
+  const [stackAbrirParaCima, setStackAbrirParaCima] = useState<boolean>(false);
+  const [categoriaStack, setCategoriaStack] = useState<CategoriaStack>('todas');
+  const [stackAtivaId, setStackAtivaId] = useState<string>('react');
+  const [certificadosAbertos, setCertificadosAbertos] = useState<boolean>(false);
+  const [redeAviso, setRedeAviso] = useState<string | null>(null);
+  const [pilarTilt, setPilarTilt] = useState<{ rx: number; ry: number; ativo: boolean }>({
+    rx: 0,
+    ry: 0,
+    ativo: false,
+  });
+  const pilarTouchStartXRef = useRef<number | null>(null);
+  const stackDockRef = useRef<HTMLDivElement>(null);
+  const certificadosRef = useRef<HTMLDivElement>(null);
+
+  const mostrarAvisoRede = (mensagem: string) => {
+    setRedeAviso(mensagem);
+    setTimeout(() => {
+      setRedeAviso((atual) => (atual === mensagem ? null : atual));
+    }, 2800);
+  };
+
+  useEffect(() => {
+    if (!certificadosAbertos) return;
+
+    const fecharAoClicarFora = (event: globalThis.MouseEvent | globalThis.TouchEvent) => {
+      if (certificadosRef.current && !certificadosRef.current.contains(event.target as Node)) {
+        setCertificadosAbertos(false);
+      }
+    };
+
+    const fecharComEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCertificadosAbertos(false);
+      }
+    };
+
+    document.addEventListener('mousedown', fecharAoClicarFora);
+    document.addEventListener('touchstart', fecharAoClicarFora);
+    document.addEventListener('keydown', fecharComEsc);
+    return () => {
+      document.removeEventListener('mousedown', fecharAoClicarFora);
+      document.removeEventListener('touchstart', fecharAoClicarFora);
+      document.removeEventListener('keydown', fecharComEsc);
+    };
+  }, [certificadosAbertos]);
+
+  const calcularDirecaoStack = () => {
+    if (!stackDockRef.current || typeof window === 'undefined') return;
+    const rect = stackDockRef.current.getBoundingClientRect();
+    const espacoAbaixo = window.innerHeight - rect.bottom;
+    const espacoAcima = rect.top - 72;
+    setStackAbrirParaCima(espacoAbaixo < 380 && espacoAcima > espacoAbaixo);
+  };
+
+  useEffect(() => {
+    if (!stackMenuAberto) return;
+
+    const fecharAoClicarFora = (event: globalThis.MouseEvent | globalThis.TouchEvent) => {
+      if (stackDockRef.current && !stackDockRef.current.contains(event.target as Node)) {
+        setStackMenuAberto(false);
+        setStackMenuFixado(false);
+      }
+    };
+
+    const fecharComEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setStackMenuAberto(false);
+        setStackMenuFixado(false);
+      }
+    };
+
+    document.addEventListener('mousedown', fecharAoClicarFora);
+    document.addEventListener('touchstart', fecharAoClicarFora);
+    document.addEventListener('keydown', fecharComEsc);
+    window.addEventListener('resize', calcularDirecaoStack);
+    return () => {
+      document.removeEventListener('mousedown', fecharAoClicarFora);
+      document.removeEventListener('touchstart', fecharAoClicarFora);
+      document.removeEventListener('keydown', fecharComEsc);
+      window.removeEventListener('resize', calcularDirecaoStack);
+    };
+  }, [stackMenuAberto]);
 
   // Efeito 3D no Hero
   const [tilt, setTilt] = useState<{ rx: number; ry: number }>({ rx: 0, ry: 0 });
@@ -269,8 +568,50 @@ export function LandingPage() {
     setTilt({ rx: 0, ry: 0 });
   };
 
-  const whatsappUrl =
-    'https://wa.me/5585920008349?text=Ol%C3%A1!%20Quero%20conhecer%20o%20sistema%20para%20o%20meu%20quiosque%20ou%20barraca%20de%20praia.';
+  const irParaPilarAnterior = () => {
+    setPilarEngenhariaIdx(
+      (prev) => (prev - 1 + PILARES_ENGENHARIA.length) % PILARES_ENGENHARIA.length
+    );
+  };
+
+  const irParaProximoPilar = () => {
+    setPilarEngenhariaIdx((prev) => (prev + 1) % PILARES_ENGENHARIA.length);
+  };
+
+  const podeInclinarPilar =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const handlePilarMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!podeInclinarPilar) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPilarTilt({
+      rx: Number((-y * 5).toFixed(2)),
+      ry: Number((x * 6).toFixed(2)),
+      ativo: true,
+    });
+  };
+
+  const handlePilarMouseLeave = () => {
+    if (!pilarTilt.ativo) return;
+    setPilarTilt({ rx: 0, ry: 0, ativo: false });
+  };
+
+  const stackSelecionada =
+    STACK_ENGENHARIA.find((item) => item.id === stackAtivaId) ?? STACK_ENGENHARIA[0];
+  const stacksFiltradas =
+    categoriaStack === 'todas'
+      ? STACK_ENGENHARIA
+      : STACK_ENGENHARIA.filter((item) => item.categoria === categoriaStack);
+
+  const whatsappUrl = criarLinkWhatsapp(
+    'Olá! Quero conhecer o sistema para o meu quiosque ou barraca de praia.'
+  );
 
   const heroTotal = heroCoronaQty * 114 + heroCocoQty * 12;
 
@@ -924,7 +1265,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50/50 text-slate-700 font-sans selection:bg-slate-200 selection:text-slate-800 overflow-x-clip">
+    <div className="min-h-dvh flex flex-col bg-slate-50/50 text-slate-700 font-sans selection:bg-slate-200 selection:text-slate-800 overflow-x-clip">
       {/* BARRA SUPERIOR */}
       <header className="sticky top-0 z-50 pt-safe bg-linear-to-r from-emerald-950 via-emerald-900/95 to-emerald-950 backdrop-blur-xl border-b border-emerald-800/60 shadow-sm shadow-emerald-950/10 transition-all">
         <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
@@ -1647,7 +1988,7 @@ export function LandingPage() {
               <LucideIcons.ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" strokeWidth={1.8} />
             </button>
 
-            {/* Palco Espacial Sem Recorte Lateral com Perspectiva 3D/5D */}
+            {/* Fundo */}
             <div className="relative h-116 lg:h-124 flex items-center justify-center perspective-distant">
               {dispositivosOrdem.map((disp, idx) => {
                 const diff = (idx - indiceDispositivoAtivo + 3) % 3;
@@ -2353,7 +2694,7 @@ export function LandingPage() {
                   <span className="text-emerald-800">Lucro real na palma da mão.</span>
                 </h2>
                 <p className="text-sm text-slate-500 leading-relaxed max-w-md">
-                  Acompanhe entradas, lucro líquido, vales e cancelamentos em tempo real à distância — sem depender de caderninhos ou planilhas no fim do turno.
+                  Acompanhe entradas, lucro líquido, vales e cancelamentos em tempo real à distância sem depender de caderninhos ou planilhas no fim do turno.
                 </p>
               </div>
 
@@ -2362,7 +2703,7 @@ export function LandingPage() {
                 {[
                   {
                     id: 0,
-                    title: 'Caixa & Auditoria ao Vivo',
+                    title: 'Caixa & Auditoria',
                     pain: 'Todo estorno ou cancelamento fica registrado com autor e horário.',
                     icon: LucideIcons.ShieldCheck,
                   },
@@ -2380,7 +2721,7 @@ export function LandingPage() {
                   },
                   {
                     id: 3,
-                    title: 'Consumo na Areia & Vales',
+                    title: 'Acompanhamento Financeiro',
                     pain: 'Controle mesas abertas, guarda-sóis e adiantamentos da equipe.',
                     icon: LucideIcons.HandCoins,
                   },
@@ -2436,7 +2777,7 @@ export function LandingPage() {
                   </span>
                   <div>
                     <span className="text-[10px] font-semibold text-slate-800 block leading-tight">
-                      Auditoria Anti-Furo
+                      Auditoria
                     </span>
                     <span className="text-[9px] text-emerald-700 font-medium">
                       Cancelamentos rastreados
@@ -2808,20 +3149,6 @@ export function LandingPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Rodapé Sutil do Cartão */}
-                    <div className="pt-3 mt-3 border-t border-slate-200/70 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                      <span className="inline-flex items-center gap-1.5 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                        <span className="truncate">
-                          {financeSlide === 0 && 'Auditoria automática de cancelamentos e estornos'}
-                          {financeSlide === 1 && 'Fechamento de turno por forma de pagamento'}
-                          {financeSlide === 2 && 'Margem líquida real por produto vendido'}
-                          {financeSlide === 3 && 'Controle de comandas abertas, vales e diárias'}
-                        </span>
-                      </span>
-                      <span className="font-medium text-emerald-700 shrink-0">Tempo Real</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -2830,242 +3157,456 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* BLOCO DE CREDIBILIDADE E ENGENHARIA: ÂNCORA-DEV & THAMILES (CARD CLEAN + PILARES 5D) */}
+      {/* BLOCO DE CREDIBILIDADE E ENGENHARIA: ÂNCORA-DEV & THAMILES (WIREFRAME 5D VERDE MODERNO + VIDRO TRANSLÚCIDO) */}
       <section
         id="ancora-dev"
-        className="relative w-full overflow-hidden py-16 sm:py-20 lg:py-24 bg-linear-to-br from-slate-950 via-emerald-950 to-slate-950 text-white border-t border-emerald-900/40"
+        className="scroll-mt-16 relative z-30 w-full overflow-x-clip py-16 sm:py-20 lg:py-28 bg-linear-to-br from-slate-50 via-emerald-50/55 to-teal-50/50 text-slate-800 border-t border-emerald-200/50"
       >
-        {/* Atmosfera Luminosa de Alta Tecnologia */}
+        {/* Atmosfera Suave na Paleta do Sistema */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-24 w-md h-112 rounded-full bg-radial from-emerald-500/20 via-transparent to-transparent blur-3xl"
+          className="pointer-events-none absolute -top-24 right-0 w-md h-112 rounded-full bg-radial from-emerald-200/35 via-transparent to-transparent blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-24 right-0 w-md h-112 rounded-full bg-radial from-amber-500/15 via-transparent to-transparent blur-3xl"
+          className="pointer-events-none absolute -bottom-24 left-0 w-96 h-96 rounded-full bg-radial from-amber-100/30 via-transparent to-transparent blur-3xl"
         />
+
+        {/* Fundo Ilustração Monocromática 5D Wireframe / RV com Linhas em Verde Moderno */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <div className="relative w-full h-full isolate mix-blend-multiply opacity-75 sm:opacity-90">
+            <img
+              src="/wireframe-ancora-5d.jpg"
+              alt=""
+              className="w-full h-full object-cover object-bottom-right contrast-110 brightness-105"
+            />
+            <div className="absolute inset-0 bg-emerald-600 mix-blend-screen" />
+          </div>
+          <div className="absolute inset-0 bg-linear-to-r from-slate-50/90 via-emerald-50/45 sm:via-emerald-50/25 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-white/75 via-transparent to-slate-50/70" />
+        </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            {/* Coluna Esquerda: Identidade Âncora-Dev + Stack Tecnológica */}
+            {/* Coluna Esquerda: Identidade Âncora-Dev + Seletor Espacial Imóvel */}
             <div className="lg:col-span-6 space-y-6">
               <div className="space-y-3">
-                <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
+                <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight text-slate-900 leading-tight">
                   Desenvolvido pela{' '}
-                  <span className="bg-linear-to-r from-amber-300 via-amber-400 to-emerald-300 bg-clip-text text-transparent">
-                    Âncora-Dev
-                  </span>
+                  <span className="text-emerald-800">Âncora-Dev</span>
                 </h2>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
+                <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
                   Empresa de Software especializada em plataformas SaaS críticas e operação em tempo real, unindo arquitetura em nuvem, segurança de dados bancários e design fluido para operações comerciais de alto volume.
                 </p>
               </div>
 
-              {/* Stack Tecnológica Real do Projeto */}
+              {/* Seletor Espacial Interativo de Stack (Altura Fixa e 100% Imóvel) */}
               <div className="space-y-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-900/65 block">
                   Stack & Referências de Engenharia
                 </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {[
-                    { label: 'React 19', Icon: LucideIcons.Code2 },
-                    { label: 'TypeScript', Icon: LucideIcons.FileCode },
-                    { label: 'Tailwind CSS v4', Icon: LucideIcons.Layers },
-                    { label: 'Vite', Icon: LucideIcons.Zap },
-                    { label: 'PostgreSQL', Icon: LucideIcons.Database },
-                    { label: 'Supabase Realtime', Icon: LucideIcons.Activity },
-                    { label: 'Row-Level Security (RLS)', Icon: LucideIcons.ShieldCheck },
-                    { label: 'Cloud SaaS Multi-tenant', Icon: LucideIcons.Cloud },
-                    { label: 'PWA Mobile-First', Icon: LucideIcons.Smartphone },
-                    { label: 'Impressão ESC/POS', Icon: LucideIcons.Printer },
-                  ].map((tech) => {
-                    const TechIcon = tech.Icon;
-                    return (
-                      <span
-                        key={tech.label}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-emerald-400/50 text-xs font-medium text-slate-200 transition-all duration-300 hover:-translate-y-0.5 cursor-default"
-                      >
-                        <TechIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" strokeWidth={1.8} />
-                        <span>{tech.label}</span>
+
+                <div
+                  ref={stackDockRef}
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === 'mouse') {
+                      calcularDirecaoStack();
+                      setStackMenuAberto(true);
+                    }
+                  }}
+                  onPointerLeave={(e) => {
+                    if (e.pointerType === 'mouse' && !stackMenuFixado) {
+                      setStackMenuAberto(false);
+                    }
+                  }}
+                  className="relative w-full max-w-lg"
+                >
+                  {/* Botão Gatilho Estável (Nunca Muda de Tamanho) */}
+                  <button
+                    type="button"
+                    aria-expanded={stackMenuAberto}
+                    aria-controls="painel-stack-espacial"
+                    onClick={() => {
+                      if (stackMenuFixado) {
+                        setStackMenuFixado(false);
+                        setStackMenuAberto(false);
+                      } else {
+                        calcularDirecaoStack();
+                        setStackMenuFixado(true);
+                        setStackMenuAberto(true);
+                      }
+                    }}
+                    className={`w-full h-15 rounded-4xl px-3.5 border backdrop-blur-xl flex items-center justify-between gap-3 transition-all duration-300 cursor-pointer ${
+                      stackMenuAberto
+                        ? 'bg-white/90 border-emerald-300/90 shadow-lg shadow-emerald-950/10'
+                        : 'bg-white/70 hover:bg-white/90 border-emerald-200/80 hover:border-emerald-300 shadow-sm shadow-emerald-950/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-9 h-9 rounded-2xl bg-emerald-950 text-emerald-300 flex items-center justify-center shrink-0 shadow-xs">
+                        <LucideIcons.Sparkles className="w-4 h-4" strokeWidth={1.8} />
                       </span>
-                    );
-                  })}
+
+                      <div className="min-w-0 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+                            Tecnologias em produção
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-semibold text-emerald-800 shrink-0">
+                            {STACK_ENGENHARIA.length}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50/90 border border-emerald-200/80 text-[10px] font-sans text-emerald-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Explorar</span>
+                      </span>
+                      <span
+                        className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                          stackMenuAberto
+                            ? 'rotate-180 bg-emerald-950 border-emerald-950 text-white'
+                            : 'bg-white/80 border-emerald-200/80 text-emerald-800'
+                        }`}
+                      >
+                        <LucideIcons.ChevronDown className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Painel Flutuante Responsivo (Direção Inteligente + Encolhe ao Filtrar Sem Mover a Página) */}
+                  {stackMenuAberto && (
+                    <div
+                      id="painel-stack-espacial"
+                      role="region"
+                      aria-label="Explorador de Tecnologias"
+                      className={`absolute left-0 right-0 z-50 transition-all duration-300 ease-out ${
+                        stackAbrirParaCima
+                          ? 'bottom-full pb-2 origin-bottom'
+                          : 'top-full pt-2 origin-top'
+                      }`}
+                    >
+                      <div className="rounded-3xl bg-white/95 backdrop-blur-2xl border border-emerald-200/80 shadow-2xl shadow-emerald-950/15 overflow-hidden max-h-96 overflow-y-auto scrollbar-none transition-all duration-300 ease-out">
+                        {/* Barra Superior com Filtros por Camada */}
+                        <div className="px-3.5 py-2.5 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between gap-2">
+                          <div
+                            role="group"
+                            aria-label="Filtrar tecnologias por camada"
+                            className="inline-flex items-center gap-1 bg-white/90 p-0.5 rounded-full border border-emerald-200/70"
+                          >
+                            {CATEGORIAS_STACK.map((cat) => {
+                              const ativa = categoriaStack === cat.id;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setCategoriaStack(cat.id);
+                                    const primeiraDaCamada =
+                                      cat.id === 'todas'
+                                        ? STACK_ENGENHARIA[0]
+                                        : STACK_ENGENHARIA.find((item) => item.categoria === cat.id);
+                                    if (primeiraDaCamada) setStackAtivaId(primeiraDaCamada.id);
+                                  }}
+                                  aria-pressed={ativa}
+                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                                    ativa
+                                      ? 'bg-emerald-900 text-white shadow-2xs'
+                                      : 'text-slate-500 hover:text-emerald-900'
+                                  }`}
+                                >
+                                  {cat.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStackMenuAberto(false);
+                              setStackMenuFixado(false);
+                            }}
+                            aria-label="Fechar explorador de tecnologias"
+                            className="w-6 h-6 rounded-full bg-white border border-emerald-200/80 text-slate-500 hover:text-emerald-900 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                          >
+                            <LucideIcons.X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Grade Filtrável com Transição Suave (Encolhe Conforme o Filtro) */}
+                        <div
+                          key={categoriaStack}
+                          className="p-2.5 grid grid-cols-2 gap-1.5 animate-in fade-in duration-200"
+                        >
+                          {stacksFiltradas.map((tech) => {
+                            const TechIcon = tech.Icon;
+                            const selecionada = stackSelecionada.id === tech.id;
+
+                            return (
+                              <button
+                                key={tech.id}
+                                type="button"
+                                onMouseEnter={() => setStackAtivaId(tech.id)}
+                                onFocus={() => setStackAtivaId(tech.id)}
+                                onClick={() => setStackAtivaId(tech.id)}
+                                aria-pressed={selecionada}
+                                className={`min-h-10 py-1.5 px-2.5 rounded-2xl border text-left flex items-center gap-2 transition-all duration-200 cursor-pointer ${
+                                  selecionada
+                                    ? 'bg-emerald-950 border-emerald-950 text-white shadow-sm'
+                                    : 'bg-white/95 hover:bg-emerald-50/70 border-slate-200/80 hover:border-emerald-300 text-slate-700'
+                                }`}
+                              >
+                                <span
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                                    selecionada
+                                      ? 'bg-emerald-400/20 text-emerald-300'
+                                      : 'bg-emerald-50 text-emerald-700'
+                                  }`}
+                                >
+                                  <TechIcon className="w-3.5 h-3.5" strokeWidth={1.8} />
+                                </span>
+                                <span className="text-[11px] font-medium leading-tight">
+                                  {tech.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Painel IA de Detalhe Instantâneo */}
+                        <div className="mx-2.5 mb-2.5 px-3 py-2.5 min-h-18 rounded-2xl bg-emerald-50/75 border border-emerald-200/70 flex flex-col justify-center">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-slate-900 truncate">
+                              {stackSelecionada.label}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white border border-emerald-200/80 text-[10px] font-medium text-emerald-800 shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              {stackSelecionada.camadaLabel}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-snug mt-1">
+                            {stackSelecionada.resumo}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Coluna Direita: Card Clean da Fundadora Thamiles + Vitrine 5D dos Pilares */}
-            <div className="lg:col-span-6 space-y-5">
-              {/* Card Clean e Compacto da Fundadora & CEO */}
-              <div className="max-w-md mx-auto lg:ml-auto rounded-3xl bg-white/95 backdrop-blur-xl border border-white/90 text-slate-800 p-5 sm:p-6 shadow-2xl space-y-3.5 transition-transform duration-500 hover:-translate-y-1">
-                <div className="flex items-center gap-3.5">
-                  <div className="relative shrink-0">
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs">
-                      <img
-                        src="/thamiles-avatar.jpg"
-                        alt="Avatar cartoon de Thamiles, Fundadora e CEO da Âncora-Dev"
-                        className="w-full h-full object-cover object-top"
+            {/* Coluna Direita: Card Translúcido da Fundadora + Garantias de Conversão 5D */}
+            <div className="lg:col-span-6">
+              <div className="w-full max-w-lg mx-auto lg:ml-auto space-y-5">
+                {/* Card da Fundadora & CEO em Vidro Fosco Translúcido */}
+                <div className="w-full rounded-3xl bg-white/65 backdrop-blur-xl border border-emerald-200/75 text-slate-800 p-5 sm:p-6 shadow-lg shadow-emerald-950/5 space-y-3.5 transition-transform duration-500 hover:-translate-y-1">
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative shrink-0">
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-emerald-200/80 bg-white shadow-xs">
+                        <img
+                          src="/thamiles-avatar.jpg"
+                          alt="Avatar cartoon de Thamiles, Fundadora e CEO da Âncora-Dev"
+                          className="w-full h-full object-cover object-top"
+                        />
+                      </div>
+                      <span
+                        aria-hidden="true"
+                        className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"
                       />
                     </div>
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"
-                    />
+
+                    <div className="min-w-0">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
+                        Fundadora & CEO
+                      </span>
+                      <h3 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 mt-1 truncate">
+                        Thamiles
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Engenheira de Software
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
-                      Fundadora & CEO
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-emerald-100/80 pt-3">
+                    No comando da Âncora-Dev, une visão estratégica e tecnologia ágil para entregar resultados reais sem complicação.
+                  </p>
+
+                  <div className="pt-2 border-t border-emerald-100/80 flex items-center justify-between text-[11px]">
+                    <span className="inline-flex items-center gap-1.5 text-emerald-800 font-medium">
+                      <LucideIcons.CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                      <span>Assinatura Âncora-Dev</span>
                     </span>
-                    <h3 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 mt-1 truncate">
-                      Thamiles
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Engenheira de Software
-                    </p>
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-emerald-600 transition-colors"
+                    >
+                      <span>Falar com especialista</span>
+                      <LucideIcons.ArrowRight className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                  À frente da Âncora-Dev, transforma desafios reais da orla em tecnologia simples, rápida e segura para gerar resultado imediato.
-                </p>
+                {/* Vitrine 5D Translúcida de Garantias e Conversão (Zero Redundância) */}
+                <div
+                  onMouseEnter={() => setEngenhariaPausado(true)}
+                  onMouseLeave={() => {
+                    setEngenhariaPausado(false);
+                    handlePilarMouseLeave();
+                  }}
+                  onTouchStart={(e) => {
+                    pilarTouchStartXRef.current = e.touches[0].clientX;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (pilarTouchStartXRef.current === null) return;
+                    const deltaX = e.changedTouches[0].clientX - pilarTouchStartXRef.current;
+                    pilarTouchStartXRef.current = null;
+                    if (deltaX > 40) irParaPilarAnterior();
+                    else if (deltaX < -40) irParaProximoPilar();
+                  }}
+                  className="w-full"
+                >
+                  <div className="relative">
+                    {/* Setas Fora da Máscara Lateral para Permanecerem Sempre Nítidas */}
+                    <button
+                      type="button"
+                      onClick={irParaPilarAnterior}
+                      aria-label="Benefício anterior"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 z-40 w-8 h-8 rounded-full bg-white/75 hover:bg-white backdrop-blur-md border border-emerald-200/80 hover:border-emerald-300 text-emerald-900 shadow-sm flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                    >
+                      <LucideIcons.ChevronLeft className="w-4 h-4" />
+                    </button>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-                    <LucideIcons.CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Assinatura Âncora-Dev</span>
-                  </span>
-                  <span className="text-slate-400 font-medium">Enterprise SaaS</span>
-                </div>
-              </div>
+                    <button
+                      type="button"
+                      onClick={irParaProximoPilar}
+                      aria-label="Próximo benefício"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 z-40 w-8 h-8 rounded-full bg-white/75 hover:bg-white backdrop-blur-md border border-emerald-200/80 hover:border-emerald-300 text-emerald-900 shadow-sm flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                    >
+                      <LucideIcons.ChevronRight className="w-4 h-4" />
+                    </button>
 
-              {/* Vitrine 5D Futurista com Foco Central e Demais Desfocados */}
-              <div
-                onMouseEnter={() => setEngenhariaPausado(true)}
-                onMouseLeave={() => setEngenhariaPausado(false)}
-                className="max-w-md mx-auto lg:ml-auto"
-              >
-                <div className="relative h-24 sm:h-26 flex items-center justify-center perspective-distant overflow-hidden">
-                  {/* Brilho 5D Sutil Atrás do Item Focado */}
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute w-56 h-12 rounded-full bg-radial from-emerald-400/30 via-transparent to-transparent blur-xl"
-                  />
+                    {/* Palco 5D com Dissolução Lateral Suave (Zero Corte Seco "|") */}
+                    <div className="relative h-28 sm:h-30 flex items-center justify-center perspective-distant overflow-hidden fade-edges-stage">
+                      {PILARES_ENGENHARIA.map((pilar, idx) => {
+                        const total = PILARES_ENGENHARIA.length;
+                        const diff = (idx - pilarEngenhariaIdx + total) % total;
+                        const estaNoCentro = diff === 0;
+                        const estaNaEsquerda = diff === total - 1;
+                        const estaNaDireita = diff === 1;
+                        const PilarIcon = pilar.Icon;
 
-                  {/* Setas Discretas */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPilarEngenhariaIdx(
-                        (prev) => (prev - 1 + PILARES_ENGENHARIA.length) % PILARES_ENGENHARIA.length
-                      )
-                    }
-                    aria-label="Pilar anterior"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                  >
-                    <LucideIcons.ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPilarEngenhariaIdx((prev) => (prev + 1) % PILARES_ENGENHARIA.length)
-                    }
-                    aria-label="Próximo pilar"
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                  >
-                    <LucideIcons.ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  {/* Cartões em Transição 5D */}
-                  {PILARES_ENGENHARIA.map((pilar, idx) => {
-                    const total = PILARES_ENGENHARIA.length;
-                    const diff = (idx - pilarEngenhariaIdx + total) % total;
-                    const estaNoCentro = diff === 0;
-                    const estaNaEsquerda = diff === total - 1;
-                    const estaNaDireita = diff === 1;
-                    const PilarIcon = pilar.Icon;
-
-                    return (
-                      <div
-                        key={pilar.id}
-                        role={estaNoCentro ? undefined : 'button'}
-                        tabIndex={estaNoCentro ? undefined : 0}
-                        aria-label={estaNoCentro ? undefined : `Focar em ${pilar.titulo}`}
-                        onClick={!estaNoCentro ? () => setPilarEngenhariaIdx(idx) : undefined}
-                        onKeyDown={
-                          !estaNoCentro
-                            ? (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  setPilarEngenhariaIdx(idx);
-                                }
+                        const estiloTiltCentro =
+                          estaNoCentro && podeInclinarPilar
+                            ? {
+                                transform: `perspective(1000px) rotateX(${pilarTilt.rx}deg) rotateY(${pilarTilt.ry}deg) translateZ(0)`,
+                                transition: pilarTilt.ativo
+                                  ? 'transform 120ms ease-out'
+                                  : 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)',
                               }
-                            : undefined
-                        }
-                        className={`absolute w-60 sm:w-68 transition-all duration-700 ease-out will-change-transform ${
-                          estaNoCentro
-                            ? 'translate-x-0 scale-100 rotate-y-0 opacity-100 blur-none z-30'
-                            : estaNaEsquerda
-                              ? '-translate-x-36 sm:-translate-x-44 scale-75 rotate-y-12 opacity-40 blur-xs hover:opacity-75 z-10 cursor-pointer'
-                              : estaNaDireita
-                                ? 'translate-x-36 sm:translate-x-44 scale-75 -rotate-y-12 opacity-40 blur-xs hover:opacity-75 z-10 cursor-pointer'
-                                : 'translate-x-0 scale-50 opacity-0 blur-sm pointer-events-none z-0'
-                        }`}
-                      >
-                        <div
-                          className={`rounded-2xl px-3.5 py-2.5 border backdrop-blur-xl flex items-center gap-3 transition-colors ${
-                            estaNoCentro
-                              ? 'bg-white/95 border-emerald-200/90 text-slate-800 shadow-xl'
-                              : 'bg-white/10 border-white/15 text-white'
-                          }`}
-                        >
-                          <span
-                            className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
+                            : undefined;
+
+                        return (
+                          <div
+                            key={pilar.id}
+                            role={estaNoCentro ? undefined : 'button'}
+                            tabIndex={estaNoCentro ? undefined : 0}
+                            aria-label={estaNoCentro ? undefined : `Focar em ${pilar.titulo}`}
+                            onClick={!estaNoCentro ? () => setPilarEngenhariaIdx(idx) : undefined}
+                            onMouseMove={estaNoCentro ? handlePilarMouseMove : undefined}
+                            onMouseLeave={estaNoCentro ? handlePilarMouseLeave : undefined}
+                            onKeyDown={
+                              !estaNoCentro
+                                ? (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setPilarEngenhariaIdx(idx);
+                                    }
+                                  }
+                                : undefined
+                            }
+                            className={`absolute w-60 sm:w-76 transition-all duration-700 ease-out will-change-transform ${
                               estaNoCentro
-                                ? 'bg-emerald-900 border-emerald-900 text-amber-300'
-                                : 'bg-white/10 border-white/20 text-emerald-300'
+                                ? 'translate-x-0 scale-100 rotate-y-0 opacity-100 z-30'
+                                : estaNaEsquerda
+                                  ? '-translate-x-28 sm:-translate-x-44 scale-80 sm:scale-85 rotate-y-12 opacity-75 hover:opacity-100 z-10 cursor-pointer'
+                                  : estaNaDireita
+                                    ? 'translate-x-28 sm:translate-x-44 scale-80 sm:scale-85 -rotate-y-12 opacity-75 hover:opacity-100 z-10 cursor-pointer'
+                                    : 'translate-x-0 scale-75 opacity-0 pointer-events-none z-0'
                             }`}
                           >
-                            <PilarIcon className="w-4 h-4" strokeWidth={1.8} />
-                          </span>
-                          <div className="min-w-0">
-                            <span
-                              className={`text-xs font-semibold block truncate ${
-                                estaNoCentro ? 'text-slate-900' : 'text-white'
+                            <div
+                              style={estiloTiltCentro}
+                              className={`relative overflow-hidden rounded-2xl px-4 py-3.5 border backdrop-blur-xl flex items-center gap-3.5 transition-colors ${
+                                estaNoCentro
+                                  ? 'bg-emerald-950/75 border-emerald-400/35 ring-1 ring-white/15 text-white shadow-xl shadow-emerald-950/15'
+                                  : 'bg-emerald-950/15 border-emerald-700/20 text-slate-800'
                               }`}
                             >
-                              {pilar.titulo}
-                            </span>
-                            <span
-                              className={`text-[10px] block truncate ${
-                                estaNoCentro ? 'text-slate-500' : 'text-slate-300'
-                              }`}
-                            >
-                              {pilar.detalhe}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                              {estaNoCentro && (
+                                <div
+                                  aria-hidden="true"
+                                  className="pointer-events-none absolute inset-x-4 top-0 h-px bg-linear-to-r from-transparent via-emerald-300/60 to-transparent"
+                                />
+                              )}
 
-                {/* Indicadores Futuristas Discretos */}
-                <div className="flex items-center justify-center gap-1.5 mt-1.5">
-                  {PILARES_ENGENHARIA.map((pilar, idx) => (
-                    <button
-                      key={pilar.id}
-                      type="button"
-                      onClick={() => setPilarEngenhariaIdx(idx)}
-                      aria-label={`Selecionar ${pilar.titulo}`}
-                      className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                        pilarEngenhariaIdx === idx
-                          ? 'w-6 bg-amber-400'
-                          : 'w-1.5 bg-white/25 hover:bg-white/50'
-                      }`}
-                    />
-                  ))}
+                              <span
+                                className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                                  estaNoCentro
+                                    ? 'bg-emerald-400/15 border-emerald-300/30 text-amber-300'
+                                    : 'bg-white/60 border-emerald-700/20 text-emerald-800'
+                                }`}
+                              >
+                                <PilarIcon className="w-4 h-4" strokeWidth={1.8} />
+                              </span>
+
+                              <div className="min-w-0 flex-1">
+                                <span
+                                  className={`text-xs sm:text-sm font-semibold tracking-tight block leading-snug ${
+                                    estaNoCentro ? 'text-white' : 'text-slate-800'
+                                  }`}
+                                >
+                                  {pilar.titulo}
+                                </span>
+                                <span
+                                  className={`text-[11px] block leading-snug mt-0.5 ${
+                                    estaNoCentro ? 'text-emerald-100/85' : 'text-slate-600'
+                                  }`}
+                                >
+                                  {pilar.detalhe}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Indicadores Discretos */}
+                  <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                    {PILARES_ENGENHARIA.map((pilar, idx) => (
+                      <button
+                        key={pilar.id}
+                        type="button"
+                        onClick={() => setPilarEngenhariaIdx(idx)}
+                        aria-label={`Selecionar ${pilar.titulo}`}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          pilarEngenhariaIdx === idx
+                            ? 'w-6 bg-emerald-800'
+                            : 'w-1.5 bg-emerald-900/25 hover:bg-emerald-900/45'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3073,13 +3614,219 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* RODAPÉ */}
-      <footer className="bg-white border-t border-slate-200/80 py-8 pb-safe-8">
-        <div className="max-w-7xl mx-auto px-4 tracking-wider sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
-          <span>Plataforma digital ideal para gestão de barracas e quiosques de praia </span>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium">      
+      {/* RODAPÉ MINIMALISTA PADRÃO T-SYSTEM BEACH (ENCOSTADO NO FUNDO + EFEITO 5D) */}
+      <footer className="mt-auto relative z-10 overflow-x-clip bg-linear-to-br from-emerald-950 via-emerald-900 to-slate-950 text-white font-sans">
+        {/* Camada 5D Wireframe Sutil + Ondas Luminosas na Paleta do Sistema */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <img
+            src="/wireframe-ancora-5d.jpg"
+            alt=""
+            className="w-full h-full object-cover object-bottom-right opacity-10 invert mix-blend-screen"
+          />
+          <div className="absolute -top-24 -right-24 w-md h-112 rounded-full bg-radial from-emerald-400/15 via-transparent to-transparent blur-3xl" />
+          <div className="absolute -bottom-24 left-1/4 w-96 h-96 rounded-full bg-radial from-teal-400/15 via-transparent to-transparent blur-3xl" />
+        </div>
+
+        {/* Faixa Superior do Rodapé */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+          {/* Barra Discreta com Voltar ao Topo */}
+          <div className="flex items-center justify-between pb-6 border-b border-white/15">
+            <a
+              href="#inicio"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-100/80 hover:text-white transition-colors"
+            >
+              <span>Voltar ao topo</span>
+              <LucideIcons.ChevronUp className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          {/* Grade Limpa de 5 Áreas */}
+          <div className="pt-8 pb-8 grid grid-cols-2 lg:grid-cols-12 gap-x-6 gap-y-8 items-start">
+            {/* Marca & Endereço */}
+            <div className="col-span-2 lg:col-span-3 space-y-3">
+              <div className="inline-flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-2xl bg-white/10 border border-white/15 text-amber-400 flex items-center justify-center shrink-0">
+                  <LucideIcons.Umbrella className="w-4 h-4" strokeWidth={2} />
+                </span>
+                <div className="leading-none">
+                  <span className="text-sm font-light tracking-wide text-emerald-100 block">
+                    t-system
+                  </span>
+                  <span className="text-lg font-bold tracking-tight text-white">
+                    beach<span className="text-amber-400">.</span>
+                  </span>
+                </div>
+              </div>
+
+              <p className="flex items-center gap-1.5 text-xs text-emerald-100/70">
+                <LucideIcons.MapPin className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                <span>Fortaleza, CE — Brasil</span>
+              </p>
+            </div>
+
+            {/* Coluna: Negócios & Videoaulas */}
+            <div className="col-span-1 lg:col-span-2 space-y-3">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+                Negócios
+              </h3>
+              <ul className="space-y-2 text-xs sm:text-[13px] text-emerald-100/80">
+                {LINKS_NEGOCIOS_RODAPE.map((item) => (
+                  <li key={item.label}>
+                    <a
+                      href={criarLinkWhatsapp(item.mensagem)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>{item.label}</span>
+                    </a>
+                  </li>
+                ))}
+                <li>
+                  <a
+                    href={criarLinkWhatsapp(
+                      'Olá! Gostaria de receber o link das videoaulas e tutoriais do T-System Beach.'
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <span>Videoaulas</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Coluna: Atendimento */}
+            <div className="col-span-1 lg:col-span-2 space-y-3">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+                Atendimento
+              </h3>
+              <ul className="space-y-2 text-xs sm:text-[13px] text-emerald-100/80">
+                {LINKS_ATENDIMENTO_RODAPE.map((item) => (
+                  <li key={item.label}>
+                    <a
+                      href={criarLinkWhatsapp(item.mensagem)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Coluna: Segurança & Certificados */}
+            <div ref={certificadosRef} className="col-span-1 lg:col-span-2 space-y-3 relative">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+                Segurança
+              </h3>
+              <ul className="space-y-2 text-xs sm:text-[13px] text-emerald-100/80">
+                <li className="flex items-center gap-1.5 text-emerald-100/90">
+                  <LucideIcons.Lock className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                  <span>Sistema Seguro</span>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setCertificadosAbertos((prev) => !prev)}
+                    aria-expanded={certificadosAbertos}
+                    className="hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer text-left"
+                  >
+                    <LucideIcons.Award className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <span>Certificados</span>
+                  </button>
+                </li>
+                <li className="text-emerald-100/75">🛡️ Proteção LGPD</li>
+              </ul>
+
+              {certificadosAbertos && (
+                <div className="absolute bottom-full left-0 mb-2 z-30 w-64 rounded-2xl bg-emerald-950/95 backdrop-blur-xl border border-emerald-400/25 p-3 shadow-2xl space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-300 pb-1 border-b border-white/10">
+                    <span>Selos & Conformidade</span>
+                    <button
+                      type="button"
+                      onClick={() => setCertificadosAbertos(false)}
+                      aria-label="Fechar certificados"
+                      className="text-emerald-200 hover:text-white cursor-pointer"
+                    >
+                      <LucideIcons.X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {SELOS_CERTIFICACAO_RODAPE.map((selo) => (
+                    <div
+                      key={selo.texto}
+                      className="text-[11px] text-emerald-100/90 flex items-center gap-1.5"
+                    >
+                      <span aria-hidden="true">{selo.emoji}</span>
+                      <span>{selo.texto}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Coluna: Siga-nos (Ícones Circulares Minimalistas) */}
+            <div className="col-span-1 lg:col-span-3 lg:justify-self-end space-y-3 relative">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+                Siga-nos
+              </h3>
+              <div className="flex items-center gap-2.5">
+                {REDES_SOCIAIS_RODAPE.map((rede) => {
+                  const circleClass =
+                    'w-8 h-8 rounded-full bg-white/15 hover:bg-amber-400 text-white hover:text-emerald-950 flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 cursor-pointer';
+
+                  if (rede.url) {
+                    return (
+                      <a
+                        key={rede.id}
+                        href={rede.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={rede.nome}
+                        title={rede.nome}
+                        className={circleClass}
+                      >
+                        <IconeRedeSocial id={rede.id} />
+                      </a>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={rede.id}
+                      type="button"
+                      onClick={() => mostrarAvisoRede(rede.aviso)}
+                      aria-label={rede.nome}
+                      title={rede.nome}
+                      className={circleClass}
+                    >
+                      <IconeRedeSocial id={rede.id} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {redeAviso && (
+                <div className="absolute bottom-full right-0 mb-2 z-30 w-60 rounded-2xl bg-emerald-950/95 backdrop-blur-xl border border-emerald-400/25 px-3 py-2 text-[11px] text-emerald-100 shadow-xl">
+                  {redeAviso}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Linha de Copyright */}
+          <div className="border-t border-white/10 pt-5 text-[11px] tracking-wide text-emerald-100/70">
+            <span>© 2022–2026 • Âncora-Dev • Todos os direitos reservados.</span>
           </div>
         </div>
+
+
       </footer>
 
       {/* BOTÃO DO WHATSAPP */}
